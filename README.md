@@ -96,7 +96,7 @@ Related links: [embarcadero.com][10] - [learndelphi.org][11]
 
 [2]: https://github.com/EtheaDev/MarkdownShellExtensions/
 
-[3]: https://github.com/EtheaDev/MarkdownShellExtensions/releases/latest/download/SVGShellExtensionsSetup.exe
+[3]: https://github.com/EtheaDev/MarkdownShellExtensions/releases/latest/download/MDShellExtensionsSetup.exe
 
 [4]: https://github.com/EtheaDev/SVGIconImageList
 

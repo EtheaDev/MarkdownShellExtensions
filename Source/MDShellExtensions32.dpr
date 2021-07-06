@@ -49,7 +49,6 @@ uses
   MDShellEx.SettingsForm in 'MDShellEx.SettingsForm.pas' {SVGSettingsForm},
   MDShellEx.Settings in 'MDShellEx.Settings.pas',
   MDShellEx.Resources in 'MDShellEx.Resources.pas' {dmResources: TDataModule},
-  MDShellEx.ThumbnailResources in 'MDShellEx.ThumbnailResources.pas' {dmThumbnailResources: TDataModule},
   dlgSearchText in 'dlgSearchText.pas' {TextSearchDialog},
   MDShellEx.About in 'MDShellEx.About.pas' {FrmAbout},
   BegaHtmlPrintPreviewForm in '..\Ext\HTMLViewer\Source\BegaHtmlPrintPreviewForm.pas',

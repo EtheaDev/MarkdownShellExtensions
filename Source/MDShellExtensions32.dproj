@@ -77,7 +77,7 @@
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
         <Debugger_HostApplication>D:\ETHEA\FExplorer\Debug\Preview Handlers\PreviewHandler Host\Bin\PreviewHost.exe</Debugger_HostApplication>
         <Debugger_CWD>c:\temp</Debugger_CWD>
-        <Debugger_RunParams>D:\ETHEA\MDShellExtensions\MDShellExtensions.dll</Debugger_RunParams>
+        <Debugger_RunParams>D:\ETHEA\MarkdownShellExtensions\MDShellExtensions.dll</Debugger_RunParams>
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
@@ -92,8 +92,8 @@
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
         <Debugger_CWD>c:\Windows\SysWoW64</Debugger_CWD>
         <DCC_RemoteDebug>false</DCC_RemoteDebug>
-        <Debugger_RunParams>D:\ETHEA\MDShellExtensions\MDShellExtensions.dll</Debugger_RunParams>
-        <Debugger_HostApplication>D:\ETHEA\MDShellExtensions\Debug\Preview Handlers\PreviewHandler Host\Bin\PreviewHost.exe</Debugger_HostApplication>
+        <Debugger_RunParams>D:\ETHEA\MarkdownShellExtensions\MDShellExtensions.dll</Debugger_RunParams>
+        <Debugger_HostApplication>D:\ETHEA\MarkdownShellExtensions\Debug\Preview Handlers\PreviewHandler Host\Bin\PreviewHost.exe</Debugger_HostApplication>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
@@ -106,7 +106,7 @@
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
         <DCC_MapFile>3</DCC_MapFile>
         <DCC_LocalDebugSymbols>true</DCC_LocalDebugSymbols>
-        <Debugger_HostApplication>D:\ETHEA\MDShellExtensions\Debug\Preview Handlers\PreviewHandler Host\Bin\PreviewHost.exe</Debugger_HostApplication>
+        <Debugger_HostApplication>D:\ETHEA\MarkdownShellExtensions\Debug\Preview Handlers\PreviewHandler Host\Bin\PreviewHost.exe</Debugger_HostApplication>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -136,10 +136,6 @@
         <DCCReference Include="MDShellEx.Settings.pas"/>
         <DCCReference Include="MDShellEx.Resources.pas">
             <Form>dmResources</Form>
-            <DesignClass>TDataModule</DesignClass>
-        </DCCReference>
-        <DCCReference Include="MDShellEx.ThumbnailResources.pas">
-            <Form>dmThumbnailResources</Form>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
         <DCCReference Include="dlgSearchText.pas">
@@ -222,8 +218,8 @@
                 <Platform value="Win64">False</Platform>
             </Platforms>
             <Deployment Version="3">
-                <DeployFile LocalName="..\Bin32\MDShellExtensions32.dll" Configuration="Debug" Class="ProjectOutput">
-                    <Platform Name="Win32">
+                <DeployFile LocalName="..\Bin64\MDShellExtensions32.dll" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win64">
                         <RemoteName>MDShellExtensions32.dll</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
@@ -234,14 +230,14 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="..\MDShellExtensions32.dll" Configuration="Release" Class="ProjectOutput">
+                <DeployFile LocalName="..\Bin32\MDShellExtensions32.dll" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>MDShellExtensions32.dll</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="..\Bin64\MDShellExtensions32.dll" Configuration="Release" Class="ProjectOutput">
-                    <Platform Name="Win64">
+                <DeployFile LocalName="..\MDShellExtensions32.dll" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win32">
                         <RemoteName>MDShellExtensions32.dll</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>

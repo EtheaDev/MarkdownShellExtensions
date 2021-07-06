@@ -37,12 +37,12 @@ uses
   Dialogs, StdCtrls, ExtCtrls, SynEdit,
   System.Generics.Collections,
   SynEditHighlighter,
-  ComCtrls, ToolWin, ImgList, SynHighlighterXML,
+  ComCtrls, ToolWin, ImgList,
   Vcl.Menus, SynEditExport,
   SynExportHTML, SynExportRTF, SynEditMiscClasses,
   MDShellEx.Settings, System.ImageList, SynEditCodeFolding,
   SVGIconImageList, SVGIconImageListBase, SVGIconImage, Vcl.VirtualImageList,
-  Vcl.OleCtrls, SHDocVw, Xml.xmldom, Xml.XMLIntf, Xml.Win.msxmldom, Xml.XMLDoc,
+  Vcl.OleCtrls, SHDocVw,
   MDShellEx.Resources, HTMLUn2, HtmlView
   ;
 
@@ -50,7 +50,7 @@ type
   TFrmPreview = class(TForm)
     SynEdit: TSynEdit;
     PanelTop: TPanel;
-    PanelXML: TPanel;
+    PanelMD: TPanel;
     StatusBar: TStatusBar;
     SVGIconImageList: TVirtualImageList;
     ToolButtonZoomIn: TToolButton;
@@ -77,7 +77,7 @@ type
     procedure FormAfterMonitorDpiChanged(Sender: TObject; OldDPI,
       NewDPI: Integer);
   private
-    FXMLFontSize: Integer;
+    FMDFontSize: Integer;
     FHTMLFontSize: Integer;
     FSimpleText: string;
     FFileName: string;
@@ -93,12 +93,13 @@ type
     procedure UpdateGUI;
     procedure UpdateFromSettings(const Preview: Boolean);
     procedure SaveSettings;
-    procedure SetXMLFontSize(const Value: Integer);
+    procedure SetMDFontSize(const Value: Integer);
     procedure SetHTMLFontSize(const Value: Integer);
     procedure UpdateHighlighter;
 
     //Visualizzatore Fattura
-    procedure ShowMarkDownAsHTML(const ASettings: TSettings);
+    procedure ShowMarkDownAsHTML(const ASettings: TSettings;
+      const AReloadImages: Boolean);
     procedure AdjustZoom(AValue: Integer);
   protected
   public
@@ -109,7 +110,7 @@ type
     class property AParent: TWinControl read FAParent write FAParent;
     procedure LoadFromFile(const AFileName: string);
     procedure LoadFromStream(const AStream: TStream);
-    property XMLFontSize: Integer read FXMLFontSize write SetXMLFontSize;
+    property MDFontSize: Integer read FMDFontSize write SetMDFontSize;
     property HTMLFontSize: Integer read FHTMLFontSize write SetHTMLFontSize;
   end;
 
@@ -174,9 +175,9 @@ end;
 
 procedure TFrmPreview.UpdateGUI;
 begin
-  if PanelXML.Visible then
+  if PanelMD.Visible then
   begin
-    Splitter.Top := PanelXML.Top + PanelXML.Height;
+    Splitter.Top := PanelMD.Top + PanelMD.Height;
     Splitter.Visible := True;
     ToolButtonShowText.Caption := 'Hide Markdown';
     ToolButtonShowText.Hint := 'Hide Markdown file content';
@@ -244,13 +245,15 @@ end;
 
 procedure TFrmPreview.FormResize(Sender: TObject);
 begin
-  PanelXML.Height := Round(Self.Height * (FPreviewSettings.SplitterPos / 100));
-  Splitter.Top := PanelXML.Height;
+  PanelMD.Height := Round(Self.Height * (FPreviewSettings.SplitterPos / 100));
+  Splitter.Top := PanelMD.Height;
   if Self.Width < (500 * Self.ScaleFactor) then
     ToolBar.ShowCaptions := False
   else
     Toolbar.ShowCaptions := True;
   UpdateGUI;
+  if FPreviewSettings.RescalingImage then
+    ShowMarkDownAsHTML(FPreviewSettings, True);
 end;
 
 procedure TFrmPreview.LoadFromFile(const AFileName: string);
@@ -263,7 +266,7 @@ begin
   try
     SynEdit.Lines.LoadFromFile(AFileName, TEncoding.UTF8);
     HtmlViewer.ServerRoot := ExtractFilePath(FFileName);
-    ShowMarkDownAsHTML(FPreviewSettings);
+    ShowMarkDownAsHTML(FPreviewSettings, True);
   finally
     LOutStream.Free;
   end;
@@ -279,7 +282,7 @@ begin
   LStringStream := TStringStream.Create('',TEncoding.UTF8);
   try
     SynEdit.Lines.LoadFromStream(AStream, TEncoding.UTF8);
-    ShowMarkDownAsHTML(FPreviewSettings);
+    ShowMarkDownAsHTML(FPreviewSettings, True);
   finally
     LStringStream.Free;
   end;
@@ -292,8 +295,8 @@ begin
   begin
     FPreviewSettings.UpdateSettings(SynEdit.Font.Name,
       HtmlViewer.DefFontName,
-      XMLFontSize, HTMLFontSize,
-      (PanelXML.Visible and HtmlViewer.Visible));
+      MDFontSize, HTMLFontSize,
+      (PanelMD.Visible and HtmlViewer.Visible));
     FPreviewSettings.WriteSettings(SynEdit.Highlighter, nil);
   end;
 end;
@@ -311,39 +314,46 @@ begin
   end;
 end;
 
-procedure TFrmPreview.SetXMLFontSize(const Value: Integer);
+procedure TFrmPreview.SetMDFontSize(const Value: Integer);
 var
   LScaleFactor: Single;
 begin
   if (Value >= MinfontSize) and (Value <= MaxfontSize) then
   begin
-    TLogPreview.Add('TFrmEditor.SetXMLFontSize'+
+    TLogPreview.Add('TFrmEditor.SetMDFontSize'+
       ' CurrentPPI: '+Self.CurrentPPI.ToString+
       ' ScaleFactor: '+ScaleFactor.ToString+
       ' Value: '+Value.ToString);
-    if FXMLFontSize <> 0 then
-      LScaleFactor := SynEdit.Font.Size / FXMLFontSize
+    if FMDFontSize <> 0 then
+      LScaleFactor := SynEdit.Font.Size / FMDFontSize
     else
       LScaleFactor := 1;
-    FXMLFontSize := Value;
-    SynEdit.Font.Size := Round(FXMLFontSize * LScaleFactor);
+    FMDFontSize := Value;
+    SynEdit.Font.Size := Round(FMDFontSize * LScaleFactor);
     SynEdit.Gutter.Font.Size := SynEdit.Font.Size;
   end;
 end;
 
-procedure TFrmPreview.ShowMarkDownAsHTML(const ASettings: TSettings);
+procedure TFrmPreview.ShowMarkDownAsHTML(const ASettings: TSettings;
+  const AReloadImages: Boolean);
 var
   LStream: TStringStream;
+  LOldPos: Integer;
 begin
   try
-    FMarkDownFile := TMarkDownFile.Create(SynEdit.Lines.Text, True);
+    if AReloadImages then
+      HtmlViewer.clear;
+    FMarkDownFile := TMarkDownFile.Create(SynEdit.Lines.Text,
+      ASettings.ProcessorDialect, True);
 
     //Carica il contenuto HTML trasformato dentro l'HTML-Viewer
+    LOldPos := HtmlViewer.VScrollBarPosition;
     HtmlViewer.DefFontSize := ASettings.HTMLFontSize;
     HtmlViewer.DefFontName := ASettings.HTMLFontName;
     LStream := TStringStream.Create(FMarkDownFile.HTML);
     try
       HtmlViewer.LoadFromStream(LStream);
+      HtmlViewer.VScrollBarPosition := LOldPos;
       HtmlViewer.Visible := True;
     finally
       LStream.Free;
@@ -360,7 +370,7 @@ var
 begin
   if (Value >= MinfontSize) and (Value <= MaxfontSize) then
   begin
-    TLogPreview.Add('TFrmEditor.SetXMLFontSize'+
+    TLogPreview.Add('TFrmEditor.SetMDFontSize'+
       ' CurrentPPI: '+Self.CurrentPPI.ToString+
       ' ScaleFactor: '+ScaleFactor.ToString+
       ' Value: '+Value.ToString);
@@ -382,8 +392,8 @@ end;
 
 procedure TFrmPreview.ToolButtonShowTextClick(Sender: TObject);
 begin
-  PanelXML.Visible := not PanelXML.Visible;
-  if not PanelXML.Visible and HTMLViewer.CanFocus then
+  PanelMD.Visible := not PanelMD.Visible;
+  if not PanelMD.Visible and HTMLViewer.CanFocus then
     HTMLViewer.SetFocus;
   UpdateGUI;
   SaveSettings;
@@ -407,11 +417,11 @@ end;
 procedure TFrmPreview.UpdateFromSettings(const Preview: Boolean);
 begin
   FPreviewSettings.ReadSettings(SynEdit.Highlighter, nil);
-  if FPreviewSettings.XMLFontSize >= MinfontSize then
-    XMLFontSize := FPreviewSettings.XMLFontSize
+  if FPreviewSettings.MDFontSize >= MinfontSize then
+    MDFontSize := FPreviewSettings.MDFontSize
   else
-    XMLFontSize := MinfontSize;
-  SynEdit.Font.Name := FPreviewSettings.XMLFontName;
+    MDFontSize := MinfontSize;
+  SynEdit.Font.Name := FPreviewSettings.MDFontName;
 
   if FPreviewSettings.HTMLFontSize >= MinfontSize then
     HTMLFontSize := FPreviewSettings.HTMLFontSize
@@ -419,7 +429,7 @@ begin
     HTMLFontSize := 12;
   HtmlViewer.DefFontName := FPreviewSettings.HTMLFontName;
 
-  PanelXML.Visible := FPreviewSettings.ShowXML;
+  PanelMD.Visible := FPreviewSettings.ShowMarkDown;
 {$IFNDEF DISABLE_STYLES}
   TStyleManager.TrySetStyle(FPreviewSettings.StyleName, False);
 {$ENDIF}
@@ -427,7 +437,7 @@ begin
   UpdateHighlighter;
   UpdateGUI;
   if Preview then
-    ShowMarkDownAsHTML(FPreviewSettings);
+    ShowMarkDownAsHTML(FPreviewSettings, True);
 end;
 
 procedure TFrmPreview.ToolButtonSettingsClick(Sender: TObject);
@@ -457,11 +467,11 @@ end;
 procedure TFrmPreview.AdjustZoom(AValue: Integer);
 begin
   if Synedit.Focused then
-    XMLFontSize := XMLFontSize + AValue
+    MDFontSize := MDFontSize + AValue
   else
   begin
     HTMLFontSize := HTMLFontSize + AValue;
-    ShowMarkDownAsHTML(FPreviewSettings);
+    ShowMarkDownAsHTML(FPreviewSettings, False);
   end;
   SaveSettings;
 end;

@@ -100,7 +100,6 @@
         <DCC_ResourcePath>..\..\ext\LibXML2\src;..\..\ext\SynEdit\Source;..\..\ext\CBLib\src;$(DCC_ResourcePath)</DCC_ResourcePath>
         <DCC_ObjPath>..\..\ext\LibXML2\src;..\..\ext\SynEdit\Source;..\..\ext\CBLib\src;$(DCC_ObjPath)</DCC_ObjPath>
         <DCC_IncludePath>..\..\ext\LibXML2\src;..\..\ext\SynEdit\Source;..\..\ext\CBLib\src;$(DCC_IncludePath)</DCC_IncludePath>
-        <DCC_Description>*** CBVCL Package Delphi 7: VCL components ***</DCC_Description>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
         <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
@@ -122,8 +121,6 @@
         <DCC_ResourcePath>..\..\ext\LibXML2\src;..\..\ext\SynEdit\Source;..\..\ext\CBLib\src;$(DCC_ResourcePath)</DCC_ResourcePath>
         <DCC_ObjPath>..\..\ext\LibXML2\src;..\..\ext\SynEdit\Source;..\..\ext\CBLib\src;$(DCC_ObjPath)</DCC_ObjPath>
         <DCC_IncludePath>..\..\ext\LibXML2\src;..\..\ext\SynEdit\Source;..\..\ext\CBLib\src;$(DCC_IncludePath)</DCC_IncludePath>
-        <DCC_Description>*** CBVCL Package Delphi 7: VCL components ***</DCC_Description>
-        <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
         <BT_BuildType>Debug</BT_BuildType>
@@ -137,7 +134,6 @@
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
         <DCC_MapFile>3</DCC_MapFile>
         <DCC_DebugInformation>2</DCC_DebugInformation>
-        <DCC_IntegerOverflowCheck>false</DCC_IntegerOverflowCheck>
     </PropertyGroup>
     <ProjectExtensions>
         <Borland.Personality>Delphi.Personality.12</Borland.Personality>

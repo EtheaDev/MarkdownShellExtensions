@@ -1137,89 +1137,6 @@ object dmResources: TdmResources
           #10
       end
       item
-        IconName = 'markdown'
-        SVGText = 
-          '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'#10'<svg'#10'   x' +
-          'mlns:dc="http://purl.org/dc/elements/1.1/"'#10'   xmlns:cc="http://c' +
-          'reativecommons.org/ns#"'#10'   xmlns:rdf="http://www.w3.org/1999/02/' +
-          '22-rdf-syntax-ns#"'#10'   xmlns:svg="http://www.w3.org/2000/svg"'#10'   ' +
-          'xmlns="http://www.w3.org/2000/svg"'#10'   xmlns:sodipodi="http://sod' +
-          'ipodi.sourceforge.net/DTD/sodipodi-0.dtd"'#10'   xmlns:inkscape="htt' +
-          'p://www.inkscape.org/namespaces/inkscape"'#10'   width="200mm"'#10'   he' +
-          'ight="200mm"'#10'   viewBox="0 0 200 200"'#10'   version="1.1"'#10'   id="sv' +
-          'g8"'#10'   inkscape:version="1.0.2-2 (e86c870879, 2021-01-15)"'#10'   so' +
-          'dipodi:docname="MD1.svg">'#10'  <defs'#10'     id="defs2" />'#10'  <sodipodi' +
-          ':namedview'#10'     id="base"'#10'     pagecolor="#ffffff"'#10'     borderco' +
-          'lor="#666666"'#10'     borderopacity="1.0"'#10'     inkscape:pageopacity' +
-          '="0.0"'#10'     inkscape:pageshadow="2"'#10'     inkscape:zoom="0.494974' +
-          '75"'#10'     inkscape:cx="248.896"'#10'     inkscape:cy="528.13893"'#10'    ' +
-          ' inkscape:document-units="mm"'#10'     inkscape:current-layer="svg8"' +
-          #10'     inkscape:document-rotation="0"'#10'     showgrid="false"'#10'     ' +
-          'inkscape:window-width="1920"'#10'     inkscape:window-height="1017"'#10 +
-          '     inkscape:window-x="-8"'#10'     inkscape:window-y="-8"'#10'     ink' +
-          'scape:window-maximized="1" />'#10'  <metadata'#10'     id="metadata5">'#10' ' +
-          '   <rdf:RDF>'#10'      <cc:Work'#10'         rdf:about="">'#10'        <dc:f' +
-          'ormat>image/svg+xml</dc:format>'#10'        <dc:type'#10'           rdf:' +
-          'resource="http://purl.org/dc/dcmitype/StillImage" />'#10'        <dc' +
-          ':title />'#10'      </cc:Work>'#10'    </rdf:RDF>'#10'  </metadata>'#10'  <path'#10 +
-          '     id="rect849"'#10'     style="display:inline;opacity:1;fill:#000' +
-          '000;stroke-width:0.669135"'#10'     d="M 35.576689,25 C 29.717309,25' +
-          ' 25,32.68125 25,42.22221 V 157.77779 C 25,167.31871 29.717309,17' +
-          '5 35.576689,175 H 164.42332 C 170.2827,175 175,167.31871 175,157' +
-          '.77779 V 42.22221 C 175,32.68125 170.2827,25 164.42332,25 Z m 8.' +
-          '344986,34.869643 h 14.495189 l 14.367165,29.01939 14.398905,-28.' +
-          '93932 14.420426,-0.0798 V 140.13227 H 87.462534 L 87.182934,94.5' +
-          '39383 72.784029,123.87404 58.866482,94.933013 58.586874,140.1322' +
-          '7 H 43.921675 Z m 82.851875,0 h 14.68158 v 40.985047 h 14.62318 ' +
-          'l -21.92969,39.17057 -21.88973,-39.17057 h 14.51466 z"'#10'     inks' +
-          'cape:label="path1"'#10'     sodipodi:insensitive="true" />'#10'</svg>'#10
-      end
-      item
-        IconName = 'markdown-grey'
-        SVGText = 
-          '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'#10'<svg'#10'   x' +
-          'mlns:dc="http://purl.org/dc/elements/1.1/"'#10'   xmlns:cc="http://c' +
-          'reativecommons.org/ns#"'#10'   xmlns:rdf="http://www.w3.org/1999/02/' +
-          '22-rdf-syntax-ns#"'#10'   xmlns:svg="http://www.w3.org/2000/svg"'#10'   ' +
-          'xmlns="http://www.w3.org/2000/svg"'#10'   xmlns:sodipodi="http://sod' +
-          'ipodi.sourceforge.net/DTD/sodipodi-0.dtd"'#10'   xmlns:inkscape="htt' +
-          'p://www.inkscape.org/namespaces/inkscape"'#10'   width="200mm"'#10'   he' +
-          'ight="200mm"'#10'   viewBox="0 0 200 200"'#10'   version="1.1"'#10'   id="sv' +
-          'g8"'#10'   inkscape:version="1.0.2-2 (e86c870879, 2021-01-15)"'#10'   so' +
-          'dipodi:docname="MD2.svg">'#10'  <defs'#10'     id="defs2" />'#10'  <sodipodi' +
-          ':namedview'#10'     id="base"'#10'     pagecolor="#ffffff"'#10'     borderco' +
-          'lor="#666666"'#10'     borderopacity="1.0"'#10'     inkscape:pageopacity' +
-          '="0.0"'#10'     inkscape:pageshadow="2"'#10'     inkscape:zoom="0.35"'#10'  ' +
-          '   inkscape:cx="324.62878"'#10'     inkscape:cy="617.00729"'#10'     ink' +
-          'scape:document-units="mm"'#10'     inkscape:current-layer="svg8"'#10'   ' +
-          '  inkscape:document-rotation="0"'#10'     showgrid="false"'#10'     inks' +
-          'cape:window-width="1920"'#10'     inkscape:window-height="1017"'#10'    ' +
-          ' inkscape:window-x="-8"'#10'     inkscape:window-y="-8"'#10'     inkscap' +
-          'e:window-maximized="1" />'#10'  <metadata'#10'     id="metadata5">'#10'    <' +
-          'rdf:RDF>'#10'      <cc:Work'#10'         rdf:about="">'#10'        <dc:forma' +
-          't>image/svg+xml</dc:format>'#10'        <dc:type'#10'           rdf:reso' +
-          'urce="http://purl.org/dc/dcmitype/StillImage" />'#10'        <dc:tit' +
-          'le></dc:title>'#10'      </cc:Work>'#10'    </rdf:RDF>'#10'  </metadata>'#10'  <' +
-          'path'#10'     id="path891"'#10'     style="fill:#000000;stroke:none;stro' +
-          'ke-width:0.669133px;stroke-linecap:butt;stroke-linejoin:miter;st' +
-          'roke-opacity:1"'#10'     d="m 35.577626,25.000001 c -5.85934,0 -13.2' +
-          '50324,7.681211 -13.250324,17.222207 V 157.77781 c 0,9.54093 7.39' +
-          '0984,17.22219 13.250324,17.22219 H 164.42236 c 5.85934,0 13.2503' +
-          '4,-7.68126 13.25034,-17.22219 V 42.222208 c 0,-9.540996 -7.391,-' +
-          '17.222207 -13.25034,-17.222207 z m 3.502656,11.795528 H 160.9197' +
-          '2 c 3.63365,0 6.55979,4.76472 6.55979,10.681542 V 152.5246 c 0,5' +
-          '.9168 -2.92614,10.67986 -6.55979,10.67986 H 39.080282 c -3.63365' +
-          '9,0 -6.559801,-4.76306 -6.559801,-10.67986 V 47.477071 c 0,-5.91' +
-          '6822 2.926142,-10.681542 6.559801,-10.681542 z m 19.336356,23.07' +
-          '2449 -14.494083,0.0017 v 80.262382 h 14.66512 l 0.278573,-45.200' +
-          '962 13.91745,28.941022 14.39881,-29.334582 0.27959,45.594522 H 1' +
-          '01.60283 V 59.869643 l -14.420322,0.08004 -14.39881,28.937686 z ' +
-          'm 68.356202,0.0017 v 40.983372 h -14.51455 l 21.89063,39.17061 2' +
-          '1.92853,-39.17061 H 141.45433 V 59.869643 Z"'#10'     inkscape:label' +
-          '="path1"'#10'     sodipodi:nodetypes="sssssssssssssssssscccccccccccc' +
-          'ccccccccc" />'#10'</svg>'#10
-      end
-      item
         IconName = 'xml'
         SVGText = 
           '<?xml version="1.0" encoding="iso-8859-1"?>'#13#10'<svg version="1.1" ' +
@@ -1524,8 +1441,83 @@ object dmResources: TdmResources
           'line-height:1.25" xml:space="preserve"><tspan x="17.629883" y="4' +
           '3.53503" fill="#007106" font-family="sans-serif" font-size="12px' +
           '" font-weight="bold">XML</tspan></text>'#10' </g>'#10'</svg>'#10
+      end
+      item
+        IconName = 'markdown-black'
+        SVGText = 
+          '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'#13#10'<svg wid' +
+          'th="200mm" height="200mm" viewBox="0 0 200 200">'#13#10'  <path'#13#10'     ' +
+          'id="rect849"'#13#10'     style="display:inline;opacity:1;fill:#000000;' +
+          'stroke-width:0.669135"'#13#10'     d="M 35.576689,25 C 29.717309,25 25' +
+          ',32.68125 25,42.22221 V 157.77779 C 25,167.31871 29.717309,175 3' +
+          '5.576689,175 H 164.42332 C 170.2827,175 175,167.31871 175,157.77' +
+          '779 V 42.22221 C 175,32.68125 170.2827,25 164.42332,25 Z m 8.344' +
+          '986,34.869643 h 14.495189 l 14.367165,29.01939 14.398905,-28.939' +
+          '32 14.420426,-0.0798 V 140.13227 H 87.462534 L 87.182934,94.5393' +
+          '83 72.784029,123.87404 58.866482,94.933013 58.586874,140.13227 H' +
+          ' 43.921675 Z m 82.851875,0 h 14.68158 v 40.985047 h 14.62318 l -' +
+          '21.92969,39.17057 -21.88973,-39.17057 h 14.51466 z"/>'#13#10'</svg>'
+      end
+      item
+        IconName = 'markdown-white'
+        SVGText = 
+          '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'#13#10'<svg wid' +
+          'th="200mm" height="200mm" viewBox="0 0 200 200">'#13#10'  <path'#13#10'     ' +
+          'id="rect849"'#13#10'     style="display:inline;opacity:1;fill:#FFFFFF;' +
+          'stroke-width:0.669135"'#13#10'     d="M 35.576689,25 C 29.717309,25 25' +
+          ',32.68125 25,42.22221 V 157.77779 C 25,167.31871 29.717309,175 3' +
+          '5.576689,175 H 164.42332 C 170.2827,175 175,167.31871 175,157.77' +
+          '779 V 42.22221 C 175,32.68125 170.2827,25 164.42332,25 Z m 8.344' +
+          '986,34.869643 h 14.495189 l 14.367165,29.01939 14.398905,-28.939' +
+          '32 14.420426,-0.0798 V 140.13227 H 87.462534 L 87.182934,94.5393' +
+          '83 72.784029,123.87404 58.866482,94.933013 58.586874,140.13227 H' +
+          ' 43.921675 Z m 82.851875,0 h 14.68158 v 40.985047 h 14.62318 l -' +
+          '21.92969,39.17057 -21.88973,-39.17057 h 14.51466 z"/>'#13#10'</svg>'
+      end
+      item
+        IconName = 'markdown-black-gray'
+        SVGText = 
+          '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'#13#10'<svg wid' +
+          'th="200mm" height="200mm" viewBox="0 0 200 200">'#13#10'  <path'#13#10'     ' +
+          'id="rect849"'#13#10'     style="display:inline;opacity:1;fill:#808080;' +
+          'stroke-width:0.669135"'#13#10'     d="M 35.576689,25 C 29.717309,25 25' +
+          ',32.68125 25,42.22221 V 157.77779 C 25,167.31871 29.717309,175 3' +
+          '5.576689,175 H 164.42332 C 170.2827,175 175,167.31871 175,157.77' +
+          '779 V 42.22221 C 175,32.68125 170.2827,25 164.42332,25 Z m 8.344' +
+          '986,34.869643 h 14.495189 l 14.367165,29.01939 14.398905,-28.939' +
+          '32 14.420426,-0.0798 V 140.13227 H 87.462534 L 87.182934,94.5393' +
+          '83 72.784029,123.87404 58.866482,94.933013 58.586874,140.13227 H' +
+          ' 43.921675 Z m 82.851875,0 h 14.68158 v 40.985047 h 14.62318 l -' +
+          '21.92969,39.17057 -21.88973,-39.17057 h 14.51466 z"/>'#13#10'</svg>'
+      end
+      item
+        IconName = 'markdown-white-gray'
+        SVGText = 
+          '<?xml version="1.0" encoding="UTF-8" standalone="no"?>'#13#10'<svg wid' +
+          'th="200mm" height="200mm" viewBox="0 0 200 200">'#13#10'  <path'#13#10'     ' +
+          'id="path891"'#13#10'     style="fill:#808080;stroke:none;stroke-width:' +
+          '0.669133px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opac' +
+          'ity:1"'#13#10'     d="m 35.577626,25.000001 c -5.85934,0 -13.250324,7.' +
+          '681211 -13.250324,17.222207 V 157.77781 c 0,9.54093 7.390984,17.' +
+          '22219 13.250324,17.22219 H 164.42236 c 5.85934,0 13.25034,-7.681' +
+          '26 13.25034,-17.22219 V 42.222208 c 0,-9.540996 -7.391,-17.22220' +
+          '7 -13.25034,-17.222207 z m 3.502656,11.795528 H 160.91972 c 3.63' +
+          '365,0 6.55979,4.76472 6.55979,10.681542 V 152.5246 c 0,5.9168 -2' +
+          '.92614,10.67986 -6.55979,10.67986 H 39.080282 c -3.633659,0 -6.5' +
+          '59801,-4.76306 -6.559801,-10.67986 V 47.477071 c 0,-5.916822 2.9' +
+          '26142,-10.681542 6.559801,-10.681542 z m 19.336356,23.072449 -14' +
+          '.494083,0.0017 v 80.262382 h 14.66512 l 0.278573,-45.200962 13.9' +
+          '1745,28.941022 14.39881,-29.334582 0.27959,45.594522 H 101.60283' +
+          ' V 59.869643 l -14.420322,0.08004 -14.39881,28.937686 z m 68.356' +
+          '202,0.0017 v 40.983372 h -14.51455 l 21.89063,39.17061 21.92853,' +
+          '-39.17061 H 141.45433 V 59.869643 Z"/>'#13#10'</svg>'#13#10
       end>
     Left = 248
     Top = 152
+  end
+  object ImageCollection1: TImageCollection
+    Images = <>
+    Left = 120
+    Top = 216
   end
 end

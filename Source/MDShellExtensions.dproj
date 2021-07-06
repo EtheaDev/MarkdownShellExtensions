@@ -68,7 +68,7 @@
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
-        <Debugger_HostApplication>D:\ETHEA\MDShellExtensions\Debug\Preview Handlers\OpenDialog\OpenDialogTest.exe</Debugger_HostApplication>
+        <Debugger_HostApplication>D:\ETHEA\MarkdownShellExtensions\Debug\Preview Handlers\OpenDialog\OpenDialogTest.exe</Debugger_HostApplication>
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
         <DCC_Namespace>Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
         <BT_BuildType>Debug</BT_BuildType>
@@ -77,7 +77,7 @@
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
-        <Debugger_HostApplication>D:\ETHEA\MDShellExtensions\Debug\Preview Handlers\PreviewHandler Host\Bin\PreviewHost.exe</Debugger_HostApplication>
+        <Debugger_HostApplication>D:\ETHEA\MarkdownShellExtensions\Debug\Preview Handlers\PreviewHandler Host\Bin\PreviewHost.exe</Debugger_HostApplication>
         <Debugger_CWD>c:\temp</Debugger_CWD>
         <Debugger_RunParams>D:\ETHEA\FExplorer\FExplorer.dll</Debugger_RunParams>
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
@@ -141,10 +141,6 @@
         <DCCReference Include="MDShellEx.Settings.pas"/>
         <DCCReference Include="MDShellEx.Resources.pas">
             <Form>dmResources</Form>
-            <DesignClass>TDataModule</DesignClass>
-        </DCCReference>
-        <DCCReference Include="MDShellEx.ThumbnailResources.pas">
-            <Form>dmThumbnailResources</Form>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
         <DCCReference Include="dlgSearchText.pas">

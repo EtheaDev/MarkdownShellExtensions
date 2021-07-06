@@ -122,7 +122,7 @@ object FrmPreview: TFrmPreview
       end
     end
   end
-  object PanelXML: TPanel
+  object PanelMD: TPanel
     Left = 0
     Top = 35
     Width = 672

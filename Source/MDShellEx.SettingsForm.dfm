@@ -41,11 +41,11 @@ object SVGSettingsForm: TSVGSettingsForm
       ImageIndex = 4
       ImageName = 'eye-settings'
       object RenderingGroupBox: TGroupBox
-        Left = 2
-        Top = 0
+        Left = 10
+        Top = 104
         Width = 238
-        Height = 105
-        Caption = 'External files loading options'
+        Height = 121
+        Caption = 'Images loading options'
         TabOrder = 0
         object SearchInFolderCheckBox: TCheckBox
           Left = 15
@@ -57,11 +57,46 @@ object SVGSettingsForm: TSVGSettingsForm
         end
         object DownloadFromWebCheckBox: TCheckBox
           Left = 15
-          Top = 55
+          Top = 82
           Width = 156
           Height = 17
           Caption = 'Download from WEB'
+          TabOrder = 2
+        end
+        object RescalingImageCheckBox: TCheckBox
+          Left = 15
+          Top = 55
+          Width = 156
+          Height = 17
+          Caption = 'Rescaling to viewer size'
           TabOrder = 1
+        end
+      end
+      object MarkdownGroupBox: TGroupBox
+        Left = 10
+        Top = 16
+        Width = 238
+        Height = 82
+        Caption = 'Markdown processor options'
+        TabOrder = 1
+        object ProcessorDialectLabel: TLabel
+          Left = 15
+          Top = 19
+          Width = 42
+          Height = 15
+          AutoSize = False
+          Caption = 'Dialect:'
+        end
+        object ProcessorDialectComboBox: TComboBox
+          Left = 15
+          Top = 40
+          Width = 202
+          Height = 23
+          Style = csDropDownList
+          TabOrder = 0
+          Items.Strings = (
+            'DaringFireball'
+            'CommonMark')
         end
       end
     end
@@ -118,12 +153,12 @@ object SVGSettingsForm: TSVGSettingsForm
       Caption = 'Font'
       ImageIndex = 1
       ImageName = 'alphabetical-variant'
-      object XMLGroupBox: TGroupBox
+      object MDGroupBox: TGroupBox
         Left = 16
         Top = 164
         Width = 281
         Height = 149
-        Caption = 'Testo XML'
+        Caption = 'Markdown Text'
         TabOrder = 1
         object FontLabel: TLabel
           Left = 8
@@ -139,7 +174,7 @@ object SVGSettingsForm: TSVGSettingsForm
           Height = 15
           Caption = 'Size'
         end
-        object XMLFontComboBox: TComboBox
+        object MDFontComboBox: TComboBox
           Left = 8
           Top = 61
           Width = 225
@@ -149,7 +184,7 @@ object SVGSettingsForm: TSVGSettingsForm
           TabOrder = 1
           OnDrawItem = FontDrawItem
         end
-        object XMLFontSizeEdit: TEdit
+        object MDFontSizeEdit: TEdit
           Left = 8
           Top = 107
           Width = 34
@@ -159,23 +194,23 @@ object SVGSettingsForm: TSVGSettingsForm
           TabOrder = 2
           Text = '12'
         end
-        object XMLUpDown: TUpDown
+        object MDUpDown: TUpDown
           Left = 42
           Top = 107
           Width = 16
           Height = 23
-          Associate = XMLFontSizeEdit
+          Associate = MDFontSizeEdit
           Min = 8
           Max = 30
           Position = 12
           TabOrder = 3
         end
-        object ShowXMLCheckBox: TCheckBox
+        object ShowMDCheckBox: TCheckBox
           Left = 8
           Top = 24
-          Width = 121
+          Width = 145
           Height = 17
-          Caption = 'Mostra testo XML'
+          Caption = 'Show markdown text'
           TabOrder = 0
         end
       end
@@ -184,7 +219,7 @@ object SVGSettingsForm: TSVGSettingsForm
         Top = 16
         Width = 281
         Height = 121
-        Caption = 'Testo HTML (default)'
+        Caption = 'HTML Text (default)'
         TabOrder = 0
         object Label1: TLabel
           Left = 8
@@ -196,9 +231,9 @@ object SVGSettingsForm: TSVGSettingsForm
         object Label2: TLabel
           Left = 8
           Top = 65
-          Width = 63
+          Width = 20
           Height = 15
-          Caption = 'Dimensione'
+          Caption = 'Size'
         end
         object HTMLFontComboBox: TComboBox
           Left = 8
@@ -490,7 +525,7 @@ object SVGSettingsForm: TSVGSettingsForm
         Height = 15
         Alignment = taCenter
         AutoSize = False
-        Caption = 'Margine alto'
+        Caption = 'top margin'
       end
       object MarginLeftLabel: TLabel
         Left = 218
@@ -499,7 +534,7 @@ object SVGSettingsForm: TSVGSettingsForm
         Height = 15
         Alignment = taCenter
         AutoSize = False
-        Caption = 'Margine sinistro'
+        Caption = 'Left margin'
       end
       object MarginRightLabel: TLabel
         Left = 505
@@ -508,7 +543,7 @@ object SVGSettingsForm: TSVGSettingsForm
         Height = 15
         Alignment = taCenter
         AutoSize = False
-        Caption = 'Margine destro'
+        Caption = 'right margin'
       end
       object MarginBottomLabel: TLabel
         Left = 362
@@ -517,17 +552,17 @@ object SVGSettingsForm: TSVGSettingsForm
         Height = 15
         Alignment = taCenter
         AutoSize = False
-        Caption = 'Margine basso'
+        Caption = 'bottom margin'
       end
       object OrientationRadioGroup: TRadioGroup
         Left = 16
         Top = 16
         Width = 193
         Height = 81
-        Caption = 'Orientamento'
+        Caption = 'Orientation'
         Items.Strings = (
-          'Verticale (portrait)'
-          'Orizzontale (landscape)')
+          'Portrait'
+          'Landscape')
         TabOrder = 0
         OnClick = OrientationRadioGroupClick
       end
@@ -586,7 +621,7 @@ object SVGSettingsForm: TSVGSettingsForm
         Top = 103
         Width = 193
         Height = 266
-        Caption = 'Dimensione pagina'
+        Caption = 'Page size'
         Items.Strings = (
           'A4'
           'A5'

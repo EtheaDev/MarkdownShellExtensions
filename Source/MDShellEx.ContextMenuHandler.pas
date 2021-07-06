@@ -170,8 +170,14 @@ var
 
   procedure EditorNotInstalled;
   begin
-    MessageBox(0, 'Error:',
-      'Markdown file editor not installed', MB_OK);
+    MessageBox(0, 'Markdown file editor not installed!',
+      'Error opening file', MB_OK);
+  end;
+
+  procedure EditorNotFound;
+  begin
+    MessageBox(0, 'Markdown file editor not found!',
+      'Error opening file', MB_OK);
   end;
 
 begin
@@ -196,7 +202,7 @@ begin
     try
       Reg.RootKey := HKEY_CLASSES_ROOT;
       TLogPreview.Add('TMDContextMenuHandler: Open Registry');
-      if Reg.OpenKey('OpenFEViewer\Shell\Open\Command', False) then
+      if Reg.OpenKey('OpenMDEditor\Shell\Open\Command', False) then
       begin
         LCommand := Reg.ReadString('');
         LCommand := StringReplace(LCommand,' "%1"','', []);
@@ -208,7 +214,7 @@ begin
           EditorNotInstalled;
       end
       else
-        EditorNotInstalled;
+        EditorNotFound;
     finally
       Reg.Free;
     end;
@@ -328,12 +334,12 @@ initialization
   {$IFDEF WIN64}
   TMDContextMenuFactory.Create(
     ComServer, TMDContextMenu, MyClass_MDContextMenu_64,
-    'MarkDownContextMenu', 'MarkDownContextMenu Shell Extension',
+    'MDContextMenu', 'MarkDownContextMenu Shell Extension',
     ciMultiInstance, tmApartment);
   {$ELSE}
   TMDContextMenuFactory.Create(
     ComServer, TMDContextMenu, MyClass_MDContextMenu_32,
-    'MarkDownContextMenu32', 'MarkDownContextMenu Shell Extension',
+    'MDContextMenu32', 'MarkDownContextMenu Shell Extension',
     ciMultiInstance, tmApartment);
   {$ENDIF}
 

@@ -78,21 +78,23 @@ type
     ThemeClientPanel: TPanel;
     ResetPanel: TPanel;
     ResetButton: TButton;
-    XMLGroupBox: TGroupBox;
+    MDGroupBox: TGroupBox;
     FontLabel: TLabel;
-    XMLFontComboBox: TComboBox;
+    MDFontComboBox: TComboBox;
     SizeLabel: TLabel;
-    XMLFontSizeEdit: TEdit;
-    XMLUpDown: TUpDown;
+    MDFontSizeEdit: TEdit;
+    MDUpDown: TUpDown;
     HTMLGroupBox: TGroupBox;
     Label1: TLabel;
     Label2: TLabel;
     HTMLFontComboBox: TComboBox;
     HTMLFontSizeEdit: TEdit;
     HTMLUpDown: TUpDown;
-    ShowXMLCheckBox: TCheckBox;
+    ShowMDCheckBox: TCheckBox;
     RenderingGroupBox: TGroupBox;
     SearchInFolderCheckBox: TCheckBox;
+    DownloadFromWebCheckBox: TCheckBox;
+    RescalingImageCheckBox: TCheckBox;
     tsPDFLayout: TTabSheet;
     OrientationImageList: TSVGIconImageList;
     OrientationRadioGroup: TRadioGroup;
@@ -106,7 +108,9 @@ type
     MarginLeftLabel: TLabel;
     MarginRightLabel: TLabel;
     MarginBottomLabel: TLabel;
-    DownloadFromWebCheckBox: TCheckBox;
+    MarkdownGroupBox: TGroupBox;
+    ProcessorDialectComboBox: TComboBox;
+    ProcessorDialectLabel: TLabel;
     procedure BoxElementsClick(Sender: TObject);
     procedure cbForegroundClick(Sender: TObject);
     procedure cbBackgroundClick(Sender: TObject);
@@ -174,6 +178,7 @@ uses
 {$IFNDEF DISABLE_STYLES}
   Vcl.Themes,
 {$ENDIF}
+  MarkdownProcessor,
   uRegistry;
 
 {$R *.dfm}
@@ -506,7 +511,7 @@ end;
 
 procedure TSVGSettingsForm.FormCreate(Sender: TObject);
 begin
-  XMLFontComboBox.Items.Assign(Screen.Fonts);
+  MDFontComboBox.Items.Assign(Screen.Fonts);
   HTMLFontComboBox.Items.Assign(Screen.Fonts);
   tsColors.TabVisible := false;
   stGeneral.TabVisible := false;
@@ -554,15 +559,22 @@ begin
   FFileName := ASettings.SettingsFileName;
   ThemesRadioGroup.ItemIndex := Ord(ASettings.ThemeSelection);
 
-  ShowXMLCheckBox.Checked := ASettings.ShowXML;
-  XMLFontComboBox.ItemIndex := XMLFontComboBox.Items.IndexOf(ASettings.XMLFontName);
-  XMLUpDown.Position := ASettings.XMLFontSize;
+  ShowMDCheckBox.Checked := ASettings.ShowMarkDown;
+  MDFontComboBox.ItemIndex := MDFontComboBox.Items.IndexOf(ASettings.MDFontName);
+  MDUpDown.Position := ASettings.MDFontSize;
 
   HTMLFontComboBox.ItemIndex := HTMLFontComboBox.Items.IndexOf(ASettings.HTMLFontName);
   HTMLUpDown.Position := ASettings.HTMLFontSize;
 
+  ProcessorDialectComboBox.ItemIndex := ord(ASettings.ProcessorDialect);
+
   SearchInFolderCheckBox.Checked := ASettings.SearchInFolder;
-  DownloadFromWebCheckBox.Checked := ASettings.DownloadFromWeb;
+  RescalingImageCheckBox.Checked := ASettings.RescalingImage;
+  DownloadFromWebCheckBox.Visible := ASettings is TEditorSettings;
+  if DownloadFromWebCheckBox.Visible then
+    DownloadFromWebCheckBox.Checked := TEditorSettings(ASettings).DownloadFromWeb
+  else
+    DownloadFromWebCheckBox.Checked := False;
 
   OrientationRadioGroup.ItemIndex := Ord(ASettings.PDFPageSettings.PrintOrientation);
   OrientationRadioGroupClick(OrientationRadioGroup);
@@ -599,16 +611,20 @@ begin
   ASettings.ActivePageIndex := pc.ActivePageIndex;
   ASettings.ThemeSelection := TThemeSelection(ThemesRadioGroup.ItemIndex);
 
-  ASettings.ShowXML := ShowXMLCheckBox.Checked;
-  ASettings.XMLFontName := XMLFontComboBox.Text;
-  ASettings.XMLFontSize := XMLUpDown.Position;
+  ASettings.ShowMarkDown := ShowMDCheckBox.Checked;
+  ASettings.MDFontName := MDFontComboBox.Text;
+  ASettings.MDFontSize := MDUpDown.Position;
 
   ASettings.HTMLFontName := HTMLFontComboBox.Text;
   ASettings.HTMLFontSize := HTMLUpDown.Position;
 
+  ASettings.ProcessorDialect := TMarkdownProcessorDialect(ProcessorDialectComboBox.ItemIndex);
+
   ASettings.StyleName := SelectedStyleName;
   ASettings.SearchInFolder := SearchInFolderCheckBox.Checked;
-  ASettings.DownloadFromWEB := DownloadFromWEBCheckBox.Checked;
+  ASettings.RescalingImage := RescalingImageCheckBox.Checked;
+  if ASettings is TEditorSettings then
+    TEditorSettings(ASettings).DownloadFromWEB := DownloadFromWEBCheckBox.Checked;
 
   ASettings.PDFPageSettings.PrintOrientation := TPrinterOrientation(OrientationRadioGroup.ItemIndex);
   ASettings.PDFPageSettings.PaperSize := PaperSizeRadioGroup.ItemIndex;

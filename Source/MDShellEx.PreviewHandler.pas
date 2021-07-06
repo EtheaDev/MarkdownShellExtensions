@@ -41,7 +41,7 @@ uses
   uPreviewHandler;
 
   type
-    TFEPreviewHandler = class(TBasePreviewHandler)
+    TMDPreviewHandler = class(TBasePreviewHandler)
   public
     constructor Create(AParent: TWinControl); override;
   end;
@@ -61,11 +61,11 @@ Uses
 type
   TWinControlClass = class(TWinControl);
 
-constructor TFEPreviewHandler.Create(AParent: TWinControl);
+constructor TMDPreviewHandler.Create(AParent: TWinControl);
 begin
-  TLogPreview.Add('TFEPreviewHandler.Create');
+  TLogPreview.Add('TMDPreviewHandler.Create');
   inherited Create(AParent);
-  TLogPreview.Add('TFEPreviewHandler Done');
+  TLogPreview.Add('TMDPreviewHandler Done');
 end;
 
 end.

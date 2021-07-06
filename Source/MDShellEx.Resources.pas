@@ -53,22 +53,24 @@ uses
   , HtmlView
   , MDShellEx.Settings
   , Vcl.Dialogs
-  , MarkdownProcessor
+  , MarkdownProcessor, Vcl.VirtualImageList, Vcl.ImageCollection
   ;
 
 resourcestring
-  FILE_SAVED = 'File "%s" salvato correttamente';
+  FILE_SAVED = 'File "%s" succesfully saved. Do you want to open it now?';
 
 type
   TMarkDownFile = record
   private
     FParsed: Boolean;
     FMarkDownContent: string;
+    FProcessorDialect: TMarkdownProcessorDialect;
     FHTML: string;
     procedure SetMarkDownContent(const AValue: string);
     function GetDefaultCSS: string;
   public
     constructor Create(const AMarkDownContent: string;
+      const AProcessorDialect: TMarkdownProcessorDialect;
       const AParseImmediately: Boolean = True);
 
     procedure Clear;
@@ -83,18 +85,21 @@ type
     SynXMLSyn: TSynXMLSyn;
     SynXMLSynDark: TSynXMLSyn;
     SVGIconImageCollection: TSVGIconImageCollection;
+    ImageCollection1: TImageCollection;
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
   private
-    MStream: TMemoryStream;
-    procedure ConvertImage(FileName: string);
-    function getStreamData(FileName: String): TStream;
+    FStream: TMemoryStream;
+    procedure ConvertImage(AFileName: string;
+      const AMaxWidth: Integer; const ABackgroundColor: TColor);
+    function getStreamData(const AFileName : String;
+      const AMaxWidth: Integer; const ABackgroundColor: TColor): TStream;
     function OpenURL(const AUrl: string): Boolean;
   public
     Settings: TSettings;
-    procedure HtmlViewerImageRequest(Sender: TObject; const SRC: UnicodeString;
-      var Stream: TStream);
-    procedure HtmlViewerHotSpotClick(Sender: TObject; const SRC: ThtString;
+    procedure HtmlViewerImageRequest(Sender: TObject; const ASource: UnicodeString;
+      var AStream: TStream);
+    procedure HtmlViewerHotSpotClick(Sender: TObject; const ASource: ThtString;
       var Handled: Boolean);
     function GetSynHighlighter(const ADarkStyle: boolean;
       const ABackgroundColor: TColor) : TSynCustomHighlighter;
@@ -109,6 +114,9 @@ implementation
 
 uses
   System.StrUtils
+  , Vcl.Themes
+  , Winapi.GDIPOBJ
+  , Winapi.GDIPAPI
   , System.IOUtils
   , System.NetEncoding
   , System.UITypes
@@ -122,16 +130,19 @@ uses
   , pngimage
   , JPeg
   , GIFImg
+  , SVGInterfaces
+  , SVGIconUtils
   ;
 
 procedure TdmResources.DataModuleCreate(Sender: TObject);
 begin
-  MStream := TMemoryStream.Create;
+  FStream := TMemoryStream.Create;
+  ImageCollection1.InterpolationMode := icIMModeHighQualityCubic;
 end;
 
 procedure TdmResources.DataModuleDestroy(Sender: TObject);
 begin
-  FreeAndNil(MStream);
+  FreeAndNil(FStream);
   inherited;
 end;
 
@@ -176,41 +187,52 @@ begin
 end;
 
 procedure TdmResources.HtmlViewerHotSpotClick(Sender: TObject;
-  const SRC: ThtString; var Handled: Boolean);
+  const ASource: ThtString; var Handled: Boolean);
 begin
-  Handled := OpenUrl(SRC);
+  Handled := OpenUrl(ASource);
 end;
 
 procedure TdmResources.HtmlViewerImageRequest(Sender: TObject;
-  const SRC: UnicodeString; var Stream: TStream);
+  const ASource: UnicodeString; var AStream: TStream);
 var
-  fullName  : String;
-  HtmlViewer: THtmlViewer;
+  LFullName: String;
+  LHtmlViewer: THtmlViewer;
+  LDownLoadFromWeb: boolean;
+  LMaxWidth: Integer;
 Begin
-  HtmlViewer := sender as THtmlViewer;
+  LHtmlViewer := sender as THtmlViewer;
 
   // HTMLViewer needs to be nil'ed
-  Stream := nil;
+  AStream := nil;
 
   // is "fullName" a local file, if not aquire file from internet
-  If FileExists(SRC) then
-    fullName := SRC
-  else If FileExists(HtmlViewer.ServerRoot+SRC) then
-    fullName := HtmlViewer.ServerRoot+SRC
+  If FileExists(ASource) then
+    LFullName := ASource
+  else If FileExists(LHtmlViewer.ServerRoot+ASource) then
+    LFullName := LHtmlViewer.ServerRoot+ASource
   else
-    fullName := SRC;
+    LFullName := ASource;
 
-  fullName := HtmlViewer.HTMLExpandFilename(fullName);
+  LFullName := LHtmlViewer.HTMLExpandFilename(LFullName);
 
-  if FileExists(fullName) then  // if local file, load it..
+  LMaxWidth := LHtmlViewer.ClientWidth - LHtmlViewer.VScrollBar.Width - (LHtmlViewer.MarginWidth * 2);
+  if FileExists(LFullName) then  // if local file, load it..
   Begin
-    MStream.LoadFromFile(fullName);
-    ConvertImage(fullName);
-    Stream := MStream;
-  end else if Settings.DownloadFromWEB then  // if not local file, download it..
+    FStream.LoadFromFile(LFullName);
+    //Convert image to stretch size of HTMLViewer
+    ConvertImage(LFullName, LMaxWidth, LHtmlViewer.DefBackground);
+    AStream := FStream;
+  end 
+  else if SameText('http', Copy(ASource,1,4)) then
   Begin
-    getStreamData(fullName);
-    Stream:=MStream;
+    LDownLoadFromWeb := (Settings is TEditorSettings) and
+      TEditorSettings(Settings).DownloadFromWEB;
+    if LDownLoadFromWeb then
+    begin
+      //Load from remote
+      getStreamData(LFullName, LMaxWidth, LHtmlViewer.DefBackground);
+      AStream := FStream;
+    end;
   End;
 End;
 
@@ -220,18 +242,21 @@ begin
   Result := True;
 end;
 
-function TdmResources.getStreamData(FileName : String): TStream;
+function TdmResources.getStreamData(const AFileName : String;
+  const AMaxWidth: Integer; const ABackgroundColor: TColor): TStream;
 var
   sl        : TStringList;
   bFail     : Boolean;
   bTryAgain : Boolean;
   LIdHTTP   : TIdHTTP;
   LIdSSLIOHandler: TIdSSLIOHandlerSocketOpenSSL;
+  LFileName: string;
 Begin
   Result := nil;
-  MStream.Clear;
+  FStream.Clear;
   LIdHTTP := nil;
   sl := nil;
+  LFileName := AFileName;
   LIdSSLIOHandler := nil;
   try
     LIdHTTP := TIdHTTP.Create;
@@ -246,24 +271,24 @@ Begin
       'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:12.0) Gecko/20100101 Firefox/12.0';
 
     try
-      LIdHTTP.Get(FileName, MStream);
+      LIdHTTP.Get(LFileName, FStream);
     except
       On E: EIdHTTPProtocolException do
-        MStream.Clear
+        FStream.Clear
       else
         raise;
     end;
     // Need To check For Failed Retrieval...
-    MStream.Position:= 0;
-    sl.LoadFromStream(MStream);
+    FStream.Position:= 0;
+    sl.LoadFromStream(FStream);
     bTryAgain := False;
     bFail     := False;
     if Length(sl.Text) = 0 then
       bFail:= True;
-    if MStream.Size = 0 then
+    if FStream.Size = 0 then
       bFail:= True;
 
-    if MStream.Size < 1024 then
+    if FStream.Size < 1024 then
     Begin
       if Pos('Not Found', sl.Text) > 0 then bFail:= True;
       if (Pos(LowerCase('<title>301 Moved Permanently</title>'), LowerCase(sl.Text)) > 0) or
@@ -271,8 +296,8 @@ Begin
       Begin
         if Pos(LowerCase('<a href="'), LowerCase(sl.Text)) > 0 then
         Begin
-          FileName := Copy(sl.Text, Pos('<a href="', sl.Text) + 9, Length(sl.Text));
-          FileName := Copy(FileName, 1, Pos('"', FileName) -1);
+          LFileName := Copy(sl.Text, Pos('<a href="', sl.Text) + 9, Length(sl.Text));
+          LFileName := Copy(LFileName, 1, Pos('"', LFileName) -1);
           bTryAgain:= True;
         End;
       end;
@@ -280,12 +305,12 @@ Begin
 
     if bTryAgain then
       // Call Function Again...
-      Result := getStreamData(FileName);
+      Result := getStreamData(LFileName, AMaxWidth, ABackgroundColor);
 
     if not bTryAgain And not bFail then
     begin
-      ConvertImage(FileName);
-      Result := MStream;
+      ConvertImage(LFileName, AMaxWidth, ABackgroundColor);
+      Result := FStream;
     end;
   finally
     LIdSSLIOHandler.Free;
@@ -294,81 +319,118 @@ Begin
   end;
 end;
 
-procedure TdmResources.ConvertImage(FileName:string);
+procedure TdmResources.ConvertImage(AFileName: string;
+  const AMaxWidth: Integer; const ABackgroundColor: TColor);
 var
-  SVG: TSVGGraphic;
-  png: TPngImage;
-  JPeg: TJPEGImage;
+  LPngImage: TPngImage;
   LBitmap: TBitmap;
+  LImage, LScaledImage: TWICImage;
   LFileExt: string;
+  LScaleFactor: double;
+  LSVG: ISVG;
+
+  function CalcScaleFactor(const AWidth: integer): double;
+  begin
+    if AWidth > AMaxWidth then
+      Result := AMaxWidth / AWidth
+    else
+      Result := 1;
+  end;
+
+  procedure MakeTransparent(DC: THandle);
+  var
+    Graphics: TGPGraphics;
+  begin
+    Graphics := TGPGraphics.Create(DC);
+    try
+      Graphics.Clear(aclTransparent);
+    finally
+      Graphics.Free;
+    end;
+  end;
+
 begin
-  LBitmap := nil;
-  LFileExt := ExtractFileExt(FileName);
-  if SameText(LFileExt,'.svg') then
-  begin
-    svg := TSVGGraphic.Create;
-    try
-      MStream.Position:=0;
-      svg.LoadFromStream(MStream);
+  LFileExt := ExtractFileExt(AFileName);
+  try
+    FStream.Position := 0;
+    if SameText(LFileExt,'.svg') then
+    begin
+      LSVG := GlobalSVGFactory.NewSvg;
+      LSVG.LoadFromStream(FStream);
+      LScaleFactor := CalcScaleFactor(Round(Lsvg.Width));
+      if (Settings.RescalingImage) and (LScaleFactor <> 1) then
+      begin
+        LBitmap := TBitmap.Create(
+          Round(LSVG.Width * LScaleFactor),
+          Round(LSVG.Height* LScaleFactor));
+      end
+      else
+      begin
+        LBitmap := TBitmap.Create(Round(LSVG.Width), Round(LSVG.Height));
+      end;
       try
-        LBitmap := TBitmap.Create(svg.Width,svg.Height);
         LBitmap.PixelFormat := pf32bit;
-        {$IFDEF IgnoreAntiAliasedColor}
         MakeTransparent(LBitmap.Canvas.Handle);
-        {$ENDIF}
-        svg.draw(LBitmap.Canvas, TRect.Create(0, 0, svg.Width,svg.Height));
-        MStream.Clear;
-        LBitmap.SaveToStream(MStream);
+        LSVG.PaintTo(LBitmap.Canvas.Handle,
+          TRect.Create(0, 0, LBitmap.Width, LBitmap.Height), True);
+        FStream.Clear;
+        //LBitmap.SaveToStream(FStream);
+        LPngImage := PNG4TransparentBitMap(LBitmap);
+        try
+          LPngImage.SaveToStream(FStream);
+        finally
+          LPngImage.Free;
+        end;
       finally
         LBitmap.free;
       end;
-    finally
-      svg.free;
-    end;
-  end
-  else if SameText(LFileExt,'.png') then
-  begin
-    png := TPngImage.Create;
-    try
-      MStream.Position:=0;
-      png.LoadFromStream(MStream);
+    end
+    else
+    begin
+      LImage := nil;
+      LScaledImage := nil;
       try
-        LBitmap := TBitmap.Create(png.Width,png.Height);
-        LBitmap.PixelFormat := pf32bit;
-        {$IFDEF IgnoreAntiAliasedColor}
-        MakeTransparent(LBitmap.Canvas.Handle);
-        {$ENDIF}
-        png.draw(LBitmap.Canvas, TRect.Create(0, 0, png.Width,png.Height));
-        MStream.Clear;
-        LBitmap.SaveToStream(MStream);
+        begin
+          LImage := TWICImage.Create;
+          LImage.LoadFromStream(FStream);
+          LScaleFactor := CalcScaleFactor(LImage.Width);
+          if (Settings.RescalingImage) and (LScaleFactor <> 1) then
+          begin
+            //Rescaling bitmap and save to stream
+            LScaledImage :=  LImage.CreateScaledCopy(
+              Round(LImage.Width*LScaleFactor),
+              Round(LImage.Height*LScaleFactor),
+              wipmHighQualityCubic);
+            LBitmap := TBitmap.Create(LScaledImage.Width,LScaledImage.Height);
+            try
+              MakeTransparent(LBitmap.Canvas.Handle);
+              LBitmap.Canvas.Draw(0,0,LScaledImage);
+              FStream.Clear;
+              if LBitmap.TransparentMode = tmAuto then
+                LBitmap.SaveToStream(FStream)
+              else
+              begin
+                LPngImage := PNG4TransparentBitMap(LBitmap);
+                try
+                  LPngImage.SaveToStream(FStream);
+                finally
+                  LPngImage.Free;
+                end;
+              end;
+            finally
+              LBitmap.Free;
+            end;
+          end
+          else
+            FStream.Position := 0;
+        end;
       finally
-        LBitmap.free;
+        LImage.Free;
+        LScaledImage.Free;
       end;
-    finally
-      png.Free;
     end;
-  end
-  else if SameText(LFileExt,'.jpg') or SameText(LFileExt,'.jpeg') then
-  begin
-    JPeg := TJPEGImage.Create;
-    try
-      MStream.Position:=0;
-      JPeg.LoadFromStream(MStream);
-      try
-        LBitmap := TBitmap.Create(JPeg.Width,JPeg.Height);
-        LBitmap.PixelFormat := pf32bit;
-        {$IFDEF IgnoreAntiAliasedColor}
-        MakeTransparent(LBitmap.Canvas.Handle);
-        {$ENDIF}
-        LBitmap.Canvas.Draw(0,0, JPeg);
-        MStream.Clear;
-        LBitmap.SaveToStream(MStream);
-      finally
-        LBitmap.free;
-      end;
-    finally
-      JPeg.Free;
-    end;
+  except
+    //don't raise any error
   end;
 end;
 
@@ -382,10 +444,11 @@ begin
 end;
 
 constructor TMarkDownFile.Create(const AMarkDownContent: string;
+  const AProcessorDialect: TMarkdownProcessorDialect;
   const AParseImmediately: Boolean = True);
 begin
   Clear;
-
+  FProcessorDialect := AProcessorDialect;
   MarkDownContent := AMarkDownContent;
   if AParseImmediately then
     Parse;
@@ -438,7 +501,7 @@ procedure TMarkDownFile.Parse;
 var
   LMDProcessor: TMarkdownProcessor;
 begin
-  LMDProcessor := TMarkdownProcessor.CreateDialect(mdCommonMark);
+  LMDProcessor := TMarkdownProcessor.CreateDialect(FProcessorDialect);
   try
     LMDProcessor.UnSafe := False;
     //Convert MD To HTML

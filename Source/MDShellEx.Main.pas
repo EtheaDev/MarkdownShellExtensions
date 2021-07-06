@@ -45,19 +45,19 @@ uses
 
 initialization
   {$IFDEF WIN64}
-  TFEPreviewHandler.RegisterPreview(MyMD_PreviewHandlerGUID_64,
-    'SVG.PreviewHandler', 'Delphi MarkDown Preview Handler 64bit');
+  TMDPreviewHandler.RegisterPreview(MyMD_PreviewHandlerGUID_64,
+    'MD.PreviewHandler', 'Delphi MarkDown Preview Handler 64bit');
   {$ELSE}
-  TFEPreviewHandler.RegisterPreview(MyMD_PreviewHandlerGUID_32,
-    'SVG.PreviewHandler', 'Delphi MarkDown Preview Handler 32bit');
+  TMDPreviewHandler.RegisterPreview(MyMD_PreviewHandlerGUID_32,
+    'MD.PreviewHandler', 'Delphi MarkDown Preview Handler 32bit');
   {$ENDIF}
 
   {$IFDEF WIN64}
-  TFEThumbnailProvider.RegisterThumbnailProvider(MyMD_ThumbnailProviderGUID,
-    'SVG.ThumbnailProvider', 'Delphi MarkDown Thumbnail Provider 64bit');
+  TMDThumbnailProvider.RegisterThumbnailProvider(MyMD_ThumbnailProviderGUID,
+    'MD.ThumbnailProvider', 'Delphi MarkDown Thumbnail Provider 64bit');
   {$ELSE}
-  TFEThumbnailProvider.RegisterThumbnailProvider(MyMD_ThumbnailProviderGUID,
-    'SVG.ThumbnailProvider', 'Delphi MarkDown Thumbnail Provider 32bit');
+  TMDThumbnailProvider.RegisterThumbnailProvider(MyMD_ThumbnailProviderGUID,
+    'MD.ThumbnailProvider', 'Delphi MarkDown Thumbnail Provider 32bit');
   {$ENDIF}
 
 end.

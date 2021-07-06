@@ -949,13 +949,13 @@ object frmMain: TfrmMain
       end
       item
         CollectionIndex = 49
-        CollectionName = 'markdown'
+        CollectionName = 'xml'
         Disabled = False
         Name = 'markdown'
       end
       item
         CollectionIndex = 50
-        CollectionName = 'markdown-grey'
+        CollectionName = 'xsl'
         Disabled = False
         Name = 'markdown-gray'
       end
@@ -966,58 +966,82 @@ object frmMain: TfrmMain
         Name = 'Support'
       end
       item
-        CollectionIndex = 51
+        CollectionIndex = 49
         CollectionName = 'xml'
         Disabled = False
         Name = 'xml'
       end
       item
-        CollectionIndex = 52
+        CollectionIndex = 50
         CollectionName = 'xsl'
         Disabled = False
         Name = 'xsl'
       end
       item
-        CollectionIndex = 53
+        CollectionIndex = 51
         CollectionName = 'xml-gray'
         Disabled = False
         Name = 'xml-gray'
       end
       item
-        CollectionIndex = 54
+        CollectionIndex = 52
         CollectionName = 'xsl-gray'
         Disabled = False
         Name = 'xsl-gray'
       end
       item
-        CollectionIndex = 55
+        CollectionIndex = 53
         CollectionName = 'file'
         Disabled = False
         Name = 'file'
       end
       item
-        CollectionIndex = 56
+        CollectionIndex = 54
         CollectionName = 'file-gray'
         Disabled = False
         Name = 'file-gray'
       end
       item
-        CollectionIndex = 57
+        CollectionIndex = 55
         CollectionName = 'save_html'
         Disabled = False
         Name = 'save_html'
       end
       item
-        CollectionIndex = 58
+        CollectionIndex = 56
         CollectionName = 'save_pdf'
         Disabled = False
         Name = 'save_pdf'
       end
       item
-        CollectionIndex = 59
+        CollectionIndex = 57
         CollectionName = 'save_xml'
         Disabled = False
         Name = 'save_xml'
+      end
+      item
+        CollectionIndex = 58
+        CollectionName = 'markdown-black'
+        Disabled = False
+        Name = 'markdown-black'
+      end
+      item
+        CollectionIndex = 59
+        CollectionName = 'markdown-white'
+        Disabled = False
+        Name = 'markdown-white'
+      end
+      item
+        CollectionIndex = 60
+        CollectionName = 'markdown-black-gray'
+        Disabled = False
+        Name = 'markdown-black-gray'
+      end
+      item
+        CollectionIndex = 61
+        CollectionName = 'markdown-white-gray'
+        Disabled = False
+        Name = 'markdown-white-gray'
       end>
     ImageCollection = dmResources.SVGIconImageCollection
     Width = 24

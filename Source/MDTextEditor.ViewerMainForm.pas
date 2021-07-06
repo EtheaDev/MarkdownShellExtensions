@@ -38,7 +38,6 @@ uses
   Vcl.CategoryButtons, Vcl.WinXCtrls, System.ImageList, Vcl.VirtualImageList,
   MDShellEx.Settings
   , System.Generics.Collections
-  , MDShellEx.ThumbnailResources
   , Vcl.PlatformVclStylesActnCtrls
   , Vcl.Styles.Fixes
   , Vcl.Styles.FormStyleHooks
@@ -77,7 +76,6 @@ resourcestring
   STATE_OVERWRITE = 'Overwrite';
   CLOSING_PROBLEMS = 'Problem closing!';
   CONFIRM_ABANDON = 'File "%s" not saved! Confirm abandon changes?';
-  SVG_PARSING_OK = 'SVG parsing is correct';
 
 type
   TEditingFile = class
@@ -88,6 +86,7 @@ type
     FShowXMLText: Boolean;
     FMarkDownFile: TMarkDownFile;
     FHTMLViewer: THTMLViewer;
+    FSettings: TSettings;
     procedure ReadFromFile;
     procedure SaveToFile;
     function GetFileName: string;
@@ -98,12 +97,13 @@ type
     procedure UpdateRootPath;
   public
     SynEditor: TSynEdit;
-    ToolbarAllegati: TToolBar;
     TabSheet: TTabSheet;
     Splitter: TSplitter;
-    Constructor Create(const EditFileName : string);
+    Constructor Create(const EditFileName : string;
+      const ASettings: TSettings);
     Destructor Destroy; override;
-    procedure ShowMarkDownAsHTML(const ASettings: TEditorSettings);
+    procedure ShowMarkDownAsHTML(const ASettings: TEditorSettings;
+      const AReloadImages: Boolean);
     property HTMLViewer: THTMLViewer read FHTMLViewer write SetHTMLViewer;
     property FileName: string read GetFileName write SetFileName; //with full path
     property Name: string read GetName; //only name of file
@@ -264,7 +264,6 @@ type
     procedure acSavePDFFileExecute(Sender: TObject);
   private
     MinFormWidth, MinFormHeight, MaxFormWidth, MaxFormHeight: Integer;
-    FThumbnailResource: TdmThumbnailResources;
     FProcessingFiles: Boolean;
     FEditorSettings: TEditorSettings;
     currentDir: string;
@@ -281,7 +280,7 @@ type
     gsReplaceText: string;
     gsReplaceTextHistory: string;
     FEditorOptions: TSynEditorOptionsContainer;
-    FXMLFontSize: Integer;
+    FMDFontSize: Integer;
     FHTMLFontSize: Integer;
     FMDFile: TEditingFile;
     FDropTarget: TDropTarget;
@@ -307,18 +306,19 @@ type
     function CurrentEditorState : string;
     procedure UpdateStatusBarPanels;
     procedure AddOpenedFile(const AFileName: string);
-    procedure UpdateMDViewer;
+    procedure UpdateMDViewer(const AReloadImages: Boolean);
     procedure SynEditChange(Sender: TObject);
     procedure SynEditEnter(Sender: TObject);
     procedure UpdateHighlighter(ASynEditor: TSynEdit);
-    procedure SetXMLFontSize(const Value: Integer);
+    procedure SetMDFontSize(const Value: Integer);
     procedure LoadOpenedFiles;
     procedure SetHTMLFontSize(const Value: Integer);
     procedure HTMLToPDF(const APDFFileName: TFileName);
     procedure FileSavedAskToOpen(const AFileName: string);
     function CanAcceptFileName(const AFileName: string): Boolean;
     function AcceptedExtensions: string;
-    property XMLFontSize: Integer read FXMLFontSize write SetXMLFontSize;
+    procedure SplitterMoved(Sender: TObject);
+    property MDFontSize: Integer read FMDFontSize write SetMDFontSize;
     property HTMLFontSize: Integer read FHTMLFontSize write SetHTMLFontSize;
   protected
     procedure CreateWindowHandle(const Params: TCreateParams); override;
@@ -376,30 +376,30 @@ end;
 
 { TEditingFile }
 
-procedure TEditingFile.ShowMarkDownAsHTML(const ASettings: TEditorSettings);
+procedure TEditingFile.ShowMarkDownAsHTML(const ASettings: TEditorSettings;
+  const AReloadImages: Boolean);
 var
   LStream: TStringStream;
+  LOldPos: Integer;
 begin
-  try
-    FMarkDownFile := TMarkDownFile.Create(SynEditor.Lines.Text, True);
+    if AReloadImages then
+      HtmlViewer.clear;
+    FMarkDownFile := TMarkDownFile.Create(SynEditor.Lines.Text,
+      ASettings.ProcessorDialect, True);
 
     //Carica il contenuto HTML trasformato dentro l'HTML-Viewer
+    LOldPos := HtmlViewer.VScrollBarPosition;
     HtmlViewer.DefFontSize := ASettings.HTMLFontSize;
     HtmlViewer.DefFontName := ASettings.HTMLFontName;
     LStream := TStringStream.Create(FMarkDownFile.HTML);
     try
       HtmlViewer.LoadFromStream(LStream);
+      HtmlViewer.VScrollBarPosition := LOldPos;
       HtmlViewer.Visible := True;
     finally
       LStream.Free;
     end;
 
-  except
-    on E: Exception do
-    begin
-      Raise
-    end;
-  end;
 end;
 
 procedure TEditingFile.ReadFromFile;
@@ -414,11 +414,13 @@ begin
   end;
 end;
 
-constructor TEditingFile.Create(const EditFileName: string);
+constructor TEditingFile.Create(const EditFileName: string;
+  const ASettings: TSettings);
 var
   Filter : Word;
 begin
   inherited Create;
+  FSettings := ASettings;
   FShowXMLText := False;
 
   if not IsStyleHookRegistered(TCustomSynEdit, TScrollingStyleHook) then
@@ -438,7 +440,10 @@ end;
 
 function TEditingFile.GetImageName: string;
 begin
-  Result := 'markdown';
+  if FSettings.UseDarkStyle then
+    Result := 'markdown-white'
+  else
+    Result := 'markdown-black';
 end;
 
 function TEditingFile.GetName: string;
@@ -495,7 +500,7 @@ begin
     for i := 0 to OpenDialog.Files.Count -1 do
       OpenFile(OpenDialog.Files[i], False);
   end;
-  UpdateMDViewer;
+  UpdateMDViewer(True);
 end;
 
 function TfrmMain.CanAcceptFileName(const AFileName: string): Boolean;
@@ -541,7 +546,7 @@ begin
       Try
         if not Assigned(EditingFile) then
         begin
-          EditingFile := TEditingFile.Create(FileName);
+          EditingFile := TEditingFile.Create(FileName, FEditorSettings);
           //Aggiungo il file alla lista
           I := AddEditingFile(EditingFile);
         end;
@@ -590,7 +595,6 @@ end;
 
 procedure TfrmMain.FormDestroy(Sender: TObject);
 begin
-  FreeAndNil(FThumbnailResource);
   FreeAndNil(EditFileList);
   FreeAndNil(SynEditPrint);
   FreeAndNil(FEditorSettings);
@@ -683,6 +687,14 @@ begin
   end;
 end;
 
+procedure TfrmMain.SplitterMoved(Sender: TObject);
+var
+  LEditingFile: TEditingFile;
+begin
+  LEditingFile := TEditingFile(TSplitter(Sender).Tag);
+  LEditingFile.ShowMarkDownAsHTML(FEditorSettings, True);
+end;
+
 procedure TfrmMain.SVClosed(Sender: TObject);
 begin
   // When TSplitView is closed, adjust ButtonOptions and Width
@@ -762,7 +774,7 @@ begin
     if CanAcceptFileName(FileNames[i]) then
       OpenFile(FileNames[i], False);
   end;
-  UpdateMDViewer;
+  UpdateMDViewer(True);
 end;
 
 function TfrmMain.DropAllowed(const FileNames: array of string): Boolean;
@@ -837,7 +849,7 @@ begin
   end;
   if LIndex <> -1 then
     PageControl.ActivePageIndex := LIndex;
-  UpdateMDViewer;
+  UpdateMDViewer(True);
 end;
 
 procedure TfrmMain.FormCreate(Sender: TObject);
@@ -845,7 +857,6 @@ var
   InitialDir : string;
   FileVersionStr: string;
 begin
-  FThumbnailResource := TdmThumbnailResources.Create(nil);
   //creo la lista dei files aperti
   EditFileList := TObjectList.Create(True);
   FEditorOptions := TSynEditorOptionsContainer.create(self);
@@ -887,7 +898,7 @@ begin
     //Carico l'eventuale file esterno
     InitialDir := ParamStr(1);
     OpenFile(ParamStr(1));
-    UpdateMDViewer;
+    UpdateMDViewer(True);
   end
   else
     InitialDir := '.';
@@ -907,7 +918,8 @@ begin
   NewExt := 'md';
 
   //Aggiungo un file vuoto
-  EditingFile := TEditingFile.Create(CurrentDir+'New.'+NewExt);
+  EditingFile := TEditingFile.Create(CurrentDir+'New.'+NewExt,
+    FEditorSettings);
   Try
     AddEditingFile(EditingFile);
     if EditingFile.SynEditor.CanFocus then
@@ -976,7 +988,7 @@ procedure TfrmMain.SynEditChange(Sender: TObject);
 begin
   if Sender = CurrentEditor then
   begin
-    UpdateMDViewer;
+    UpdateMDViewer(False);
   end;
 end;
 
@@ -990,7 +1002,6 @@ var
   LTabSheet: TTabSheet;
   LEditor: TSynEdit;
   LFEViewer: THtmlViewer;
-  LToolBarAllegati: TToolbar;
   LSplitter: TSplitter;
 begin
   //lo aggiungo alla lista dei file aperti
@@ -1032,15 +1043,8 @@ begin
     LFEViewer.PopupMenu := PopHTMLViewer;
     LFEViewer.DefBackground := StyleServices.GetSystemColor(clWindow);
     LFEViewer.OnHotSpotClick := dmResources.HtmlViewerHotSpotClick;
-    LFEViewer.OnImageRequest:= dmResources.HtmlViewerImageRequest;
-
-    LToolBarAllegati := TToolbar.Create(LTabSheet);
-    LToolBarAllegati.Align := alTop;
-    LToolBarAllegati.List := True;
-    LToolBarAllegati.ShowCaptions := True;
-    LToolBarAllegati.Height := 30;
-    LToolBarAllegati.Parent := LTabSheet;
-    LToolBarAllegati.Images := VirtualImageList;
+    LFEViewer.OnImageRequest := dmResources.HtmlViewerImageRequest;
+    LFEViewer.ScrollBars := TScrollStyle.ssVertical;
 
     LSplitter := TSplitter.Create(LTabSheet);
     LSplitter.Align := alRight;
@@ -1049,9 +1053,10 @@ begin
     LSplitter.Width := 6;
     LSplitter.Parent := LTabSheet;
     LSplitter.Beveled := True;
+    LSplitter.OnMoved := SplitterMoved;
+    LSplitter.Tag := Integer(EditingFile);
 
     EditingFile.Splitter := LSplitter;
-    EditingFile.ToolbarAllegati := LToolBarAllegati;
     EditingFile.HTMLViewer := LFEViewer;
 
     UpdateFromSettings(LEditor);
@@ -1074,16 +1079,21 @@ begin
   PageControl.OnChange(PageControl);
 end;
 
-procedure TfrmMain.UpdateMDViewer;
+procedure TfrmMain.UpdateMDViewer(const AReloadImages: Boolean);
 begin
   if FProcessingFiles then
     Exit;
   if (CurrentEditor <> nil) then
   begin
+    if CurrentEditor.Modified then
+      pageControl.ActivePage.Imagename := CurrentEditFile.ImageName
+    else
+      pageControl.ActivePage.Imagename := CurrentEditFile.ImageName+'-gray';
+
     StatusBar.Panels[STATUSBAR_MESSAGE].Text := CurrentEditFile.FileName;
 
     //Show HTML content of MarkDown
-    CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings);
+    CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings, AReloadImages);
   end;
 end;
 
@@ -1096,7 +1106,7 @@ begin
     Caption := Application.Title+' - '+CurrentEditFile.FileName;
     FMDFile := CurrentEditFile;
   end;
-  UpdateMDViewer;
+  UpdateMDViewer(False);
 end;
 
 procedure TfrmMain.acSaveUpdate(Sender: TObject);
@@ -1299,20 +1309,20 @@ begin
     PageSetupDlg.GetValues(SynEditPrint);
 end;
 
-procedure TfrmMain.SetXMLFontSize(const Value: Integer);
+procedure TfrmMain.SetMDFontSize(const Value: Integer);
 var
   LScaleFactor: Single;
 begin
   if (CurrentEditor <> nil) and (Value >= MinfontSize) and (Value <= MaxfontSize) then
   begin
-    if FXMLFontSize <> 0 then
-      LScaleFactor := CurrentEditor.Font.Size / FXMLFontSize
+    if FMDFontSize <> 0 then
+      LScaleFactor := CurrentEditor.Font.Size / FMDFontSize
     else
       LScaleFactor := 1;
     CurrentEditor.Font.Size := Round(Value * LScaleFactor);
-    FEditorSettings.XMLFontSize := Value;
+    FEditorSettings.MDFontSize := Value;
   end;
-  FXMLFontSize := Value;
+  FMDFontSize := Value;
 end;
 
 procedure TfrmMain.FileSavedAskToOpen(const AFileName: string);
@@ -1366,7 +1376,7 @@ begin
   if (CurrentEditor <> nil) and (Value >= MinfontSize) and (Value <= MaxfontSize) then
   begin
     if FHTMLFontSize <> 0 then
-      LScaleFactor := CurrentEditFile.HTMLViewer.DefFontSize / FXMLFontSize
+      LScaleFactor := CurrentEditFile.HTMLViewer.DefFontSize / FMDFontSize
     else
       LScaleFactor := 1;
     CurrentEditFile.HTMLViewer.DefFontSize := Round(Value * LScaleFactor);
@@ -1404,8 +1414,8 @@ var
   i : integer;
   EditingFile : TEditingFile;
 begin
-  FEditorSettings.XMLFontName := FEditorOptions.Font.Name;
-  XMLFontSize := FEditorOptions.Font.Size;
+  FEditorSettings.MDFontName := FEditorOptions.Font.Name;
+  MDFontSize := FEditorOptions.Font.Size;
 
   for i := 0 to EditFileList.Count -1 do
   begin
@@ -1429,10 +1439,10 @@ begin
   end
   else
     FEditorSettings.ReadSettings(nil, self.FEditorOptions);
-  if FEditorSettings.XMLFontSize >= MinfontSize then
-    XMLFontSize := FEditorSettings.XMLFontSize
+  if FEditorSettings.MDFontSize >= MinfontSize then
+    MDFontSize := FEditorSettings.MDFontSize
   else
-    XMLFontSize := MinfontSize;
+    MDFontSize := MinfontSize;
   if FEditorSettings.HTMLFontSize >= MinfontSize then
     HTMLFontSize := FEditorSettings.HTMLFontSize
   else
@@ -1476,12 +1486,12 @@ end;
 procedure TfrmMain.actnFontExecute(Sender: TObject);
 begin
   if Sender = actnEnlargeFont then
-    XMLFontSize := FEditorOptions.Font.Size+1
+    MDFontSize := FEditorOptions.Font.Size+1
   else if Sender = actnReduceFont then
-    XMLFontSize := FEditorOptions.Font.Size-1
+    MDFontSize := FEditorOptions.Font.Size-1
   else
     Exit;
-  FEditorOptions.Font.Size := XMLFontSize;
+  FEditorOptions.Font.Size := MDFontSize;
   UpdateEditorsOptions;
 end;
 
@@ -1489,8 +1499,8 @@ procedure TfrmMain.InitEditorOptions;
 begin
   with FEditorOptions do
   begin
-    Font.Name := FEditorSettings.XMLFontName;
-    Font.Size := XMLFontSize;
+    Font.Name := FEditorSettings.MDFontName;
+    Font.Size := MDFontSize;
     TabWidth := 2;
     WantTabs := False;
     Options := Options - [eoSmartTabs];
@@ -1501,8 +1511,8 @@ end;
 
 procedure TfrmMain.actnSaveAsExecute(Sender: TObject);
 begin
-  SaveDialog.FileName := ChangeFileExt(CurrentEditFile.FileName, '.xml');
-  SaveDialog.Filter := 'File Fattura Elettronica (*.xml;*.p7m)|*.xml;*.p7m|Fogli di Stile (*.xsl)|*.xsl';
+  SaveDialog.FileName := ChangeFileExt(CurrentEditFile.FileName, '.md');
+  SaveDialog.Filter := 'Maerkdown text file (*.md)';
 
   SaveDialog.FileName := CurrentEditFile.FileName;
   if SaveDialog.Execute then
@@ -1527,7 +1537,7 @@ begin
   else
     LValue := -1;
   FEditorSettings.HTMLFontSize := FEditorSettings.HTMLFontSize + LValue;
-  CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings);
+  CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings, False);
 end;
 
 procedure TfrmMain.RecentPopupMenuPopup(Sender: TObject);
@@ -1644,7 +1654,7 @@ begin
     else
       FEditorSettings.WriteSettings(nil, FEditorOptions);
     UpdateFromSettings(CurrentEditor);
-    UpdateMDViewer;
+    UpdateMDViewer(True);
     UpdateHighlighters;
   end;
 end;
@@ -1762,7 +1772,7 @@ begin
   LFilename := (Sender as TMenuItem).Hint;
   //Carico il file selezionato
   OpenFile(LFileName);
-  UpdateMDViewer;
+  UpdateMDViewer(True);
   if (CurrentEditor <> nil) and (CurrentEditor.CanFocus) then
     (CurrentEditor.SetFocus);
   CloseSplitViewMenu;

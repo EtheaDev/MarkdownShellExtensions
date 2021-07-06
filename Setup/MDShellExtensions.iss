@@ -68,10 +68,10 @@ Name: Editor; Description: MarkDown Text Editor; Flags: fixed; Types: custom ful
 Name: ShellExtensions; Description: MarkDown Shell Extensions (Preview and Thumbnails); Types: custom compact full
 
 [Registry]
-Root: "HKCR"; Subkey: ".md"; ValueType: string; ValueData: "Open"; Flags: uninsdeletekey
-Root: "HKCR"; Subkey: "OpenMDEditor"; ValueType: string; ValueData: "MarkDown Text file"; Flags: uninsdeletekey
-Root: "HKCR"; Subkey: "OpenMDEditor\Shell\Open\Command"; ValueType: string; ValueData: """{app}\MDTextEditor.exe"" ""%1"""; Flags: uninsdeletevalue
-Root: "HKCR"; Subkey: "OpenMDEditor\DefaultIcon"; ValueType: string; ValueData: "{app}\MDTextEditor.exe,0"; Flags: uninsdeletevalue
+Root: "HKCR"; Subkey: ".md"; ValueType: string; ValueData: "Open"; Flags: uninsdeletekey; Components: Editor
+Root: "HKCR"; Subkey: "OpenMDEditor"; ValueType: string; ValueData: "MarkDown Text file"; Flags: uninsdeletekey; Components: Editor
+Root: "HKCR"; Subkey: "OpenMDEditor\Shell\Open\Command"; ValueType: string; ValueData: """{app}\MDTextEditor.exe"" ""%1"""; Flags: uninsdeletekey; Components: Editor
+Root: "HKCR"; Subkey: "OpenMDEditor\DefaultIcon"; ValueType: string; ValueData: "{app}\MDTextEditor.exe,0"; Flags: uninsdeletekey; Components: Editor
 
 [Code]
 function InitializeSetup(): Boolean;

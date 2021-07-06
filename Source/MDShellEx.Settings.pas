@@ -39,7 +39,7 @@ uses
   , System.Generics.Collections
   , SynEditOptionsDialog
   , System.UITypes
-//  , SynPDF
+  , MarkdownProcessor
   , IniFiles;
 
 const
@@ -76,23 +76,25 @@ type
   TSettings = class
   private
     FSplitterPos: Integer;
-    FXMLFontSize: Integer;
+    FMDFontSize: Integer;
     FStyleName: string;
     FUseDarkStyle: boolean;
-    FXMLFontName: string;
-    FShowXML: Boolean;
+    FMDFontName: string;
+    FShowMarkDown: Boolean;
     FSearchInFolder: Boolean;
-    FDownloadFromWEB: Boolean;
     FActivePageIndex: Integer;
     FThemeSelection: TThemeSelection;
     FHTMLFontSize: Integer;
     FHTMLFontName: string;
+    FRescalingImage: Boolean;
+    FProcessorDialect: TMarkdownProcessorDialect;
     function GetUseDarkStyle: Boolean;
     procedure SetSearchInFolder(const Value: Boolean);
-    procedure SetDownloadFromWEB(const Value: Boolean);
     function GetThemeSectionName: string;
     function GetButtonTextColor: TColor;
     class function GetSettingsFileName: string; static;
+    procedure SetRescalingImage(const Value: Boolean);
+    procedure SetProcessorDialect(const Value: TMarkdownProcessorDialect);
   protected
     FIniFile: TIniFile;
   public
@@ -107,8 +109,8 @@ type
     class var FSettingsPath: string;
     class property SettingsFileName: string read GetSettingsFileName;
 
-    procedure UpdateSettings(const AXMLFontName, AHTMLFontName: string;
-      AXMLFontSize, AHTMLFontSize: Integer; AEditorVisible: Boolean);
+    procedure UpdateSettings(const AMDFontName, AHTMLFontName: string;
+      AMDFontSize, AHTMLFontSize: Integer; AEditorVisible: Boolean);
     procedure ReadSettings(const ASynEditHighilighter: TSynCustomHighlighter;
       const ASynEditorOptions: TSynEditorOptionsContainer); virtual;
     procedure WriteSettings(const ASynEditHighilighter: TSynCustomHighlighter;
@@ -117,17 +119,18 @@ type
     property UseDarkStyle: Boolean read GetUseDarkStyle;
     property ButtonTextColor: TColor read GetButtonTextColor;
 
-    property XMLFontSize: Integer read FXMLFontSize write FXMLFontSize;
-    property XMLFontName: string read FXMLFontName write FXMLFontName;
+    property MDFontSize: Integer read FMDFontSize write FMDFontSize;
+    property MDFontName: string read FMDFontName write FMDFontName;
     property HTMLFontSize: Integer read FHTMLFontSize write FHTMLFontSize;
     property HTMLFontName: string read FHTMLFontName write FHTMLFontName;
     property StyleName: string read FStyleName write FStyleName;
-    property ShowXML: Boolean read FShowXML write FShowXML;
+    property ShowMarkDown: Boolean read FShowMarkDown write FShowMarkDown;
     property SplitterPos: Integer read FSplitterPos write FSplitterPos;
+    property RescalingImage: Boolean read FRescalingImage write SetRescalingImage;
     property SearchInFolder: Boolean read FSearchInFolder write SetSearchInFolder;
-    property DownloadFromWEB: Boolean read FDownloadFromWEB write SetDownloadFromWEB;
     property ActivePageIndex: Integer read FActivePageIndex write FActivePageIndex;
     property ThemeSelection: TThemeSelection read FThemeSelection write FThemeSelection;
+    property ProcessorDialect: TMarkdownProcessorDialect read FProcessorDialect write SetProcessorDialect;
   end;
 
   TPreviewSettings = class(TSettings)
@@ -137,6 +140,8 @@ type
 
   TEditorSettings = class(TSettings)
   private
+    FDownloadFromWEB: Boolean;
+    procedure SetDownloadFromWEB(const Value: Boolean);
     procedure WriteSynEditorOptions(
       const ASynEditorOptions: TSynEditorOptionsContainer);
     procedure ReadSynEditorOptions(
@@ -153,6 +158,7 @@ type
       const ASynEditorOptions: TSynEditorOptionsContainer);
     destructor Destroy; override;
     procedure UpdateOpenedFiles(AFileList: TStrings; const ACurrentFileName: string);
+    property DownloadFromWEB: Boolean read FDownloadFromWEB write SetDownloadFromWEB;
   end;
 
 implementation
@@ -324,17 +330,18 @@ var
   LAttribute: TSynHighlighterAttributes;
 begin
   TLogPreview.Add('ReadSettings '+SettingsFileName);
-  FXMLFontSize := FIniFile.ReadInteger('Global', 'XMLFontSize', 10);
+  FMDFontSize := FIniFile.ReadInteger('Global', 'MDFontSize', 10);
   FHTMLFontSize := FIniFile.ReadInteger('Global', 'HTMLFontSize', 12);
-  FXMLFontName := FIniFile.ReadString('Global', 'XMLFontName', 'Consolas');
+  FMDFontName := FIniFile.ReadString('Global', 'MDFontName', 'Consolas');
   FHTMLFontName := FIniFile.ReadString('Global', 'HTMLFontName', 'Arial');
-  FShowXML := FIniFile.ReadInteger('Global', 'ShowXML', 0) = 1;
+  FShowMarkDown := FIniFile.ReadInteger('Global', 'ShowMarkDown', 0) = 1;
   FSplitterPos := FIniFile.ReadInteger('Global', 'SplitterPos', 33);
+  RescalingImage := Boolean(FIniFile.ReadInteger('Global', 'RescalingImage', 0));
   SearchInFolder := Boolean(FIniFile.ReadInteger('Global', 'SearchInFolder', 1));
-  DownloadFromWEB := Boolean(FIniFile.ReadInteger('Global', 'DownloadFromWEB', 0));
   FActivePageIndex := FIniFile.ReadInteger('Global', 'ActivePageIndex', 0);
   FStyleName := FIniFile.ReadString('Global', 'StyleName', DefaultStyleName);
   FThemeSelection := TThemeSelection(FIniFile.ReadInteger('Global', 'ThemeSelection', 0));
+  FProcessorDialect := TMarkdownProcessorDialect(FIniFile.ReadInteger('Global', 'ProcessorDialect', 0));
   //Select Style by default on Actual Windows Theme
   if FThemeSelection = tsAsWindows then
   begin
@@ -371,24 +378,29 @@ begin
   PDFPageSettings.MarginRight := FIniFile.ReadFloat('PDFPageSettins', 'MarginRight', 1);
 end;
 
+procedure TSettings.SetProcessorDialect(const Value: TMarkdownProcessorDialect);
+begin
+  FProcessorDialect := Value;
+end;
+
+procedure TSettings.SetRescalingImage(const Value: Boolean);
+begin
+  FRescalingImage := Value;
+end;
+
 procedure TSettings.SetSearchInFolder(const Value: Boolean);
 begin
   FSearchInFolder := Value;
 end;
 
-procedure TSettings.SetDownloadFromWEB(const Value: Boolean);
+procedure TSettings.UpdateSettings(const AMDFontName, AHTMLFontName: string;
+  AMDFontSize, AHTMLFontSize: Integer; AEditorVisible: Boolean);
 begin
-  FDownloadFromWEB := Value;
-end;
-
-procedure TSettings.UpdateSettings(const AXMLFontName, AHTMLFontName: string;
-  AXMLFontSize, AHTMLFontSize: Integer; AEditorVisible: Boolean);
-begin
-  XMLFontSize := AXMLFontSize;
-  XMLFontName := AXMLFontName;
+  MDFontSize := AMDFontSize;
+  MDFontName := AMDFontName;
   HTMLFontSize := AHTMLFontSize;
   HTMLFontName := AHTMLFontName;
-  ShowXML := AEditorVisible;
+  ShowMarkDown := AEditorVisible;
 end;
 
 procedure TSettings.WriteSettings(const ASynEditHighilighter: TSynCustomHighlighter;
@@ -398,20 +410,22 @@ var
   LAttribute: TSynHighlighterAttributes;
   LThemeSection: string;
 begin
-  FIniFile.WriteInteger('Global', 'XMLFontSize', FXMLFontSize);
+  FIniFile.WriteInteger('Global', 'MDFontSize', FMDFontSize);
   FIniFile.WriteInteger('Global', 'HTMLFontSize', FHTMLFontSize);
 
-  FIniFile.WriteString('Global', 'XMLFontName', FXMLFontName);
+  FIniFile.WriteString('Global', 'MDFontName', FMDFontName);
   FIniFile.WriteString('Global', 'HTMLFontName', FHTMLFontName);
 
   FIniFile.WriteString('Global', 'StyleName', FStyleName);
-  FIniFile.WriteInteger('Global', 'ShowXML', Ord(FShowXML));
+  FIniFile.WriteInteger('Global', 'ShowMarkDown', Ord(FShowMarkDown));
   FIniFile.WriteInteger('Global', 'SplitterPos', FSplitterPos);
+  FIniFile.WriteInteger('Global', 'RescalingImage', Ord(FRescalingImage));
   FIniFile.WriteInteger('Global', 'SearchInFolder', Ord(FSearchInFolder));
-  FIniFile.WriteInteger('Global', 'DownloadFromWEB', Ord(FDownloadFromWEB));
   FIniFile.WriteInteger('Global', 'ActivePageIndex', FActivePageIndex);
 
   FIniFile.WriteInteger('Global', 'ThemeSelection', Ord(FThemeSelection));
+  FIniFile.WriteInteger('Global', 'ProcessorDialect', Ord(FProcessorDialect));
+
   if (FUseDarkStyle and (LightBackground <> default_darkbackground)) or
     (not FUseDarkStyle and (LightBackground <> default_lightbackground)) then
     FIniFile.WriteInteger('Global', 'LightBackground', LightBackground);
@@ -450,6 +464,11 @@ end;
 
 { TEditorSettings }
 
+procedure TEditorSettings.SetDownloadFromWEB(const Value: Boolean);
+begin
+  FDownloadFromWEB := Value;
+end;
+
 constructor TEditorSettings.CreateSettings(const ASynEditHighilighter: TSynCustomHighlighter;
   const ASynEditorOptions: TSynEditorOptionsContainer);
 begin
@@ -478,6 +497,8 @@ var
   LFileName: string;
 begin
   inherited;
+  DownloadFromWEB := Boolean(FIniFile.ReadInteger('Global', 'DownloadFromWEB', 0));
+
   //Leggo la lista dei files aperti di recente
   FIniFile.ReadSectionValues(LAST_OPENED_SECTION, HistoryFileList);
   for I := 0 to HistoryFileList.Count -1 do
@@ -592,6 +613,8 @@ var
   I: Integer;
 begin
   inherited;
+  FIniFile.WriteInteger('Global', 'DownloadFromWEB', Ord(FDownloadFromWEB));
+
   FIniFile.EraseSection(LAST_OPENED_SECTION);
   for I := 0 to HistoryFileList.Count -1 do
   begin

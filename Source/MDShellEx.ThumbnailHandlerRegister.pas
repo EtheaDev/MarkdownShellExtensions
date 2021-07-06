@@ -70,7 +70,7 @@ end;
 function TThumbnailHandlerRegister.CreateComObject(const Controller: IUnknown): TComObject;
 begin
   result := inherited CreateComObject(Controller);
-  TComFEThumbnailProvider(result).ThumbnailHandlerClass := TThumbnailHandlerClass;
+  TComMDThumbnailProvider(result).ThumbnailHandlerClass := TThumbnailHandlerClass;
 end;
 
 class procedure TThumbnailHandlerRegister.DeleteRegValue(const Key, ValueName: string; RootKey: DWord);
@@ -157,7 +157,7 @@ begin
     inherited UpdateRegistry(True);
     LRegKey := Format('%sCLSID\%s',[RootPrefix, sClassID]);
     CreateRegKey(LRegKey, 'AppID', sAppID, RootKey);
-    CreateRegKey(LRegKey, 'DisplayName', 'Delphi Svg Thumbnail Provider', RootKey);
+    CreateRegKey(LRegKey, 'DisplayName', 'Delphi Markdown Thumbnail Provider', RootKey);
     //CreateRegKeyDWORD(LRegKey, 'DisableLowILProcessIsolation', 1, RootKey);
 
     if ProgID <> '' then

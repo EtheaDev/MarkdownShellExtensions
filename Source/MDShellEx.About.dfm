@@ -30,124 +30,11 @@ object FrmAbout: TFrmAbout
     WordWrap = True
   end
   object LabelVersion: TLabel
-    Left = 328
+    Left = 316
     Top = 64
     Width = 35
     Height = 13
     Caption = 'Version'
-  end
-  object Panel1: TPanel
-    Left = 0
-    Top = 265
-    Width = 446
-    Height = 51
-    Align = alBottom
-    BevelOuter = bvNone
-    Color = clWindow
-    ParentBackground = False
-    TabOrder = 0
-    object btnOK: TButton
-      Left = 360
-      Top = 16
-      Width = 75
-      Height = 25
-      Caption = 'OK'
-      Default = True
-      TabOrder = 2
-      OnClick = btnOKClick
-    end
-    object btnIssues: TButton
-      Left = 8
-      Top = 16
-      Width = 125
-      Height = 25
-      Caption = 'Submit issue...'
-      ImageIndex = 0
-      TabOrder = 0
-      OnClick = btnIssuesClick
-    end
-    object btnCheckUpdates: TButton
-      Left = 139
-      Top = 16
-      Width = 125
-      Height = 25
-      Caption = 'Check for updates'
-      ImageIndex = 3
-      TabOrder = 1
-      Visible = False
-      OnClick = btnCheckUpdatesClick
-    end
-  end
-  object MemoCopyRights: TMemo
-    Left = 11
-    Top = 87
-    Width = 427
-    Height = 172
-    Anchors = [akLeft, akTop, akBottom]
-    Color = clBtnFace
-    Lines.Strings = (
-      'Author:'
-      'Carlo Barazzetta'
-      'https://github.com/EtheaDev/MarkdownShellExtensions'
-      'Copyright '#169' 2021 all rights reserved.'
-      ''
-      'Other libraries from Ethea:'
-      'SVGIconImageList'
-      'https://github.com/EtheaDev/SVGIconImageList/'
-      ''
-      'Third parties libraries:'
-      'OpenSLL Library: Cryptography and SSL/TLS Toolkit'
-      'Copyright '#169' 1998-2018 The OpenSSL Project.  All rights reserved.'
-      ''
-      'Delphi Markdown'
-      'https://github.com/grahamegrieve/delphi-markdown'
-      
-        'Copyright (c) 2011+, Health Intersections Pty Ltd All rights res' +
-        'erved.'
-      ''
-      'Delphi Preview Handler'
-      'https://github.com/RRUZ/delphi-preview-handler'
-      'The Initial Developer of the Original Code is Rodrigo Ruz V.'
-      
-        'Portions created by Rodrigo Ruz V. are Copyright '#169' 2011-2021 Rod' +
-        'rigo Ruz V.'
-      ''
-      'SynEdit http://synedit.svn.sourceforge.net/viewvc/synedit/'
-      'all rights reserved.'
-      ''
-      'Synopse/SynPDF https://github.com/synopse/SynPDF'
-      'Copyright '#169' Synopse: all right reserved.'
-      ''
-      'HtmlToPdf https://github.com/MuzioValerio/HtmlToPdf'
-      'Copyright '#169' Muzio Valerio.'
-      ''
-      
-        '- TSVG Library - http://www.mwcs.de Original version '#169' 2005, 200' +
-        '8 Martin '
-      'Walter.'
-      ''
-      'HTMLViewer - https://github.com/BerndGabriel/HtmlViewer'
-      'Copyright (c) 1995 - 2008 by L. David Baldwin'
-      'Copyright (c) 1995 - 2008 by Anders Melander (DitherUnit.pas)'
-      'Copyright (c) 1995 - 2008 by Ron Collins (HtmlGif1.pas)'
-      'Copyright (c) 2008 - 2009 by Sebastian Zierer (Delphi 2009 Port)'
-      'Copyright (c) 2008 - 2010 by Arvid Winkelsdorf (Fixes)'
-      'Copyright (c) 2009 - 2019 by HtmlViewer Team')
-    ReadOnly = True
-    ScrollBars = ssVertical
-    TabOrder = 1
-  end
-  object LinkLabel1: TLinkLabel
-    Left = 8
-    Top = 62
-    Width = 303
-    Height = 19
-    Caption = 
-      '<a href="https://github.com/EtheaDev/MarkdownShellExtensions">ht' +
-      'tps://github.com/EtheaDev/MarkdownShellExtensions</a>'
-    TabOrder = 2
-    UseVisualStyle = True
-    OnClick = LinkLabel1Click
   end
   object SVGIconImage1: TSVGIconImage
     Left = 383
@@ -280,21 +167,133 @@ object FrmAbout: TFrmAbout
     Width = 175
     Height = 53
     AutoSize = False
-    Proportional = True
     SVGText = 
       '<svg xmlns="http://www.w3.org/2000/svg" width="755.906" height="' +
-      '226.772" viewBox="0 0 200 60">'#13#10' <defs>'#13#10'  <filter id="A">'#13#10'   <' +
-      'feGaussianBlur in="SourceAlpha" stdDeviation="2"/>'#13#10'   <feOffset' +
-      ' dx="2" dy="2" result="A"/>'#13#10'   <feFlood flood-color="#fff" floo' +
-      'd-opacity=".6"/>'#13#10'   <feComposite in2="A" operator="in" result="' +
-      'A"/>'#13#10'   <feMerge>'#13#10'    <feMergeNode in="A"/>'#13#10'    <feMergeNode ' +
-      'in="SourceGraphic"/>'#13#10'   </feMerge>'#13#10'  </filter>'#13#10' </defs>'#13#10' <pa' +
-      'th fill="#005e98" filter="url(#A)" transform="matrix(.8 0 0 .8 1' +
-      '8 6)" d="M0 60l4.557-11.2H37.6V60zm52.8-48.8h-9.2V0h29.6v11.2H64' +
-      'V60H52.8zM79.2 0h11.2v60H79.2zm30.4 0h11.2v60h-11.2zm17.2 48.8h2' +
-      '9.6V60h-29.6zm52.075-13.2H162.4V24.4h11.92l-5.368-13.2H162.4V0h1' +
-      '3.2L200 60h-11.2zM94.4 24.4h11.2v11.2H94.4zm32.4 0h29.598v11.2H1' +
-      '26.8zm-112.325 0H37.6v11.2H9.924zm5.368-13.2L24.4 0h13.2v11.2zM1' +
-      '26.8 0h29.6v11.2h-29.6z"/>'#13#10'</svg>'
+      '226.772" viewBox="0 0 200 60">'#13#10' <path fill="#005e98" filter="ur' +
+      'l(#A)" transform="matrix(.8 0 0 .8 18 6)" d="M0 60l4.557-11.2H37' +
+      '.6V60zm52.8-48.8h-9.2V0h29.6v11.2H64V60H52.8zM79.2 0h11.2v60H79.' +
+      '2zm30.4 0h11.2v60h-11.2zm17.2 48.8h29.6V60h-29.6zm52.075-13.2H16' +
+      '2.4V24.4h11.92l-5.368-13.2H162.4V0h13.2L200 60h-11.2zM94.4 24.4h' +
+      '11.2v11.2H94.4zm32.4 0h29.598v11.2H126.8zm-112.325 0H37.6v11.2H9' +
+      '.924zm5.368-13.2L24.4 0h13.2v11.2zM126.8 0h29.6v11.2h-29.6z"/>'#13#10 +
+      '</svg>'
+  end
+  object Panel1: TPanel
+    Left = 0
+    Top = 265
+    Width = 446
+    Height = 51
+    Align = alBottom
+    BevelOuter = bvNone
+    Color = clWindow
+    ParentBackground = False
+    TabOrder = 0
+    object btnOK: TButton
+      Left = 360
+      Top = 16
+      Width = 75
+      Height = 25
+      Caption = 'OK'
+      Default = True
+      TabOrder = 2
+      OnClick = btnOKClick
+    end
+    object btnIssues: TButton
+      Left = 8
+      Top = 16
+      Width = 125
+      Height = 25
+      Caption = 'Submit issue...'
+      ImageIndex = 0
+      TabOrder = 0
+      OnClick = btnIssuesClick
+    end
+    object btnCheckUpdates: TButton
+      Left = 139
+      Top = 16
+      Width = 125
+      Height = 25
+      Caption = 'Check for updates'
+      ImageIndex = 3
+      TabOrder = 1
+      Visible = False
+      OnClick = btnCheckUpdatesClick
+    end
+  end
+  object MemoCopyRights: TMemo
+    Left = 11
+    Top = 87
+    Width = 427
+    Height = 172
+    Anchors = [akLeft, akTop, akBottom]
+    Color = clBtnFace
+    Lines.Strings = (
+      'Author:'
+      'Carlo Barazzetta'
+      'https://github.com/EtheaDev/MarkdownShellExtensions'
+      'Copyright '#169' 2021 all rights reserved.'
+      ''
+      'Other libraries from Ethea:'
+      'SVGIconImageList'
+      'https://github.com/EtheaDev/SVGIconImageList/'
+      ''
+      'Third parties libraries:'
+      'OpenSLL Library: Cryptography and SSL/TLS Toolkit'
+      'Copyright '#169' 1998-2018 The OpenSSL Project.  All rights reserved.'
+      ''
+      'Delphi Markdown'
+      'https://github.com/grahamegrieve/delphi-markdown'
+      
+        'Copyright (c) 2011+, Health Intersections Pty Ltd All rights res' +
+        'erved.'
+      ''
+      'Delphi Preview Handler'
+      'https://github.com/RRUZ/delphi-preview-handler'
+      'The Initial Developer of the Original Code is Rodrigo Ruz V.'
+      
+        'Portions created by Rodrigo Ruz V. are Copyright '#169' 2011-2021 Rod' +
+        'rigo Ruz V.'
+      ''
+      'SynEdit http://synedit.svn.sourceforge.net/viewvc/synedit/'
+      'all rights reserved.'
+      ''
+      'Synopse/SynPDF https://github.com/synopse/SynPDF'
+      'Copyright '#169' Synopse: all right reserved.'
+      ''
+      'HtmlToPdf https://github.com/MuzioValerio/HtmlToPdf'
+      'Copyright '#169' Muzio Valerio.'
+      ''
+      
+        '- TSVG Library - http://www.mwcs.de Original version '#169' 2005, 200' +
+        '8 Martin '
+      'Walter.'
+      ''
+      
+        '- Image32 Library - http://www.angusj.com/delphi/image32/Docs/_B' +
+        'ody.htm'
+      'Copyright '#169'2019-2021 Angus Johnson.'
+      ''
+      'HTMLViewer - https://github.com/BerndGabriel/HtmlViewer'
+      'Copyright (c) 1995 - 2008 by L. David Baldwin'
+      'Copyright (c) 1995 - 2008 by Anders Melander (DitherUnit.pas)'
+      'Copyright (c) 1995 - 2008 by Ron Collins (HtmlGif1.pas)'
+      'Copyright (c) 2008 - 2009 by Sebastian Zierer (Delphi 2009 Port)'
+      'Copyright (c) 2008 - 2010 by Arvid Winkelsdorf (Fixes)'
+      'Copyright (c) 2009 - 2019 by HtmlViewer Team')
+    ReadOnly = True
+    ScrollBars = ssVertical
+    TabOrder = 1
+  end
+  object LinkLabel1: TLinkLabel
+    Left = 8
+    Top = 62
+    Width = 303
+    Height = 19
+    Caption = 
+      '<a href="https://github.com/EtheaDev/MarkdownShellExtensions">ht' +
+      'tps://github.com/EtheaDev/MarkdownShellExtensions</a>'
+    TabOrder = 2
+    UseVisualStyle = True
+    OnClick = LinkLabel1Click
   end
 end

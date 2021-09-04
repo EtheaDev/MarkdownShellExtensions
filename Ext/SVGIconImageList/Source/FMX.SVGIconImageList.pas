@@ -44,11 +44,11 @@ uses
   , FMX.Graphics
   , FMX.Objects
   , FMX.Image32SVG
-  , Image32
+  , Img32
   ;
 
 const
-  SVGIconImageListVersion = '2.3.1';
+  SVGIconImageListVersion = '3.0.0';
   DEFAULT_SIZE = 32;
   ZOOM_DEFAULT = 100;
   SVG_INHERIT_COLOR = TAlphaColors.Null;

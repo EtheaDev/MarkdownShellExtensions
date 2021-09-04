@@ -1,9 +1,9 @@
-unit Image32_Ttf;
+unit Img32.Text;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  2.26                                                            *
-* Date      :  13 July 2021                                                    *
+* Version   :  3.1                                                             *
+* Date      :  15 August 2021                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2019-2021                                         *
 *                                                                              *
@@ -16,13 +16,13 @@ unit Image32_Ttf;
 
 interface
 
-{$I Image32.inc}
+{$I Img32.inc}
 
 uses
-  {$IFDEF MSWINDOWS}Windows, ShlObj, ActiveX, {$ENDIF}
+  {$IFDEF MSWINDOWS} Windows, ShlObj, ActiveX, {$ENDIF}
   Types, SysUtils, Classes, Math,
   {$IFDEF XPLAT_GENERICS} Generics.Collections, Generics.Defaults,{$ENDIF}
-  Image32, Image32_Draw;
+  Img32, Img32.Draw;
 
 type
   TFixed = type single;
@@ -142,7 +142,7 @@ type
     minorVersion   : Word;
     fontRevision   : TFixed;
     checkSumAdjust : Cardinal;
-    magicNumber    : Cardinal;  //$5F0F3CF5
+    magicNumber    : Cardinal;  // $5F0F3CF5
     flags          : Word;
     unitsPerEm     : Word;
     dateCreated    : UInt64;
@@ -322,6 +322,8 @@ type
 
   TFontReader = class(TNotifySender)
   private
+    fFontManager       : TFontManager;
+    fDestroying        : Boolean;
     fStream            : TMemoryStream;
     fFontWeight        : integer;
     fFontInfo          : TFontInfo;
@@ -521,7 +523,7 @@ type
 implementation
 
 uses
-  Image32_Vector;
+  Img32.Vector;
 
 var
   aFontManager: TFontManager;
@@ -844,7 +846,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-
 {$IFDEF MSWINDOWS}
 constructor TFontReader.Create(const fontname: string);
 begin
@@ -858,6 +859,11 @@ destructor TFontReader.Destroy;
 begin
   Clear;
   fStream.Free;
+  if Assigned(fFontManager) then
+  begin
+    fDestroying := true;
+    fFontManager.Delete(self);
+  end;
   inherited;
 end;
 //------------------------------------------------------------------------------
@@ -1928,8 +1934,8 @@ begin
   end;
   GetGlyphInfo(Ord('G'),glyph, dummy, gm);
   rec := GetBoundsD(glyph);
-  glyph := Image32_Vector.OffsetPath(glyph, -rec.Left, -rec.Top);
-  glyph := Image32_Vector.ScalePath(glyph,
+  glyph := Img32.Vector.OffsetPath(glyph, -rec.Left, -rec.Top);
+  glyph := Img32.Vector.ScalePath(glyph,
     imgSize/rec.Width, imgSize/rec.Height);
   img := TImage32.Create(imgSize,imgSize);
   try
@@ -2473,7 +2479,7 @@ begin
         dy := (rec.Bottom - nextPt.Y - descent) / 2;
         if dy > 0 then
         begin
-          Result := Image32_Vector.OffsetPath(Result, 0, dy);
+          Result := Img32.Vector.OffsetPath(Result, 0, dy);
           nextPt.Y := nextPt.Y + dy;
         end;
       end;
@@ -2482,7 +2488,7 @@ begin
         dy := rec.Bottom - nextPt.Y;
         if dy > 0 then
         begin
-          Result := Image32_Vector.OffsetPath(Result, 0, dy);
+          Result := Img32.Vector.OffsetPath(Result, 0, dy);
           nextPt.Y := nextPt.Y + dy;
         end;
         nextPt.Y := rec.Bottom;
@@ -2756,7 +2762,7 @@ begin
       y := y + yMax  * scale; //yMax = char ascent
       dy := - yMin * scale;   //yMin = char descent
     end;
-    glyphs := Image32_Vector.OffsetPath( glyphInfo.contours, x + dx, y);
+    glyphs := Img32.Vector.OffsetPath( glyphInfo.contours, x + dx, y);
     DrawPolygon(image, glyphs, frNonZero, textColor);
     if text[i] = #32 then
       y := y + dy - interCharSpace else
@@ -2906,7 +2912,11 @@ var
   i: integer;
 begin
   for i := 0 to fFontList.Count -1 do
-    TFontReader(fFontList[i]).Free;
+    with TFontReader(fFontList[i]) do
+    begin
+      fFontManager := nil;
+      Free;
+    end;
   fFontList.Clear;
 end;
 //------------------------------------------------------------------------------
@@ -2927,6 +2937,8 @@ begin
   except
     FreeAndNil(Result);
   end;
+  if Assigned(Result) then
+    Result.fFontManager := self;
 end;
 //------------------------------------------------------------------------------
 {$ENDIF}
@@ -2947,6 +2959,8 @@ begin
   except
     FreeAndNil(Result);
   end;
+  if Assigned(Result) then
+    Result.fFontManager := self;
 end;
 //------------------------------------------------------------------------------
 
@@ -2966,6 +2980,8 @@ begin
   except
     FreeAndNil(Result);
   end;
+  if Assigned(Result) then
+    Result.fFontManager := self;
 end;
 //------------------------------------------------------------------------------
 
@@ -2985,6 +3001,8 @@ begin
   except
     FreeAndNil(Result);
   end;
+  if Assigned(Result) then
+    Result.fFontManager := self;
 end;
 //------------------------------------------------------------------------------
 
@@ -2999,7 +3017,7 @@ begin
   if not Assigned(fr2) or
     ((fr.fFontInfo.macStyles <> fr2.fFontInfo.macStyles) or
     not SameText(fr.fFontInfo.faceName, fr2.fFontInfo.faceName)) then
-      fFontList.Add(fr)
+    fFontList.Add(fr)
   else
       Result := false;
 end;
@@ -3012,7 +3030,8 @@ begin
   for i := 0 to fFontList.Count -1 do
     if TFontReader(fFontList[i]) = fontReader then
     begin
-      fontReader.Free;
+      //make sure the FontReader object isn't destroying itself externally
+      if not fontReader.fDestroying then fontReader.Free;
       fFontList.Delete(i);
       Result := true;
       Exit;

@@ -40,12 +40,12 @@ Uses
   , FMX.Types
   , FMX.Graphics
   , FMX.Objects
-  , Image32             //Warning: from version 2.3 the default rendering engine is Image32
-  , Image32_SVG_Core    //because is the best engine available with SVGIconImageList.
-  , Image32_SVG_Reader  //If you don't want to use it change SVGIconImageList.inc
-  , Image32_SVG_Writer  //Otherwise you must add two search path:
-  , Image32_Ttf         //- SVGIconImageList\Images32\Source
-  ;                     //- SVGIconImageList\Images32\Source\Image32_SVG
+  , Img32             //Warning: from version 2.3 the default rendering engine is Image32
+  , Img32.SVG.Core    //because is the best engine available with SVGIconImageList.
+  , Img32.SVG.Reader  //If you don't want to use it change SVGIconImageList.inc
+  , Img32.SVG.Writer  //Otherwise you must add this search path:
+  , Img32.Text        //- SVGIconImageList\Image32\Source
+  , Img32.Vector;
 
 resourcestring
   SVG_ERROR_PARSING_SVG_TEXT = 'Error parsing SVG Text: %s';
@@ -257,7 +257,7 @@ end;
 procedure TFmxImage32SVG.PaintToBitmap(ABitmap: TBitmap;
   const AZoom: Integer = 100; const KeepAspectRatio: Boolean = True);
 var
-  color: TColor32;
+  LColor: TColor32;
   LWidth, LHeight: Integer;
 begin
   Assert(Assigned(FImage32));
@@ -272,12 +272,12 @@ begin
   //Update FsvgReader BEFORE calling FsvgReader.DrawImage
   if FApplyFixedColorToRootOnly and not FGrayScale and
     (FFixedColor <> clNone32) then
-      color := AlphaToColor32(FFixedColor)
+      LColor := AlphaToColor32(FFixedColor)
   else
-    color := clNone32;
+    LColor := clNone32;
 
-  fSvgReader.SetDefaultFillColor(color);
-  fSvgReader.SetDefaultStrokeColor(color);
+  fSvgReader.SetOverrideFillColor(LColor);
+  fSvgReader.SetOverrideStrokeColor(LColor);
 
   FsvgReader.KeepAspectRatio := KeepAspectRatio;
 
@@ -289,7 +289,7 @@ begin
     FImage32.Grayscale
   else if (FFixedColor <> clNone32) and
     not FApplyFixedColorToRootOnly then
-      FImage32.SetRGB(AlphaToColor32(FFixedColor));
+      FImage32.SetRGB(FFixedColor);
 
   //Opacity applyed to Image32
   if FOpacity <> 1.0 then

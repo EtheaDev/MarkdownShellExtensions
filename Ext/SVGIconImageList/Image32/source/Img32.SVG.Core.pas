@@ -1,9 +1,9 @@
-unit Image32_SVG_Core;
+unit Img32.SVG.Core;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  2.27                                                            *
-* Date      :  17 July 2021                                                    *
+* Version   :  3.1                                                             *
+* Date      :  15 August 2021                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2019-2021                                         *
 *                                                                              *
@@ -16,12 +16,12 @@ unit Image32_SVG_Core;
 
 interface
 
-{$I ..\Image32.inc}
+{$I Img32.inc}
 
 uses
   SysUtils, Classes, Types, Math,
   {$IFDEF XPLAT_GENERICS} Generics.Collections, Generics.Defaults,{$ENDIF}
-  Image32, Image32_Vector, Image32_Ttf, Image32_Transform;
+  Img32, Img32.Vector, Img32.Text, Img32.Transform;
 
 {$IFDEF ZEROBASEDSTR}
   {$ZEROBASEDSTRINGS OFF}
@@ -55,6 +55,8 @@ type
     function  GetValue(relSize: double; assumeRelValBelow: Double): double;
     function  GetValueXY(const relSize: TRectD; assumeRelValBelow: Double): double;
     function  IsValid: Boolean;
+    function  IsRelativeValue(assumeRelValBelow: double): Boolean;
+      {$IFDEF INLINE} inline; {$ENDIF}
     function  HasFontUnits: Boolean;
     function  HasAngleUnits: Boolean;
   end;
@@ -80,21 +82,15 @@ type
     function  IsEmpty: Boolean;
   end;
 
-  //////////////////////////////////////////////////////////////////////
-  // TAnsi - alternative to AnsiString/UTF8String with less overhead.
-  //////////////////////////////////////////////////////////////////////
-
   {$IFNDEF UNICODE}
   UTF8Char  = Char;
   PUTF8Char = PChar;
+  {$ELSE}
+  {$IF COMPILERVERSION < 31}
+  UTF8Char = AnsiChar;
+  PUTF8Char = PAnsiChar;
+  {$IFEND}
   {$ENDIF}
-
-  TAnsi = {$IFDEF RECORD_METHODS} record {$ELSE} object {$ENDIF}
-    text: PUTF8Char;
-    len : integer;
-    function AsUTF8String: UTF8String;
-  end;
-  TArrayOfTAnsi = array of TAnsi;
 
   TSvgItalicSyle  = (sfsUndefined, sfsNone, sfsItalic);
   TFontDecoration = (fdUndefined, fdNone, fdUnderline, fdStrikeThrough);
@@ -147,7 +143,7 @@ type
 
   TXmlEl = class              //base element class
   public
-    name        : TAnsi;
+    name        : UTF8String;
     {$IFDEF XPLAT_GENERICS}
     attribs     : TList <PSvgAttrib>;
     {$ELSE}
@@ -176,7 +172,7 @@ type
   TSvgTreeEl = class(TXmlEl)
   public
     hash        : Cardinal;
-    text        : TAnsi;
+    text        : UTF8String;
     {$IFDEF XPLAT_GENERICS}
     childs      : TList<TSvgTreeEl>;
     {$ELSE}
@@ -236,6 +232,7 @@ type
     //GetSimplePath - ignores curves and is only used with markers
     function GetSimplePath: TPathD;
     function IsClosed: Boolean;
+    function Clone: TSvgPath;
   end;
   TSvgPaths = array of TSvgPath;
 
@@ -260,12 +257,12 @@ type
   function UTF8StringToColor32(const value: UTF8String; var color: TColor32): Boolean;
   function MakeDashArray(const dblArray: TArrayOfDouble; scale: double): TArrayOfInteger;
   function Match(c: PUTF8Char; const compare: UTF8String): Boolean; overload;
-  function PUTF8CharToTAnsi(var c: PUTF8Char; endC: PUTF8Char; out value: TAnsi): Boolean;
-  procedure PUTF8CharToUTF8String(var c: PUTF8Char; endC: PUTF8Char; out value: UTF8String);
+  function Match(const compare1, compare2: UTF8String): Boolean; overload;
+  function ToUTF8String(var c: PUTF8Char; endC: PUTF8Char): UTF8String;
 
   //special parsing functions //////////////////////////////////////////
   function ParseSvgPath(const value: UTF8String): TSvgPaths;
-  procedure ParseStyleElementContent(const value: TAnsi; stylesList: TClassStylesList);
+  procedure ParseStyleElementContent(const value: UTF8String; stylesList: TClassStylesList);
   function ParseTransform(const transform: UTF8String): TMatrixD;
 
   procedure GetSvgFontInfo(const value: UTF8String; var fontInfo: TSVGFontInfo);
@@ -278,6 +275,7 @@ type
 
 type
   TSetOfUTF8Char = set of UTF8Char;
+  UTF8Strings = array of UTF8String;
 
 function CharInSet(chr: UTF8Char; chrs: TSetOfUTF8Char): Boolean;
 
@@ -290,7 +288,7 @@ const
   space       = #32;
   SvgDecimalSeparator = '.'; //do not localize
 
-  {$I Image32_SVG_Hash_Consts.inc}
+  {$I Img32.SVG.HashConsts.inc}
 
 var
   LowerCaseTable : array[#0..#255] of UTF8Char;
@@ -312,7 +310,7 @@ const
   buffSize    = 32;
 
   //include hashed html entity constants
-  {$I html_entity_hash_consts.inc}
+  {$I Img32.SVG.HtmlHashConsts.inc}
 
 //------------------------------------------------------------------------------
 // Miscellaneous functions ...
@@ -330,6 +328,62 @@ end;
 function CharInSet(chr: UTF8Char; chrs: TSetOfUTF8Char): Boolean;
 begin
   Result := chr in chrs;
+end;
+//------------------------------------------------------------------------------
+
+function Match(c: PUTF8Char; const compare: UTF8String): Boolean;
+var
+  i: integer;
+begin
+  Result := false;
+  for i := 1 to Length(compare) do
+  begin
+    if LowerCaseTable[c^] <> compare[i] then Exit;
+    inc(c);
+  end;
+  Result := true;
+end;
+//------------------------------------------------------------------------------
+
+function Match(const compare1, compare2: UTF8String): Boolean;
+var
+  i, len: integer;
+  c1, c2: PUTF8Char;
+begin
+  Result := false;
+  len := Length(compare1);
+  if len <> Length(compare2) then Exit;
+  c1 := @compare1[1]; c2 := @compare2[1];
+  for i := 1 to len do
+  begin
+    if LowerCaseTable[c1^] <> LowerCaseTable[c2^] then Exit;
+    inc(c1); inc(c2);
+  end;
+  Result := true;
+end;
+//------------------------------------------------------------------------------
+
+function Split(const str: UTF8String): UTF8Strings;
+var
+  i,j,k, spcCnt, len: integer;
+begin
+  spcCnt := 0;
+  i := 1;
+  len := Length(str);
+  while (len > 0) and (str[len] <= #32) do dec(len);
+  while (i <= len) and (str[i] <= #32) do inc(i);
+  for j := i + 1 to len do
+    if (str[j] <= #32) and (str[j -1] > #32) then inc(spcCnt);
+  SetLength(Result, spcCnt +1);
+  for k := 0 to spcCnt do
+  begin
+    j := i;
+    while (j <= len) and (str[j] > #32) do inc(j);
+    SetLength(Result[k], j -i);
+    Move(str[i], Result[k][1], j -i);
+    while (j <= len) and (str[j] <= #32) do inc(j);
+    i := j;
+  end;
 end;
 //------------------------------------------------------------------------------
 
@@ -437,7 +491,7 @@ begin
   while (c < endC) and
     (LowerCaseTable[c^] >= 'a') and (LowerCaseTable[c^] <= 'z') do
       inc(c);
-  PUTF8CharToUTF8String(c2, c, word);
+  word := ToUTF8String(c2, c);
 end;
 //------------------------------------------------------------------------------
 
@@ -455,7 +509,7 @@ begin
     inc(c);
     c2 := c;
     while (c < endC) and (c^ <> quote) do inc(c);
-    PUTF8CharToUTF8String(c2, c,word);
+    word := ToUTF8String(c2, c);
     inc(c);
   end else
   begin
@@ -465,7 +519,7 @@ begin
     inc(c);
     while (c < endC) and
       CharInSet(LowerCaseTable[c^], ['A'..'Z', 'a'..'z', '-', '_']) do inc(c);
-    PUTF8CharToUTF8String(c2, c,word);
+    word := ToUTF8String(c2, c);
   end;
 end;
 //------------------------------------------------------------------------------
@@ -527,12 +581,14 @@ end;
 
 function ParseNextWordHashed(var c: PUTF8Char; endC: PUTF8Char): cardinal;
 var
-  name: TAnsi;
+  c2: PUTF8Char;
+  name: UTF8String;
 begin
-  name.text := c;
-  name.len := ParseNameLength(c, endC);
-  if name.len = 0 then Result := 0
-  else Result := GetHash(name.AsUTF8String);
+  c2 := c;
+  ParseNameLength(c, endC);
+  name := ToUTF8String(c2, c);
+  if name = '' then Result := 0
+  else Result := GetHash(name);
 end;
 //------------------------------------------------------------------------------
 
@@ -694,7 +750,7 @@ begin
   if c^ = '#' then inc(c);
   c2 := c;
   while (c < endC) and (c^ <> ')') do inc(c);
-  PUTF8CharToUTF8String(c2, c, Result);
+  Result := ToUTF8String(c2, c);
 end;
 //------------------------------------------------------------------------------
 
@@ -718,75 +774,33 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function AnsiTrim(var name: TAnsi): Boolean;
+function AllTrim(var name: UTF8String): Boolean;
 var
-  endC: PUTF8Char;
+  i, len: integer;
 begin
-  while (name.len > 0) and (name.text^ <= space) do
+  len := Length(name);
+  i := 0;
+  while (len > 0) and (name[1] <= space) do
   begin
-    inc(name.text); dec(name.len);
+    inc(i); dec(len);
   end;
-  Result := name.len > 0;
+  if i > 0 then Delete(name, 1, i);
+  Result := len > 0;
   if not Result then Exit;
-  endC := name.text + name.len -1;
-  while endC^ <= space do
-  begin
-    dec(endC); dec(name.len);
-  end;
+  while name[len] <= space do dec(len);
+  SetLength(name, len);
 end;
 //------------------------------------------------------------------------------
 
-function PUTF8CharToTAnsi(var c: PUTF8Char;  endC: PUTF8Char;
-  out value: TAnsi): Boolean;
-begin
-  SkipBlanks(c, endC);
-  value.text := c;
-  value.len := ParseNameLength(c, endC);
-  Result := value.len > 0;
-end;
-//------------------------------------------------------------------------------
-
-procedure PUTF8CharToUTF8String(var c: PUTF8Char; endC: PUTF8Char; out value: UTF8String);
+function ToUTF8String(var c: PUTF8Char; endC: PUTF8Char): UTF8String;
 var
   len: integer;
 begin
   len := endC - c;
-  SetLength(value, len);
-  if len > 0 then
-  begin
-    Move(c^, value[1], len * SizeOf(UTF8Char));
-    c := endC;
-  end;
-end;
-//------------------------------------------------------------------------------
-
-function Match(c: PUTF8Char; const compare: UTF8String): Boolean;
-var
-  i: integer;
-begin
-  Result := false;
-  for i := 1 to Length(compare) do
-  begin
-    if LowerCaseTable[c^] <> compare[i] then Exit;
-    inc(c);
-  end;
-  Result := true;
-end;
-//------------------------------------------------------------------------------
-
-function Match(c: PUTF8Char; const compare: TAnsi): Boolean; overload;
-var
-  i: integer;
-  c1, c2: PUTF8Char;
-begin
-  Result := false;
-  c1 := c; c2 := compare.text;
-  for i := 0 to compare.len -1 do
-  begin
-    if LowerCaseTable[c1^] <> LowerCaseTable[c2^] then Exit;
-    inc(c1); inc(c2);
-  end;
-  Result := true;
+  SetLength(Result, len);
+  if len = 0 then Exit;
+  Move(c^, Result[1], len * SizeOf(UTF8Char));
+  c := endC;
 end;
 //------------------------------------------------------------------------------
 
@@ -799,7 +813,7 @@ begin
   inc(c); //skip ampersand.
   c2 := c; c3 := c;
   ParseNameLength(c3, endC);
-  PUTF8CharToUTF8String(c2, c3, entityName);
+  entityName := ToUTF8String(c2, c3);
   entity := owner.FindEntity(GetHash(entityName));
   Result := (c3^ = ';') and Assigned(entity);
   //nb: increments 'c' only if the entity is found.
@@ -808,7 +822,7 @@ end;
 //------------------------------------------------------------------------------
 
 function ParseQuotedString(var c: PUTF8Char; endC: PUTF8Char;
-  out ansi: UTF8String): Boolean;
+  out quotStr: UTF8String): Boolean;
 var
   quote: UTF8Char;
   c2: PUTF8Char;
@@ -819,7 +833,7 @@ begin
   while (c < endC) and (c^ <> quote) do inc(c);
   Result := (c < endC);
   if not Result then Exit;
-  PUTF8CharToUTF8String(c2, c, ansi);
+  quotStr := ToUTF8String(c2, c);
   inc(c);
 end;
 //------------------------------------------------------------------------------
@@ -1022,7 +1036,7 @@ begin
     begin
       //decode html entity ...
       case GetHashCaseSensitive(c, ce - c) of
-        {$I html_entity_values.inc}
+        {$I Img32.SVG.HtmlValues.inc}
       end;
     end;
 
@@ -1223,12 +1237,15 @@ begin
     Result[i] := Ceil(dblArray[i] * scale);
     dist := Result[i] + dist;
   end;
+
   if dist = 0 then
-    Result := nil
-  else if len = 1 then
   begin
-    SetLength(Result, 2);
-    Result[1] := Result[0];
+    Result := nil;
+  end
+  else if Odd(len) then
+  begin
+    SetLength(Result, len *2);
+    Move(Result[0], Result[len], len * SizeOf(integer));
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1241,7 +1258,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure ParseStyleElementContent(const value: TAnsi;
+procedure ParseStyleElementContent(const value: UTF8String;
   stylesList: TClassStylesList);
 var
   len, cap: integer;
@@ -1260,18 +1277,18 @@ var
 
 var
   i: integer;
-  aclassName: TAnsi;
-  aStyle: TAnsi;
-  c, endC: PUTF8Char;
+  aclassName: UTF8String;
+  aStyle: UTF8String;
+  c, c2, endC: PUTF8Char;
 begin
   //https://oreillymedia.github.io/Using_SVG/guide/style.html
 
   stylesList.Clear;
-  if value.len = 0 then Exit;
+  if value = '' then Exit;
 
   len := 0; cap := 0;
-  c := value.text;
-  endC := c + value.len;
+  c := @value[1];
+  endC := c + Length(value);
 
   SkipBlanks(c, endC);
   if Match(c, '<![cdata[') then inc(c, 9);
@@ -1281,10 +1298,11 @@ begin
       [SvgDecimalSeparator, '#', 'a'..'z']) do
   begin
     //get one or more class names for each pending style
-    aclassName.text := c;
-    aclassName.len := ParseNameLength(c, endC);
+    c2 := c;
+    ParseNameLength(c, endC);
+    aclassName := ToUTF8String(c2, c);
 
-    AddName(Lowercase(String(aclassName.AsUTF8String)));
+    AddName(Lowercase(String(aclassName)));
     if PeekNextChar(c, endC) = ',' then
     begin
       inc(c);
@@ -1296,14 +1314,14 @@ begin
     //now get the style
     if PeekNextChar(c, endC) <> '{' then Break;
     inc(c);
-    aStyle.text := c;
+    c2 := c;
     while (c < endC) and (c^ <> '}') do inc(c);
     if (c = endC) then break;
-    aStyle.len := c - aStyle.text;
+    aStyle := ToUTF8String(c2, c);
 
     //finally, for each class name add (or append) this style
     for i := 0 to High(names) do
-      stylesList.AddAppendStyle(names[i], aStyle.AsUTF8String);
+      stylesList.AddAppendStyle(names[i], aStyle);
     names := nil;
     len := 0; cap := 0;
     inc(c);
@@ -1346,15 +1364,16 @@ end;
 
 function TXmlEl.ParseHeader(var c: PUTF8Char; endC: PUTF8Char): Boolean;
 var
-  className, style: UTF8String;
+  style: UTF8String;
+  c2: PUTF8Char;
 begin
   SkipBlanks(c, endC);
-  name.text := c;
-  name.len := ParseNameLength(c, endC);
+  c2 := c;;
+  ParseNameLength(c, endC);
+  name := ToUTF8String(c2, c);
 
   //load the class's style (ie undotted style) if found.
-  className := name.AsUTF8String;
-  style := owner.classStyles.GetStyle(classname);
+  style := owner.classStyles.GetStyle(name);
   if style <> '' then ParseStyleAttribute(style);
 
   Result := ParseAttributes(c, endC);
@@ -1371,7 +1390,7 @@ begin
   if not Result then Exit;
   c2 := c;
   ParseNameLength(c, endC);
-  PUTF8CharToUTF8String(c2, c, attrib.Name);
+  attrib.Name := ToUTF8String(c2, c);
   attrib.hash := GetHash(attrib.Name);
 end;
 //------------------------------------------------------------------------------
@@ -1393,14 +1412,16 @@ begin
   c3 := c;
   while (c3 > c2) and ((c3 -1)^ <= space) do 
     dec(c3);
-  PUTF8CharToUTF8String(c2, c3, attrib.value);
+  attrib.value := ToUTF8String(c2, c3);
   inc(c); //skip end quote
 end;
 //------------------------------------------------------------------------------
 
 function TXmlEl.ParseAttributes(var c: PUTF8Char; endC: PUTF8Char): Boolean;
 var
+  i: integer;
   attrib, styleAttrib, classAttrib, idAttrib: PSvgAttrib;
+  classes: UTF8Strings;
   ansi: UTF8String;
 begin
   Result := false;
@@ -1441,19 +1462,23 @@ begin
     end;    
   end;
 
-  if assigned(classAttrib) then 
+  if assigned(classAttrib) then
     with classAttrib^ do
     begin
-      //get the 'dotted' classname
-      ansi := SvgDecimalSeparator + value;
-      //get the style definition
-      ansi := owner.classStyles.GetStyle(ansi);
-      if ansi <> '' then ParseStyleAttribute(ansi);
+      //get the 'dotted' classname(s)
+      classes := Split(value);
+      for i := 0 to High(classes) do
+      begin
+        ansi := SvgDecimalSeparator + classes[i];
+        //get the style definition
+        ansi := owner.classStyles.GetStyle(ansi);
+        if ansi <> '' then ParseStyleAttribute(ansi);
+      end;
     end;
 
   if assigned(styleAttrib) then
     ParseStyleAttribute(styleAttrib.value);
-    
+
   if assigned(idAttrib) then
   begin
     //get the 'hashed' classname
@@ -1468,8 +1493,8 @@ end;
 
 procedure TXmlEl.ParseStyleAttribute(const style: UTF8String);
 var
-  styleName, styleVal: TAnsi;
-  c, endC: PUTF8Char;
+  styleName, styleVal: UTF8String;
+  c, c2, endC: PUTF8Char;
   attrib: PSvgAttrib;
 begin
   //there are 4 ways to load styles (in ascending precedence) -
@@ -1482,23 +1507,24 @@ begin
   endC := c + Length(style);
   while SkipStyleBlanks(c, endC) do
   begin
-    styleName.text := c;
-    styleName.len := ParseStyleNameLen(c, endC);
-    if styleName.len = 0 then Break;
+    c2 := c;
+    ParseStyleNameLen(c, endC);
+    styleName := ToUTF8String(c2, c);
+    if styleName = '' then Break;
 
     if (ParseNextChar(c, endC) <> ':') or  //syntax check
       not SkipBlanks(c,endC) then Break;
 
-    styleVal.text := c;
+    c2 := c;
     inc(c);
     while (c < endC) and (c^ <> ';') do inc(c);
-    styleVal.len := c - styleVal.text;
-    AnsiTrim(styleVal);
+    styleVal := ToUTF8String(c2, c);
+    AllTrim(styleVal);
     inc(c);
 
     new(attrib);
-    attrib.name := styleName.AsUTF8String;
-    attrib.value := styleVal.AsUTF8String;
+    attrib.name := styleName;
+    attrib.value := styleVal;
     attrib.hash := GetHash(attrib.name);
     attribs.Add(attrib);
   end;
@@ -1602,8 +1628,7 @@ end;
 function TSvgTreeEl.ParseHeader(var c: PUTF8Char; endC: PUTF8Char): Boolean;
 begin
   Result := inherited ParseHeader(c, endC);
-  if Result then
-    hash := GetHash(name.AsUTF8String);
+  if Result then hash := GetHash(name);
 end;
 //------------------------------------------------------------------------------
 
@@ -1611,7 +1636,7 @@ function TSvgTreeEl.ParseContent(var c: PUTF8Char; endC: PUTF8Char): Boolean;
 var
   child: TSvgTreeEl;
   entity: PSvgAttrib;
-  tmpC, tmpEndC: PUTF8Char;
+  c2, tmpC, tmpEndC: PUTF8Char;
 begin
   Result := false;
   while SkipBlanks(c, endC) do
@@ -1631,19 +1656,19 @@ begin
             end else
             begin
               //it's very likely <![CDATA[
-              text.text := c - 1;
+              c2 := c - 1;
               if Match(c, '![cdata[') then
               begin
                 while (c < endC) and ((c^ <> ']') or not Match(c, ']]>')) do
                   inc(c);
-                text.len := c - text.text;
+                text := ToUTF8String(c2, c);
                 inc(c, 3);
                 if (hash = hStyle) then
                   ParseStyleElementContent(text, owner.classStyles);
               end else
               begin
                 while (c < endC) and (c^ <> '<') do inc(c);
-                text.len := c - text.text;
+                text := ToUTF8String(c2, c);
               end;
             end;
           end;
@@ -1653,7 +1678,7 @@ begin
             inc(c);
             if Match(c, name) then
             begin
-              inc(c, name.len);
+              inc(c, Length(name));
               //very rarely there's a space before '>'
               SkipBlanks(c, endC);
               Result := c^ = '>';
@@ -1693,21 +1718,18 @@ begin
       while (c < endC) and (c^ <> '<') do inc(c);
       if (hash = hTextPath) then
       begin
-        text.text := tmpC;
-        text.len := c - tmpC;
+        text := ToUTF8String(tmpC, c);
       end else
       begin
         child := TSvgTreeEl.Create(owner);
         childs.Add(child);
-        child.text.text := tmpC;
-        child.text.len := c - tmpC;
+        child.text := ToUTF8String(tmpC, c);
       end;
     end else
     begin
       tmpC := c;
       while (c < endC) and (c^ <> '<') do inc(c);
-      text.text := tmpC;
-      text.len := c - tmpC;
+      text := ToUTF8String(tmpC, c);
 
       //if <style> element then load styles into owner.classStyles
       if (hash = hStyle) then
@@ -1796,8 +1818,11 @@ var
   i, len: LongInt;
   encoding: TSvgEncoding;
   s: UnicodeString;
+  wc: PWord;
   utf8: UTF8String;
 begin
+  Clear;
+  Result := true;
   try
     svgStream.LoadFromStream(stream);
 
@@ -1809,15 +1834,20 @@ begin
           SetLength(s, svgStream.Size div 2);
           Move(svgStream.Memory^, s[1], svgStream.Size);
           if encoding = eUnicodeBE then
-            for i := 1 to Length(s) do FlipEndian(s[i]);
+          begin
+            wc := @s[1];
+            for i := 1 to Length(s) do
+            begin
+              wc^ := Swap(wc^);
+              inc(wc);
+            end;
+          end;
           utf8 := UTF8Encode(s);
           len := Length(utf8);
           svgStream.SetSize(len);
           Move(utf8[1], svgStream.Memory^, len);
         end;
     end;
-
-    Result := true;
     ParseStream;
   except
     Result := false;
@@ -2034,6 +2064,22 @@ begin
       end;
     end;
   SetLength(Result, pathLen);
+end;
+//------------------------------------------------------------------------------
+
+function TSvgPath.Clone: TSvgPath;
+var
+  i, segLen: integer;
+begin
+  Result.firstPt := firstPt;
+  segLen := Length(segs);
+  SetLength(Result.segs, segLen);
+  for i := 0 to segLen -1 do
+    with segs[i] do
+    begin
+      Result.segs[i].segType := segType;
+      Result.segs[i].vals := Copy(vals, 0, Length(vals));
+    end;
 end;
 //------------------------------------------------------------------------------
 
@@ -2332,7 +2378,7 @@ function TValue.GetValue(relSize: double; assumeRelValBelow: Double): double;
 begin
   if not IsValid or (rawVal = 0) then
     Result := 0
-  else if (unitType = utNumber) and (Abs(rawVal) <= assumeRelValBelow) then
+  else if IsRelativeValue(assumeRelValBelow) then
     Result := rawVal * relSize
   else
     Result := ConvertValue(self, relSize);
@@ -2346,9 +2392,15 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+function  TValue.IsRelativeValue(assumeRelValBelow: double): Boolean;
+begin
+  Result := (unitType = utNumber) and (Abs(rawVal) <= assumeRelValBelow);
+end;
+//------------------------------------------------------------------------------
+
 function TValue.IsValid: Boolean;
 begin
-  Result := (unitType <> utUnknown) and Image32_Vector.IsValid(rawVal);
+  Result := (unitType <> utUnknown) and Img32.Vector.IsValid(rawVal);
 end;
 //------------------------------------------------------------------------------
 
@@ -2530,17 +2582,6 @@ begin
 end;
 
 //------------------------------------------------------------------------------
-// TAnsi
-//------------------------------------------------------------------------------
-
-function TAnsi.AsUTF8String: UTF8String;
-begin
-  SetLength(Result, len);
-  if len > 0 then
-    Move(text^, Result[1], len);
-end;
-
-//------------------------------------------------------------------------------
 // GetSvgArcInfo - and support functions
 //------------------------------------------------------------------------------
 
@@ -2587,7 +2628,7 @@ begin
     if (radii.Y < 0) then radii.Y := -radii.Y;
     if (radii.X = 0) or (radii.Y = 0) then Exit;
 
-    Image32_Vector.GetSinCos(phi_rads, s_phi, c_phi);;
+    GetSinCos(phi_rads, s_phi, c_phi);;
     hd_x := (p1.X - p2.X) / 2.0; // half diff of x
     hd_y := (p1.Y - p2.Y) / 2.0; // half diff of y
     hs_x := (p1.X + p2.X) / 2.0; // half sum of x
@@ -2915,7 +2956,7 @@ procedure MakeColorConstList;
 var
   i   : integer;
   co  : TColorObj;
-  {$I html_color_consts.inc}
+  {$I Img32.SVG.HtmlColorConsts.inc}
 begin
   ColorConstList := TStringList.Create;
   ColorConstList.CaseSensitive := false;

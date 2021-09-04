@@ -11,7 +11,6 @@ object frmMain: TfrmMain
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
-  OldCreateOrder = False
   Position = poScreenCenter
   ShowHint = True
   OnAfterMonitorDpiChanged = FormAfterMonitorDpiChanged
@@ -22,10 +21,10 @@ object frmMain: TfrmMain
   OnMouseWheelDown = FormMouseWheelDown
   OnMouseWheelUp = FormMouseWheelUp
   OnResize = FormResize
+  PixelsPerInch = 96
   DesignSize = (
     944
     590)
-  PixelsPerInch = 96
   TextHeight = 15
   object ClientPanel: TPanel
     Left = 44
@@ -208,11 +207,10 @@ object frmMain: TfrmMain
       Left = 40
       Top = 3
       Width = 116
-      Height = 30
+      Height = 15
       Align = alLeft
       Caption = 'MarkDown Text Editor'
       Layout = tlCenter
-      ExplicitHeight = 15
     end
     object SettingsToolBar: TToolBar
       AlignWithMargins = True
@@ -692,355 +690,295 @@ object frmMain: TfrmMain
     Top = 192
   end
   object VirtualImageList: TVirtualImageList
-    DisabledGrayscale = False
-    DisabledSuffix = '_Disabled'
     Images = <
       item
         CollectionIndex = 0
         CollectionName = 'Style'
-        Disabled = False
         Name = 'Style'
       end
       item
         CollectionIndex = 1
         CollectionName = 'Open'
-        Disabled = False
         Name = 'Open'
       end
       item
         CollectionIndex = 2
         CollectionName = 'New'
-        Disabled = False
         Name = 'New'
       end
       item
         CollectionIndex = 3
         CollectionName = 'Close'
-        Disabled = False
         Name = 'Close'
       end
       item
         CollectionIndex = 4
         CollectionName = 'Close-all'
-        Disabled = False
         Name = 'Close-all'
       end
       item
         CollectionIndex = 5
         CollectionName = 'Close-all-folder'
-        Disabled = False
         Name = 'Close-all-folder'
       end
       item
         CollectionIndex = 6
         CollectionName = 'Search'
-        Disabled = False
         Name = 'Search'
       end
       item
         CollectionIndex = 7
         CollectionName = 'Search-repeat'
-        Disabled = False
         Name = 'Search-repeat'
       end
       item
         CollectionIndex = 8
         CollectionName = 'Copy'
-        Disabled = False
         Name = 'Copy'
       end
       item
         CollectionIndex = 9
         CollectionName = 'Paste'
-        Disabled = False
         Name = 'Paste'
       end
       item
         CollectionIndex = 10
         CollectionName = 'Cut'
-        Disabled = False
         Name = 'Cut'
       end
       item
         CollectionIndex = 11
         CollectionName = 'Undo'
-        Disabled = False
         Name = 'Undo'
       end
       item
         CollectionIndex = 12
         CollectionName = 'Save'
-        Disabled = False
         Name = 'Save'
       end
       item
         CollectionIndex = 13
         CollectionName = 'Save-all'
-        Disabled = False
         Name = 'Save-all'
       end
       item
         CollectionIndex = 14
         CollectionName = 'Save-as'
-        Disabled = False
         Name = 'Save-as'
       end
       item
         CollectionIndex = 15
         CollectionName = 'Print'
-        Disabled = False
         Name = 'Print'
       end
       item
         CollectionIndex = 16
         CollectionName = 'Print-preview'
-        Disabled = False
         Name = 'Print-preview'
       end
       item
         CollectionIndex = 17
         CollectionName = 'Print-settings'
-        Disabled = False
         Name = 'Print-settings'
       end
       item
         CollectionIndex = 18
         CollectionName = 'Select-all'
-        Disabled = False
         Name = 'Select-all'
       end
       item
         CollectionIndex = 19
         CollectionName = 'Reformat'
-        Disabled = False
         Name = 'Reformat'
       end
       item
         CollectionIndex = 20
         CollectionName = 'Replace'
-        Disabled = False
         Name = 'Replace'
       end
       item
         CollectionIndex = 21
         CollectionName = 'Settings'
-        Disabled = False
         Name = 'Settings'
       end
       item
         CollectionIndex = 22
         CollectionName = 'Exit'
-        Disabled = False
         Name = 'Exit'
       end
       item
         CollectionIndex = 23
         CollectionName = 'about'
-        Disabled = False
         Name = 'about'
       end
       item
         CollectionIndex = 24
         CollectionName = 'menu'
-        Disabled = False
         Name = 'menu'
       end
       item
         CollectionIndex = 25
         CollectionName = 'Minus'
-        Disabled = False
         Name = 'Minus'
       end
       item
         CollectionIndex = 26
         CollectionName = 'plus'
-        Disabled = False
         Name = 'plus'
       end
       item
         CollectionIndex = 27
         CollectionName = 'back'
-        Disabled = False
         Name = 'back'
       end
       item
         CollectionIndex = 28
         CollectionName = 'preferences-desktop'
-        Disabled = False
         Name = 'preferences-desktop'
       end
       item
         CollectionIndex = 29
         CollectionName = 'preferences-desktop-color'
-        Disabled = False
         Name = 'preferences-desktop-color'
       end
       item
         CollectionIndex = 30
         CollectionName = 'view_details'
-        Disabled = False
         Name = 'view_details'
       end
       item
         CollectionIndex = 31
         CollectionName = 'left'
-        Disabled = False
         Name = 'left'
       end
       item
         CollectionIndex = 32
         CollectionName = 'right'
-        Disabled = False
         Name = 'right'
       end
       item
         CollectionIndex = 33
         CollectionName = 'binoculars'
-        Disabled = False
         Name = 'binoculars'
       end
       item
         CollectionIndex = 34
         CollectionName = 'whole-page'
-        Disabled = False
         Name = 'whole-page'
       end
       item
         CollectionIndex = 35
         CollectionName = 'page-width'
-        Disabled = False
         Name = 'page-width'
       end
       item
         CollectionIndex = 36
         CollectionName = 'svg-logo'
-        Disabled = False
         Name = 'svg-logo'
       end
       item
         CollectionIndex = 37
         CollectionName = 'svg-logo-gray'
-        Disabled = False
         Name = 'svg-logo-gray'
       end
       item
         CollectionIndex = 38
         CollectionName = 'export'
-        Disabled = False
         Name = 'export'
       end
       item
         CollectionIndex = 46
         CollectionName = 'error'
-        Disabled = False
         Name = 'error'
       end
       item
         CollectionIndex = 47
         CollectionName = 'info'
-        Disabled = False
         Name = 'info'
       end
       item
         CollectionIndex = 48
         CollectionName = 'attachment'
-        Disabled = False
         Name = 'attachment'
       end
       item
         CollectionIndex = 49
         CollectionName = 'xml'
-        Disabled = False
         Name = 'markdown'
       end
       item
         CollectionIndex = 50
         CollectionName = 'xsl'
-        Disabled = False
         Name = 'markdown-gray'
       end
       item
         CollectionIndex = 41
         CollectionName = 'Support'
-        Disabled = False
         Name = 'Support'
       end
       item
         CollectionIndex = 49
         CollectionName = 'xml'
-        Disabled = False
         Name = 'xml'
       end
       item
         CollectionIndex = 50
         CollectionName = 'xsl'
-        Disabled = False
         Name = 'xsl'
       end
       item
         CollectionIndex = 51
         CollectionName = 'xml-gray'
-        Disabled = False
         Name = 'xml-gray'
       end
       item
         CollectionIndex = 52
         CollectionName = 'xsl-gray'
-        Disabled = False
         Name = 'xsl-gray'
       end
       item
         CollectionIndex = 53
         CollectionName = 'file'
-        Disabled = False
         Name = 'file'
       end
       item
         CollectionIndex = 54
         CollectionName = 'file-gray'
-        Disabled = False
         Name = 'file-gray'
       end
       item
         CollectionIndex = 55
         CollectionName = 'save_html'
-        Disabled = False
         Name = 'save_html'
       end
       item
         CollectionIndex = 56
         CollectionName = 'save_pdf'
-        Disabled = False
         Name = 'save_pdf'
       end
       item
         CollectionIndex = 57
         CollectionName = 'save_xml'
-        Disabled = False
         Name = 'save_xml'
       end
       item
         CollectionIndex = 58
         CollectionName = 'markdown-black'
-        Disabled = False
         Name = 'markdown-black'
       end
       item
         CollectionIndex = 59
         CollectionName = 'markdown-white'
-        Disabled = False
         Name = 'markdown-white'
       end
       item
         CollectionIndex = 60
         CollectionName = 'markdown-black-gray'
-        Disabled = False
         Name = 'markdown-black-gray'
       end
       item
         CollectionIndex = 61
         CollectionName = 'markdown-white-gray'
-        Disabled = False
         Name = 'markdown-white-gray'
       end>
     ImageCollection = dmResources.SVGIconImageCollection

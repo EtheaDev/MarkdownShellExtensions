@@ -1,9 +1,9 @@
-unit Image32_Extra;
+unit Img32.Extra;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  2.25                                                            *
-* Date      :  28 June 2021                                                    *
+* Version   :  3.1                                                             *
+* Date      :  15 August 2021                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2019-2021                                         *
 *                                                                              *
@@ -17,11 +17,11 @@ unit Image32_Extra;
 
 interface
 
-{$I Image32.inc}
+{$I Img32.inc}
 
 uses
   SysUtils, Classes, Math, Types,
-  Image32, Image32_Draw, Image32_Vector;
+  Img32, Img32.Draw, Img32.Vector;
 
 type
   TButtonShape = (bsRound, bsSquare, bsDiamond);
@@ -92,11 +92,11 @@ procedure EraseOutsidePaths(img: TImage32; const paths: TPathsD;
 procedure Draw3D(img: TImage32; const polygon: TPathD;
   fillRule: TFillRule; height, blurRadius: double;
   colorLt: TColor32 = $DDFFFFFF; colorDk: TColor32 = $80000000;
-  angleRads: double = angle45); overload;
+  angleRads: double = angle225); overload;
 procedure Draw3D(img: TImage32; const polygons: TPathsD;
   fillRule: TFillRule; height, blurRadius: double;
   colorLt: TColor32 = $DDFFFFFF; colorDk: TColor32 = $80000000;
-  angleRads: double = angle45); overload;
+  angleRads: double = angle225); overload;
 
 function RainbowColor(fraction: double): TColor32;
 function GradientColor(color1, color2: TColor32; frac: single): TColor32;
@@ -145,9 +145,9 @@ implementation
 
 uses
   {$IFNDEF MSWINDOWS}
-  Image32_FMX,
+  Img32.FMX,
   {$ENDIF}
-  Image32_Transform;
+  Img32.Transform;
 
 const
   FloodFillDefaultRGBTolerance: byte = 20;
@@ -265,11 +265,12 @@ begin
   rec := GetBounds(polygons);
   if IsEmptyRect(rec) or (depth < 1) then Exit;
   if not ClockwiseRotationIsAnglePositive then angleRads := -angleRads;
+  NormalizeAngle(angleRads);
   GetSinCos(angleRads, y, x);
   x := depth * x;
   y := depth * y;
   blurSize := Max(1,Round(depth / 4));
-  rec := Image32_Vector.InflateRect(rec, Ceil(depth*2), Ceil(depth*2));
+  Img32.Vector.InflateRect(rec, Ceil(depth*2), Ceil(depth*2));
   polys := OffsetPath(polygons, -rec.Left, -rec.Top);
   shadowPolys := OffsetPath(polys, x, y);
   shadowImg := TImage32.Create(RectWidth(rec), RectHeight(rec));
@@ -305,7 +306,7 @@ begin
   rec := GetBounds(polygons);
   glowPolys := OffsetPath(polygons,
     blurRadius -rec.Left +1, blurRadius -rec.Top +1);
-  rec := Image32_Vector.InflateRect(rec, blurRadius +1, blurRadius +1);
+  Img32.Vector.InflateRect(rec, blurRadius +1, blurRadius +1);
   glowImg := TImage32.Create(RectWidth(rec), RectHeight(rec));
   try
     DrawPolygon(glowImg, glowPolys, fillRule, color);
@@ -397,7 +398,7 @@ begin
     path[0] := PointD(x, 0); path[1] := PointD(x, h);;
     for i := 1 to (w div minorInterval) do
     begin
-      Image32_Draw.DrawLine(img, path, 1, minColor, esSquare);
+      Img32.Draw.DrawLine(img, path, 1, minColor, esSquare);
       path[0].X := path[0].X + minorInterval;
       path[1].X := path[1].X + minorInterval;
     end;
@@ -405,7 +406,7 @@ begin
     path[0] := PointD(0, y); path[1] := PointD(w, y);
     for i := 1 to (h div minorInterval) do
     begin
-      Image32_Draw.DrawLine(img, path, 1, minColor, esSquare);
+      Img32.Draw.DrawLine(img, path, 1, minColor, esSquare);
       path[0].Y := path[0].Y + minorInterval;
       path[1].Y := path[1].Y + minorInterval;
     end;
@@ -416,7 +417,7 @@ begin
     path[0] := PointD(x, 0); path[1] := PointD(x, h);;
     for i := 1 to (w div majorInterval) do
     begin
-      Image32_Draw.DrawLine(img, path, 1, majColor, esSquare);
+      Img32.Draw.DrawLine(img, path, 1, majColor, esSquare);
       path[0].X := path[0].X + majorInterval;
       path[1].X := path[1].X + majorInterval;
     end;
@@ -424,7 +425,7 @@ begin
     path[0] := PointD(0, y); path[1] := PointD(w, y);
     for i := 1 to (h div majorInterval) do
     begin
-      Image32_Draw.DrawLine(img, path, 1, majColor, esSquare);
+      Img32.Draw.DrawLine(img, path, 1, majColor, esSquare);
       path[0].Y := path[0].Y + majorInterval;
       path[1].Y := path[1].Y + majorInterval;
     end;
@@ -504,7 +505,7 @@ begin
   else if k < 230 then k := 3
   else k := 4;
   cutoutRec := rect;
-  Image32_Vector.InflateRect(cutoutRec, k, k);
+  Img32.Vector.InflateRect(cutoutRec, k, k);
 
   cutout  := TImage32.Create(img, cutoutRec);
   mask    := TImage32.Create(cutout.Width, cutout.Height);
@@ -513,7 +514,7 @@ begin
     //fill behind the cutout with black also
     //blurring the fill to soften its edges
     rect3 := cutout.Bounds;
-    Image32_Vector.InflateRect(rect3, -k, -k);
+    Img32.Vector.InflateRect(rect3, -k, -k);
     path := Ellipse(rect3);
     DrawPolygon(mask, path, frNonZero, clBlack32);
     //given the very small area and small radius of the blur, the
@@ -605,37 +606,35 @@ procedure Draw3D(img: TImage32; const polygons: TPathsD;
   colorLt: TColor32; colorDk: TColor32; angleRads: double);
 var
   tmp: TImage32;
-  recI: TRect;
-  recD: TRectD;
+  rec: TRect;
   paths, paths2: TPathsD;
   x,y: double;
 begin
+  rec := GetBounds(polygons);
+  if IsEmptyRect(rec) then Exit;
   if not ClockwiseRotationIsAnglePositive then angleRads := -angleRads;
   GetSinCos(angleRads, y, x);
-  recD := GetBoundsD(polygons);
-  if recD.IsEmpty then Exit;
-  recI := Rect(recD);
-  paths := OffsetPath(polygons, -recI.Left, -recI.Top);
-  tmp := TImage32.Create(rectWidth(recI), rectHeight(recI));
+  paths := OffsetPath(polygons, -rec.Left, -rec.Top);
+  tmp := TImage32.Create(rectWidth(rec), rectHeight(rec));
   try
     if colorLt shr 24 > 0 then
     begin
       tmp.Clear(colorLt);
-      paths2 := OffsetPath(paths, height*x, height*y);
+      paths2 := OffsetPath(paths, -height*x, -height*y);
       EraseInsidePaths(tmp, paths2, fillRule);
       FastGaussianBlur(tmp, tmp.Bounds, Round(blurRadius), 0);
       EraseOutsidePaths(tmp, paths, fillRule, tmp.Bounds);
-      img.CopyBlend(tmp, tmp.Bounds, recI, BlendToAlpha);
+      img.CopyBlend(tmp, tmp.Bounds, rec, BlendToAlpha);
     end;
 
     if colorDk shr 24 > 0 then
     begin
       tmp.Clear(colorDk);
-      paths2 := OffsetPath(paths, -height*x, -height*y);
+      paths2 := OffsetPath(paths, height*x, height*y);
       EraseInsidePaths(tmp, paths2, fillRule);
       FastGaussianBlur(tmp, tmp.Bounds, Round(blurRadius), 0);
       EraseOutsidePaths(tmp, paths, fillRule, tmp.Bounds);
-      img.CopyBlend(tmp, tmp.Bounds, recI, BlendToAlpha);
+      img.CopyBlend(tmp, tmp.Bounds, rec, BlendToAlpha);
     end;
   finally
     tmp.Free;
@@ -701,12 +700,12 @@ var
   i: integer;
   radius: double;
   rec: TRectD;
-  shadowSize, shadowAngle: double;
+  lightSize, lightAngle: double;
 begin
   img.Clear;
   if (size < 5) then Exit;
   radius := size * 0.5;
-  shadowSize := radius * 0.25;
+  lightSize := radius * 0.25;
 
   rec := RectD(pt.X -radius, pt.Y -radius, pt.X +radius, pt.Y +radius);
 
@@ -722,13 +721,13 @@ begin
       end;
     bsSquare:
       begin
-        rec := InflateRect(rec, -1,-1);
+        Img32.Vector.InflateRect(rec, -1,-1);
         Result := Rectangle(rec);
       end;
     else
       Result := Ellipse(rec);
   end;
-  shadowAngle := angle45;
+  lightAngle := angle225;
 
   img.BeginUpdate;
   try
@@ -736,15 +735,15 @@ begin
     //nb: only need to cutout the inside shadow if
     //the pending color fill is semi-transparent
     if baShadow in buttonAttributes then
-      DrawShadow(img, Result, frNonZero, shadowSize,
-        shadowAngle, $AA000000, color shr 24 < 254);
+      DrawShadow(img, Result, frNonZero, lightSize,
+        (lightAngle + angle180), $AA000000, color shr 24 < 254);
 
     if color shr 24 > 2 then
       DrawPolygon(img, Result, frNonZero, color);
 
     if ba3D in buttonAttributes then
-      Draw3D(img, Result, frNonZero, shadowSize*2,
-        Ceil(shadowSize), $CCFFFFFF, $AA000000, shadowAngle);
+      Draw3D(img, Result, frNonZero, lightSize*2,
+        Ceil(lightSize), $CCFFFFFF, $AA000000, lightAngle);
     DrawLine(img, Result, DpiAwareI, clBlack32, esPolygon);
   finally
     img.EndUpdate;
@@ -1768,20 +1767,6 @@ end;
 // RamerDouglasPeucker - and support functions
 //------------------------------------------------------------------------------
 
-function PerpendicularDistSqrd(const pt, line1, line2: TPointD): double;
-var
-  a,b,c,d: double;
-begin
-  a := pt.X - line1.X;
-  b := pt.Y - line1.Y;
-  c := line2.X - line1.X;
-  d := line2.Y - line1.Y;
-  if (c = 0) and (d = 0) then
-    result := 0 else
-    result := Sqr(a * d - c * b) / (c * c + d * d);
-end;
-//------------------------------------------------------------------------------
-
 procedure RDP(const path: TPathD; startIdx, endIdx: integer;
   epsilonSqrd: double; const flags: TArrayOfInteger);
 var
@@ -2516,7 +2501,7 @@ var
   row: PColor32Array;
   wcRow: PWeightedColorArray;
 begin
-  rec := Image32_Vector.IntersectRect(rec, img.Bounds);
+  Types.IntersectRect(rec, rec, img.Bounds);
   if IsEmptyRect(rec) or (radius < 1) then Exit
   else if radius > MaxBlur then radius := MaxBlur;
 
@@ -2560,68 +2545,84 @@ end;
 //http://blog.ivank.net/fastest-gaussian-blur.html
 //https://www.peterkovesi.com/papers/FastGaussianSmoothing.pdf
 
-function BoxesForGauss(stdDev, boxCnt, maxVal: integer): TArrayOfInteger;
+function BoxesForGauss(stdDev, boxCnt: integer): TArrayOfInteger;
 var
   i, wl, wu, m: integer;
   wIdeal, mIdeal: double;
 begin
-  wIdeal := Sqrt((12*stdDev*stdDev/boxCnt)+1);
-  wl := Floor(wIdeal);
-  if (wl mod 2 = 0) then dec(wl);
-  wu := wl+2;
-
-  mIdeal := (12 *stdDev*stdDev
-    -boxCnt *wl*wl - 4*boxCnt *wl - 3 *boxCnt) / (-4 *wl - 4);
-  m := Round(mIdeal);
   SetLength(Result, boxCnt);
-  wl := Min(maxVal, wl);
-  wu := Min(maxVal, wu);
+
+  wIdeal := Sqrt((12*stdDev*stdDev/boxCnt)+1); // Ideal averaging filter width
+  wl := Floor(wIdeal); if not Odd(wl) then dec(wl);
+  mIdeal :=
+    (-3*stdDev*stdDev +0.25*boxCnt*wl*wl +boxCnt*wl +0.75*boxCnt)/(wl+1);
+
+  m := Floor(mIdeal) div 2;   //nb: variation on Ivan Kutskir's code.
+  wl := (wl -1) div 2;        //    It's better to do this here
+  wu := wl+1;                 //    than later in both BoxBlurH & BoxBlurV
 
   for i := 0 to boxCnt -1 do
     if i < m then
-      Result[i] := (wl -1) div 2 else
-      Result[i] := (wu -1) div 2;
+      Result[i] := wl else
+      Result[i] := wu;
 end;
 //------------------------------------------------------------------------------
 
 procedure BoxBlurH(var src, dst: TArrayOfColor32; w,h, stdDev: integer);
 var
-  i,j, ti, li, ri: integer;
+  i,j, ti, li, ri, re, ovr: integer;
   fv, lv, val: TWeightedColor;
+  rc: TColor32;
 begin
+  ovr := Max(0, stdDev - w);
   for i := 0 to h -1 do
   begin
     ti := i * w;
     li := ti;
     ri := ti +stdDev;
 
+    re := ti +w -1; //idx of last pixel in row
+    rc := src[re];  //color of last pixel in row
+
     fv.Reset;
     lv.Reset;
     val.Reset;
 
     fv.Add(src[ti], 1);
-    lv.Add(src[ti +w -1], 1);
-    val.Add(fv.Color, stdDev +1);
+    lv.Add(rc, 1);
+    val.Add(src[ti], stdDev +1);
 
-    for j := 0 to stdDev -1 do
+    for j := 0 to stdDev -1 - ovr do
       val.Add(src[ti + j]);
+    if ovr > 0 then val.Add(rc, ovr);
+
     for j := 0 to stdDev do
     begin
-      val.Add(src[ri]); inc(ri);
+      if ri > re then
+        val.Add(rc) else
+        val.Add(src[ri]);
+      inc(ri);
       val.Subtract(fv);
-      dst[ti] := val.Color; inc(ti);
+      if ti <= re then
+        dst[ti] := val.Color;
+      inc(ti);
     end;
     for j := stdDev +1 to w - stdDev -1 do
     begin
-      val.Add(src[ri]); inc(ri);
-      val.Subtract(src[li]); inc(li);
+      if ri <= re then
+      begin
+        val.Add(src[ri]); inc(ri);
+        val.Subtract(src[li]); inc(li);
+      end;
       dst[ti] := val.Color; inc(ti);
     end;
-    for j := w - stdDev to w -1 do
+    while ti <= re do
     begin
+      if ti > re then Break;
       val.Add(lv);
       val.Subtract(src[li]); inc(li);
-      dst[ti] := val.Color; inc(ti);
+      dst[ti] := val.Color;
+      inc(ti);
     end;
   end;
 end;
@@ -2629,9 +2630,11 @@ end;
 
 procedure BoxBlurT(var src, dst: TArrayOfColor32; w, h, stdDev: integer);
 var
-  i,j, ti, li, ri: integer;
+  i,j, ti, li, ri, re, ovr: integer;
   fv, lv, val: TWeightedColor;
+  rc: TColor32;
 begin
+  ovr := Max(0, stdDev - h);
   for i := 0 to w -1 do
   begin
     ti := i;
@@ -2642,30 +2645,43 @@ begin
     lv.Reset;
     val.Reset;
 
-    fv.Add(src[ti]);
-    lv.Add(src[ti +w *(h-1)], 1);
-    val.Add(fv.Color, stdDev +1);
+    re := ti +w *(h-1); //idx of last pixel in column
+    rc := src[re];      //color of last pixel in column
 
-    for j := 0 to stdDev -1 do
+    fv.Add(src[ti]);
+    lv.Add(rc, 1);
+    val.Add(src[ti], stdDev +1);
+
+    for j := 0 to stdDev -1 -ovr do
       val.Add(src[ti + j *w]);
+    if ovr > 0 then val.Add(rc, ovr);
+
     for j := 0 to stdDev do
     begin
-      val.Add(src[ri]); inc(ri, w);
+      if ri > re then
+        val.Add(rc) else
+        val.Add(src[ri]);
+      inc(ri, w);
       val.Subtract(fv);
-      dst[ti] := val.Color; inc(ti, w);
-
+      if ti <= re then
+        dst[ti] := val.Color;
+      inc(ti, w);
     end;
     for j := stdDev +1 to h - stdDev -1 do
     begin
-      val.Add(src[ri]); inc(ri, w);
-      val.Subtract(src[li]); inc(li, w);
+      if ri <= re then
+      begin
+        val.Add(src[ri]); inc(ri, w);
+        val.Subtract(src[li]); inc(li, w);
+      end;
       dst[ti] := val.Color; inc(ti, w);
     end;
-    for j := h - stdDev to h -1 do
+    while ti <= re do
     begin
       val.Add(lv);
       val.Subtract(src[li]); inc(li, w);
-      dst[ti] := val.Color; inc(ti, w);
+      dst[ti] := val.Color;
+      inc(ti, w);
     end;
   end;
 end;
@@ -2674,7 +2690,7 @@ end;
 procedure FastGaussianBlur(img: TImage32;
   const rec: TRect; stdDev: integer; repeats: integer);
 var
-  i,j,len, w,h, maxStdDev: integer;
+  i,j,len, w,h: integer;
   rec2: TRect;
   boxes: TArrayOfInteger;
   src, dst: TArrayOfColor32;
@@ -2682,21 +2698,17 @@ var
   p: PColor32;
 begin
   if not Assigned(img) then Exit;
-  rec2 := Image32_Vector.IntersectRect(rec, img.Bounds);
+  Types.IntersectRect(rec2, rec, img.Bounds);
   if IsEmptyRect(rec2) then Exit;
   blurFullImage := RectsEqual(rec2, img.Bounds);
 
   w := RectWidth(rec2);
   h := RectHeight(rec2);
+  if (Min(w, h) < 2) or (stdDev < 1) then Exit;
+
   len := w * h;
   SetLength(src, len);
   SetLength(dst, len);
-
-  //safety check to avoid overflows
-  maxStdDev := Min(w, h) div 2 -1;
-  if stdDev > maxStdDev then
-    stdDev := maxStdDev;
-  if stdDev < 1 then Exit;
 
   if blurFullImage then
   begin
@@ -2704,7 +2716,7 @@ begin
     Move(img.PixelBase^, dst[0], len * SizeOf(TColor32));
   end else
   begin
-    //copy just a rectangular region into  dst array
+    //copy just a rectangular region into dst array
     p := @dst[0];
     for i := rec2.Top to rec2.Bottom -1 do
     begin
@@ -2715,8 +2727,8 @@ begin
   end;
 
   //do the blur
-  inc(repeats);
-  boxes := BoxesForGauss(stdDev, repeats, maxStdDev);
+  inc(repeats); //now represents total iterations
+  boxes := BoxesForGauss(stdDev, repeats);
   for j := 0 to repeats -1 do
     begin
       BoxBlurH(dst, src, w, h, boxes[j]);

@@ -387,7 +387,7 @@ begin
     FMarkDownFile := TMarkDownFile.Create(SynEditor.Lines.Text,
       ASettings.ProcessorDialect, True);
 
-    //Carica il contenuto HTML trasformato dentro l'HTML-Viewer
+    //Load HTML content into HTML-Viewer
     LOldPos := HtmlViewer.VScrollBarPosition;
     HtmlViewer.DefFontSize := ASettings.HTMLFontSize;
     HtmlViewer.DefFontName := ASettings.HTMLFontName;
@@ -428,6 +428,7 @@ begin
 
   FileName := EditFileName;
   Fextension := ExtractFileExt(FileName);
+
   FIcon := TIcon.Create;
   if FileExists(FileName) then
     FIcon.Handle := ExtractAssociatedIcon(hInstance, PChar(DoubleQuote(FileName)),Filter);
@@ -526,10 +527,10 @@ begin
     if FileExists(FileName) then
     begin
       if not CanAcceptFileName(FileName) then
-        raise Exception.CreateFmt('cannot load file with extension different from "%s"',
+        raise Exception.CreateFmt('Cannot open file with extensions different from "%s"',
         [AcceptedExtensions]);
 
-      //ciclo per cercare se il file è già aperto
+      //looking for the file already opened
       EditingFile := nil;
       I := -1;
       for J := 0 to EditFileList.Count -1 do
@@ -542,16 +543,16 @@ begin
           break;
         end;
       end;
-      //Creo l'oggetto EditingFile
+      //searching EditingFile object
       Try
         if not Assigned(EditingFile) then
         begin
           EditingFile := TEditingFile.Create(FileName, FEditorSettings);
-          //Aggiungo il file alla lista
+          //Add file to list
           I := AddEditingFile(EditingFile);
         end;
 
-        //Apro il file
+        //Opens the file
         EditingFile.ReadFromFile;
 
         Result := True;
@@ -857,7 +858,7 @@ var
   InitialDir : string;
   FileVersionStr: string;
 begin
-  //creo la lista dei files aperti
+  //Build opened-files list
   EditFileList := TObjectList.Create(True);
   FEditorOptions := TSynEditorOptionsContainer.create(self);
   FEditorSettings := TEditorSettings.CreateSettings(nil, FEditorOptions);
@@ -871,7 +872,7 @@ begin
   //Double font for title
   lblTitle.Font.Size := lblTitle.Font.Size * 2;
 
-  //Versione
+  //Version
   FileVersionStr := uMisc.GetFileVersion(GetModuleLocation());
   Application.Title := Application.Title + ' (Ver.'+FileVersionStr+')';
   Caption := Application.Title;
@@ -880,22 +881,22 @@ begin
 
   UpdateFromSettings(nil);
 
-  //Aggancia l'imagelist che si sgancia
+  //Explicit attach imagelist
   ActionList.Images := VirtualImageList;
 
-  //directory di partenza
+  //staring folder
   CurrentDir := IncludeTrailingPathDelimiter(TPath.GetDocumentsPath);
 
-  //Inizializza output di stampa
+  //Initialize print output
   InitSynEditPrint;
 
-  //Carico i files che erano rimasti aperti
+  //Load previous opened-files
   LoadOpenedFiles;
 
-  //Inizializza Open e Save Dialog dalla Dir di lancio del programma
+  //Initialize Open and Save Dialog with application path
   if ParamStr(1) <> '' then
   begin
-    //Carico l'eventuale file esterno
+    //Load file passed at command line
     InitialDir := ParamStr(1);
     OpenFile(ParamStr(1));
     UpdateMDViewer(True);
@@ -906,7 +907,7 @@ begin
   OpenDialog.InitialDir := InitialDir;
   SaveDialog.InitialDir := InitialDir;
 
-  //Aggiorna le impostazioni di tutti gli editor aperti
+  //Update all editor options
   UpdateEditorsOptions;
 end;
 
@@ -917,7 +918,7 @@ var
 begin
   NewExt := 'md';
 
-  //Aggiungo un file vuoto
+  //Create object to manage new file
   EditingFile := TEditingFile.Create(CurrentDir+'New.'+NewExt,
     FEditorSettings);
   Try
@@ -943,7 +944,7 @@ end;
 
 procedure TfrmMain.acCloseExecute(Sender: TObject);
 begin
-  //Rimuovo il file da editare
+  //Remove editing file
   RemoveEditingFile(CurrentEditFile);
 end;
 
@@ -1004,16 +1005,16 @@ var
   LFEViewer: THtmlViewer;
   LSplitter: TSplitter;
 begin
-  //lo aggiungo alla lista dei file aperti
+  //Add file to opened-list
   Result := EditFileList.Add(EditingFile);
-  //Appena aggiungo un'oggetto alla lista creo la pagina Associata
+  //Create the Tabsheet page associated to the file
   LTabSheet := nil;
   LEditor := nil;
   LFEViewer := nil;
   Try
     LTabSheet := TTabSheet.Create(self);
     LTabSheet.PageControl := PageControl;
-    //Attacco al TAG del tabsheet l'oggetto del file da editare
+    //Use TAG of tabsheet to store the object pointer
     LTabSheet.Tag := Integer(EditingFile);
     LTabSheet.Caption := EditingFile.Name;
     LTabSheet.Imagename := EditingFile.ImageName+'-gray';
@@ -1021,7 +1022,7 @@ begin
     LTabSheet.TabVisible := True;
     EditingFile.TabSheet := LTabSheet;
 
-    //Creo l'oggetto dell'editor all'interno della pagina con l'owner la pagina
+    //Create the SynEdit object editor into the TabSheet that is the owner
     LEditor := TSynEdit.Create(nil);
     LEditor.OnChange := SynEditChange;
     LEditor.OnEnter := SynEditEnter;
@@ -1030,7 +1031,7 @@ begin
     LEditor.Parent := LTabSheet;
     LEditor.SearchEngine := SynEditSearch;
     LEditor.PopupMenu := popEditor;
-    //Assegna le preferenze dell'utente
+    //Assign user preferences to the editor
     FEditorOptions.AssignTo(LEditor);
     LEditor.MaxScrollWidth := 3000;
     EditingFile.SynEditor := LEditor;
@@ -1063,7 +1064,7 @@ begin
     UpdateHighlighter(LEditor);
     LEditor.Visible := True;
 
-    //Visualizzo il tabsheet
+    //Show the tabsheet
     LTabSheet.Visible := True;
   Except
     LTabSheet.Free;
@@ -1072,10 +1073,10 @@ begin
     raise;
   End;
 
-  //Attivo la pagina appena creata
+    //Make the Tabsheet the current page
   PageControl.ActivePage := LTabSheet;
 
-  //Forzo "change" della pagina
+    //and call "change" of pagecontrol
   PageControl.OnChange(PageControl);
 end;
 
@@ -1100,7 +1101,7 @@ end;
 procedure TfrmMain.PageControlChange(Sender: TObject);
 begin
   CloseSplitViewMenu;
-  //Imposto la caption dell'Editor
+  //Setting the Editor caption as the actual file opened
   if CurrentEditFile <> nil then
   begin
     Caption := Application.Title+' - '+CurrentEditFile.FileName;
@@ -1158,7 +1159,7 @@ begin
   if pos = -1 then
     raise EComponentError.Create(CLOSING_PROBLEMS);
 
-  //Richiesta di abbandono delle modifiche pendenti
+  //Confirm abandon changes
   if EditingFile.SynEditor.Modified then
   begin
     if MessageDlg(Format(CONFIRM_ABANDON,[EditingFile.FileName]),
@@ -1170,17 +1171,17 @@ begin
   if FMDFile = EditingFile then
     FMDFile := nil;
 
-  //Elimino il file dalla lista
+  //Delete the file from the Opened-List
   EditFileList.Delete(pos);
 
-  //Elimino la pagina
+  //Delete the TabSheet
   PageControl.Pages[pos].Free;
 
-  //Attivo la pagina nuova che ha preso il posto della precedente
+  //Activate the previous page and call "change" of pagecontrol
   if pos > 0 then
     PageControl.ActivePageIndex := pos-1;
 
-  //Forzo "change" della pagina
+  //Force "change" of Page
   PageControl.OnChange(PageControl);
 end;
 
@@ -1432,7 +1433,7 @@ end;
 procedure TfrmMain.UpdateFromSettings(AEditor: TSynEdit);
 begin
   UpdateApplicationStyle(FEditorSettings.StyleName);
-  if AEditor <> nil then
+  if (AEditor <> nil) then
   begin
     FEditorSettings.ReadSettings(AEditor.Highlighter, self.FEditorOptions);
     AEditor.ReadOnly := False;
@@ -1461,7 +1462,7 @@ begin
   LBackgroundColor := StyleServices.GetSystemColor(clWindow);
   ASynEditor.Highlighter := dmResources.GetSynHighlighter(
     FEditorSettings.UseDarkStyle, LBackgroundColor);
-  //Assegna i colori "custom" all'Highlighter
+  //Assign custom colors to the Highlighter
   FEditorSettings.ReadSettings(ASynEditor.Highlighter, self.FEditorOptions);
 end;
 
@@ -1476,7 +1477,6 @@ begin
     UpdateHighlighter(LEditingFile.SynEditor);
   end;
 end;
-
 
 procedure TfrmMain.actnEditingUpdate(Sender: TObject);
 begin
@@ -1523,7 +1523,7 @@ begin
     end;
     CurrentEditFile.SaveToFile;
 
-    //Forzo "change" della pagina
+    //call the "onchange" event of PageControl
     PageControl.OnChange(PageControl);
   end;
 end;
@@ -1674,14 +1674,14 @@ procedure TfrmMain.AddOpenedFile(const AFileName: string);
 var
   i : integer;
 begin
-  //se esiste già la voce la cancello
+  //Add the opened file to the opened-file list
   i := FEditorSettings.HistoryFileList.IndexOf(AFileName);
   if i >= 0 then
     FEditorSettings.HistoryFileList.Delete(i);
-  //massimo 15 voci
+  //max 15 items
   if FEditorSettings.HistoryFileList.Count > 15 then
     FEditorSettings.HistoryFileList.Delete(14);
-  //Aggiungo la voce in prima posizione
+  //add the last opened-file at first position
   FEditorSettings.HistoryFileList.Insert(0, AFileName);
 end;
 
@@ -1770,7 +1770,7 @@ var
   LFileName : string;
 begin
   LFilename := (Sender as TMenuItem).Hint;
-  //Carico il file selezionato
+  //Load the selected file
   OpenFile(LFileName);
   UpdateMDViewer(True);
   if (CurrentEditor <> nil) and (CurrentEditor.CanFocus) then

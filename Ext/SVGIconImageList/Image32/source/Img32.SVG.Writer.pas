@@ -1,9 +1,9 @@
-unit Image32_SVG_Writer;
+unit Img32.SVG.Writer;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  2.27                                                            *
-* Date      :  17 July 2021                                                    *
+* Version   :  3.1                                                             *
+* Date      :  15 August 2021                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2019-2021                                         *
 *                                                                              *
@@ -19,13 +19,13 @@ unit Image32_SVG_Writer;
 
 interface
 
-{$I Image32.inc}
+{$I Img32.inc}
 
 uses
   SysUtils, Classes, Types, Math,
   {$IFDEF XPLAT_GENERICS} Generics.Collections, Generics.Defaults,{$ENDIF}
-  Image32, Image32_SVG_Core, Image32_Vector, Image32_Draw,
-  Image32_Transform, Image32_Ttf;
+  Img32, Img32.SVG.Core, Img32.Vector, Img32.Draw,
+  Img32.Transform, Img32.Text;
 
 {$IFDEF ZEROBASEDSTR}
   {$ZEROBASEDSTRINGS OFF}
@@ -77,6 +77,7 @@ type
     fFillClr     : TColor32;
     fStrokeClr   : TColor32;
     fStrokeWidth : double;
+    fDashes     : TArrayOfDouble;
     function WriteHeader: string; override;
   public
     Matrix      : TMatrixD;
@@ -84,9 +85,10 @@ type
     procedure Rotate(const pivotPt: TPointD; angleRad: double);
     procedure Translate(dx, dy: double);
     procedure Skew(dx, dy: double);
-    property FillColor: TColor32 read fFillClr write fFillClr;
-    property StrokeColor: TColor32 read fStrokeClr write fStrokeClr;
-    property StrokeWidth: double read fStrokeWidth write fStrokeWidth;
+    property FillColor    : TColor32 read fFillClr write fFillClr;
+    property StrokeColor  : TColor32 read fStrokeClr write fStrokeClr;
+    property StrokeWidth  : double read fStrokeWidth write fStrokeWidth;
+    property Dashes       : TArrayOfDouble read fDashes write fDashes;
   end;
 
   TSvgGroupWriter = class(TExBaseElWriter)
@@ -227,7 +229,7 @@ end;
 
 procedure AppendInt(var s: string; val: double);
 begin
-  s := Format('%s%1.0d ',[s, val]);
+  s := Format('%s%1.0f ',[s, val]);
 end;
 //------------------------------------------------------------------------------
 
@@ -436,6 +438,14 @@ begin
   begin
     AppendColorAttrib(Result, 'stroke', fStrokeClr);
     AppendFloatAttrib(Result, 'stroke-width', fStrokeWidth);
+  end;
+
+  if Assigned(fDashes) then
+  begin
+    AppendStr(Result, 'stroke-dasharray="', true);
+    for i := 0 to High(fDashes) do
+      AppendFloat(Result, fDashes[i]);
+    AppendStr(Result, '"');
   end;
 
   if not IsIdentityMatrix(Matrix) then
@@ -704,7 +714,7 @@ const
 begin
   currPath := GetCurrentPath;
   currSeg  := GetNewOrAppendSeg(currPath, dsArc);
-  AddSegmentValues(currSeg, [radii.sx, radii.sy, angle,
+  AddSegmentValues(currSeg, [radii.cx, radii.cy, angle,
     boolVal[arcFlag], boolVal[sweepFlag], endPt.X, endPt.Y]);
   fLastPt := endPt;
 end;
@@ -814,8 +824,8 @@ begin
   Result := inherited WriteHeader;
   AppendFloatAttrib(Result, 'cx', Origin.X);
   AppendFloatAttrib(Result, 'cy', Origin.Y);
-  AppendFloatAttrib(Result, 'rx', radii.sx);
-  AppendFloatAttrib(Result, 'ry', radii.sy);
+  AppendFloatAttrib(Result, 'rx', radii.cx);
+  AppendFloatAttrib(Result, 'ry', radii.cy);
 end;
 
 //------------------------------------------------------------------------------
@@ -836,10 +846,10 @@ begin
   AppendFloatAttrib(Result, 'y', RecWH.Top);
   AppendFloatAttrib(Result, 'width', RecWH.Width);
   AppendFloatAttrib(Result, 'height', RecWH.Height);
-  if radii.sx > 0 then
-    AppendFloatAttrib(Result, 'rx', radii.sx);
-  if radii.sy > 0 then
-    AppendFloatAttrib(Result, 'ry', radii.sy);
+  if radii.cx > 0 then
+    AppendFloatAttrib(Result, 'rx', radii.cx);
+  if radii.cy > 0 then
+    AppendFloatAttrib(Result, 'ry', radii.cy);
 end;
 
 //------------------------------------------------------------------------------
@@ -892,8 +902,8 @@ begin
   inherited;
   fElStr := 'text';
   fontInfo := nullfontInfo;
-  offset.sx := InvalidD;
-  offset.sy := InvalidD;
+  offset.cx := InvalidD;
+  offset.cy := InvalidD;
 end;
 //------------------------------------------------------------------------------
 
@@ -936,10 +946,10 @@ begin
   if position.Y <> InvalidD then
     AppendFloatAttrib(Result, 'y', position.Y);
 
-  if offset.sx <> InvalidD then
-    AppendFloatAttrib(Result, 'dx', offset.sx);
-  if offset.sy <> InvalidD then
-    AppendFloatAttrib(Result, 'dy', offset.sy);
+  if offset.cx <> InvalidD then
+    AppendFloatAttrib(Result, 'dx', offset.cx);
+  if offset.cy <> InvalidD then
+    AppendFloatAttrib(Result, 'dy', offset.cy);
 
 end;
 //------------------------------------------------------------------------------

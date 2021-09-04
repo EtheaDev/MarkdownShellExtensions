@@ -1,9 +1,9 @@
-unit Image32_SVG;
+unit Img32.Fmt.SVG;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  2.27                                                            *
-* Date      :  15 July 2021                                                    *
+* Version   :  3.1                                                             *
+* Date      :  15 August 2021                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2019-2021                                         *
 * Purpose   :  SVG file format extension for TImage32                          *
@@ -12,10 +12,10 @@ unit Image32_SVG;
 
 interface
 
-{$I Image32.inc}
+{$I Img32.inc}
 
 uses
-  SysUtils, Classes, Math, Image32, Image32_Vector, Image32_SVG_Reader;
+  SysUtils, Classes, Math, Img32, Img32.Vector, Img32.SVG.Reader;
 
 type
   TImageFormat_SVG = class(TImageFormat)
@@ -82,11 +82,11 @@ end;
 class function TImageFormat_SVG.IsValidImageStream(stream: TStream): Boolean;
 var
   i, savedPos, len: integer;
-  buff: array [1..256] of AnsiChar;
+  buff: array [1..1024] of AnsiChar;
 begin
   Result := false;
   savedPos := stream.Position;
-  len := Min(256, stream.Size - savedPos);
+  len := Min(1024, stream.Size - savedPos);
   stream.Read(buff[1], len);
   stream.Position := savedPos;
   for i := 1 to len -4 do

@@ -1,9 +1,9 @@
-unit Image32Panels;
+unit Img32.Panels;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  2.24                                                            *
-* Date      :  26 June 2021                                                    *
+* Version   :  3.1                                                             *
+* Date      :  15 August 2021                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2019-2021                                         *
 * Purpose   :  Component that displays images on a TPanel descendant           *
@@ -15,9 +15,9 @@ interface
 uses
   SysUtils, Classes, Windows, Messages, Types, Graphics,
   Controls, Forms, ExtCtrls, Themes, uxTheme, Math, ShellApi, ClipBrd,
-  Image32;
+  Img32;
 
-{$I Image32.inc}
+{$I Img32.inc}
 
 const
   WM_MOUSEHWHEEL = $020E;
@@ -184,7 +184,6 @@ procedure Register;
 begin
   RegisterComponents('Image32 Panels', [TImage32Panel]);
 end;
-
 type
   TNotifyImage32 = class(TImage32)
   protected
@@ -1222,6 +1221,7 @@ end;
 constructor TImage32Panel.Create(AOwner: TComponent);
 begin
   inherited;
+  Color := clWhite;
   fImage := TNotifyImage32.Create(Self);
   fImage.Resampler := rBicubicResampler;
   fImage.SetSize(200,200);

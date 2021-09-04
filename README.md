@@ -1,6 +1,6 @@
 ﻿# Markdown Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 1.1.0 - 20 Jul 2021**
+**Latest Version 1.2.0 - 04 Sep 2021**
 
 **A collection of extensions tools for markdown files, integrated into Microsoft Windows Explorer (Vista, 7, 8 and 10):**
 
@@ -54,8 +54,12 @@ To manually install the SVGShellExtensions.dll follow these steps:
 
 ## Release Notes ##
 
+04 Sep 2021: ver. 1.2.0
+- Added Support for Delphi 11
+- Updated Image32 Lib
+
 20 Jul 2021: ver. 1.1.0
-- Addedo Image32 Lib to best rendering of SVG Images
+- Added Image32 Lib to best rendering of SVG Images
 
 06 Jul 2021
 - First public release with setup

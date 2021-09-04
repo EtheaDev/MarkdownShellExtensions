@@ -95,7 +95,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 4: https://github.com/grahamegrieve/delphi-markdown
 
-![Delphi 10.4 Sydney Support](https://raw.githubusercontent.com/EtheaDev/SVGShellExtensions/main/Setup/SupportingDelphi.jpg)
+![Delphi 10.4 Sydney Support](/Setup/SupportingDelphi.jpg)
 
 Related links: [embarcadero.com][10] - [learndelphi.org][11]
 

@@ -58,7 +58,7 @@ Source: "..\Bin64\ssleay32.dll"; DestDir: {app}; Components: ShellExtensions; Fl
 
 [Icons]
 Name: "{group}\MDTextEditor"; Filename: "{app}\MDTextEditor.exe"; WorkingDir: "{app}"; IconFilename: "{app}\MDTextEditor.exe"; Components: Editor
-Name: "{userdesktop}\MDTextEditor"; Filename: "{app}\MTextDEditor.exe"; Tasks: desktopicon; Components: Editor
+Name: "{userdesktop}\MDTextEditor"; Filename: "{app}\MDTextEditor.exe"; Tasks: desktopicon; Components: Editor
 
 [Run]
 Filename: {app}\MDTextEditor.exe; Description: {cm:LaunchProgram,'MD Text Editor'}; Flags: nowait postinstall skipifsilent; Components: Editor

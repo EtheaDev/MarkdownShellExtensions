@@ -2,10 +2,10 @@ unit Img32.FMX;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  3.1                                                             *
-* Date      :  15 August 2021                                                    *
+* Version   :  4.0                                                             *
+* Date      :  10 January 2022                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2019-2021                                         *
+* Copyright :  Angus Johnson 2019-2022                                         *
 * Purpose   :  Image file format support for TImage32 and FMX                  *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************)
@@ -13,13 +13,13 @@ unit Img32.FMX;
 interface
 
 {$I Img32.inc}
+
 uses
-  SysUtils, Classes, Math, Img32, System.Rtti,
+  SysUtils, Classes, Math, System.Rtti,
   System.Generics.Collections, System.Generics.Defaults,
-  FMX.Platform, FMX.Types, FMX.Surfaces, FMX.Graphics;
+  FMX.Platform, FMX.Types, FMX.Surfaces, FMX.Graphics, Img32;
 
 type
-
   TImageFormat_FMX = class(TImageFormat)
   private
     fExt: string;
@@ -35,19 +35,10 @@ type
     property Ext: string read fExt write fExt;
   end;
 
-function DPIAwareFMX(val: Integer): Integer; overload; inline;
-function DPIAwareFMX(val: double): double; overload; inline;
+procedure AssignImage32ToFmxBitmap(img: TImage32; bmp: TBitmap);
 
 const
   RT_BITMAP = PChar(2);
-
-var
-  screenScale: double;
-
-  {$IFNDEF MSWINDOWS}
-  dpiAwareI: integer;
-  DpiAwareD: double;
-  {$ENDIF}
 
 implementation
 
@@ -203,47 +194,35 @@ end;
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
+procedure AssignImage32ToFmxBitmap(img: TImage32; bmp: TBitmap);
+var
+  src, dst: TBitmapData; //TBitmapData is a record.
+begin
+  if not Assigned(img) or not Assigned(bmp) then Exit;
+  src := TBitMapData.Create(img.Width, img.Height, TPixelFormat.BGRA);
+  src.Data := img.PixelBase;
+  src.Pitch := img.Width * 4;
+  bmp.SetSize(img.Width, img.Height);
+  if bmp.Map(TMapAccess.Write, dst) then
+  try
+    dst.Copy(src);
+  finally
+    bmp.Unmap(dst);
+  end;
+end;
+//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+
 procedure CheckScreenScale;
 var
   ScreenService: IFMXScreenService;
 begin
   if TPlatformServices.Current.SupportsPlatformService(
   IFMXScreenService, IInterface(ScreenService)) then
-    ScreenScale := ScreenService.GetScreenScale else
-    ScreenScale := 1;
+    DpiAwareOne := ScreenService.GetScreenScale else
+    DpiAwareOne := 1;
+  dpiAware1 := Round(DpiAwareOne);
 end;
-//------------------------------------------------------------------------------
-
-function DPIAwareFMX(val: Integer): Integer;
-begin
-  Result := Round(screenScale * val);
-end;
-//------------------------------------------------------------------------------
-
-function DPIAwareFMX(val: double): double;
-begin
-  Result := screenScale * val;
-end;
-//------------------------------------------------------------------------------
-
-procedure InitScreenScale;
-var
-  ScreenService: IFMXScreenService;
-begin
-  if TPlatformServices.Current.SupportsPlatformService (
-    IFMXScreenService, IInterface(ScreenService)) then
-      screenScale := ScreenService.GetScreenScale else
-      screenScale := 1.0;
-end;
-//------------------------------------------------------------------------------
-
-{$IFNDEF MSWINDOWS}
-procedure InitDpiVars;
-begin
-  dpiAwareI := DPIAwareFMX(1);
-  DpiAwareD := DPIAwareFMX(1.0);
-end;
-{$ENDIF}
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -253,9 +232,8 @@ initialization
   TImage32.RegisterImageFormatClass('PNG', TImageFormat_FMX, cpHigh);
   TImage32.RegisterImageFormatClass('JPG', TImageFormat_FMX, cpLow);
   TImage32.RegisterImageFormatClass('GIF', TImageFormat_FMX, cpLow);
-  CheckScreenScale;
 {$IFNDEF MSWINDOWS}
-  InitDpiVars;
+  CheckScreenScale;
 {$ENDIF}
 
 end.

@@ -3,7 +3,7 @@
 {       Icon SVG ImageList: An extended ImageList for Delphi/VCL               }
 {       to simplify use of SVG Icons (resize, opacity and more...)             }
 {                                                                              }
-{       Copyright (c) 2019-2021 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2019-2022 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {       Contributors: Vincent Parrett, Kiriakos Vlahos                         }
 {                                                                              }
@@ -55,9 +55,6 @@ function UpdateSVGIconListViewCaptions(const AListView: TListView;
 procedure SVGExportToPng(const AWidth, AHeight: Integer;
   FSVG: ISVG; const AOutFolder: string;
   const AFileName: string = '');
-{$IFDEF IgnoreAntiAliasedColor}
-procedure MakeTransparent(DC: THandle);
-{$ENDIF}
 function PNG4TransparentBitMap(aBitmap: TBitmap): TPNGImage;
 
 implementation
@@ -67,10 +64,6 @@ uses
   , System.Types
   , Vcl.Themes
   , SVGIconImageCOllection
-  {$IFDEF IgnoreAntiAliasedColor}
-  , Winapi.GDIPAPI
-  , Winapi.GDIPOBJ
-  {$ENDIF}
   {$IFDEF D10_3}
   , VirtualImageList
   {$ENDIF}
@@ -121,20 +114,6 @@ begin
   end;
 end;
 
-{$IFDEF IgnoreAntiAliasedColor}
-procedure MakeTransparent(DC: THandle);
-var
-  Graphics: TGPGraphics;
-begin
-  Graphics := TGPGraphics.Create(DC);
-  try
-    Graphics.Clear(aclTransparent);
-  finally
-    Graphics.Free;
-  end;
-end;
-{$ENDIF}
-
 procedure SVGExportToPng(const AWidth, AHeight: Integer;
   FSVG: ISVG; const AOutFolder: string;
   const AFileName: string = '');
@@ -147,11 +126,15 @@ begin
   LImagePng := nil;
   try
     LBitmap := TBitmap.Create;
-    LBitmap.PixelFormat := pf32bit;
+    LBitmap.PixelFormat := TPixelFormat.pf32bit;   // 32bit bitmap
+    LBitmap.AlphaFormat := TAlphaFormat.afDefined; // Enable alpha channel
+
     LBitmap.SetSize(AWidth, AHeight);
-    {$IFDEF IgnoreAntiAliasedColor}
-    MakeTransparent(LBitmap.Canvas.Handle);
-    {$ENDIF}
+
+    // Fill background with transparent
+    LBitmap.Canvas.Brush.Color := clNone;
+    LBitmap.Canvas.FillRect(Rect(0, 0, AWidth, AHeight));
+
     FSVG.PaintTo(LBitmap.Canvas.Handle, TRectF.Create(0, 0, AWidth, AHeight));
 
     LImagePng := PNG4TransparentBitMap(LBitmap);

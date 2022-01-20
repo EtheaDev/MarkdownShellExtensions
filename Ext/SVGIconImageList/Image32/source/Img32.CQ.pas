@@ -2,8 +2,8 @@ unit Img32.CQ;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  3.1                                                             *
-* Date      :  15 August 2021                                                    *
+* Version   :  4.0                                                             *
+* Date      :  22 December 2021                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2019-2021                                         *
 * Purpose   :  Color reduction for TImage32                                    *
@@ -177,11 +177,10 @@ end;
 
 function GetColorDistance(color1, color2: TColor32): integer;
 var
-  argb1: TARGB absolute color1;
-  argb2: TARGB absolute color2;
+  c1: TARGB absolute color1;
+  c2: TARGB absolute color2;
 begin
-  result := Sqr(argb2.R - argb1.R) +
-    Sqr(argb2.G - argb1.G) + Sqr(argb2.B - argb1.B);
+  result := Sqr(c2.R - c1.R) + Sqr(c2.G - c1.G) + Sqr(c2.B - c1.B);
 end;
 //------------------------------------------------------------------------------
 
@@ -499,7 +498,7 @@ var
  end;
 
 begin
-  if (color shr 24) < $80 then Exit;
+  if GetAlpha(color) < $80 then Exit;
   inc(TotalCount);
   color := color and $FFFFFF;
   AddColor(Top, 0);

@@ -1692,6 +1692,8 @@ begin
     SV.CompactWidth := Round(44 * ScaleFactor)
   else
     SV.CompactWidth := Round(66 * ScaleFactor);
+  if (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil) and (CurrentEditFile.HTMLViewer.Width > CurrentEditFile.TabSheet.Width) then
+    CurrentEditFile.HTMLViewer.Width := width div 3;
 end;
 
 procedure TfrmMain.FormAfterMonitorDpiChanged(Sender: TObject; OldDPI,

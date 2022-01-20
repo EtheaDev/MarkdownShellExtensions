@@ -1,6 +1,6 @@
 ﻿# Markdown Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 1.2.0 - 04 Sep 2021**
+**Latest Version 1.3.0 - 20 Jan 2022**
 
 **A collection of extensions tools for markdown files, integrated into Microsoft Windows Explorer (Vista, 7, 8 and 10):**
 
@@ -10,7 +10,7 @@
 
 ### Features
 
-- Supports Windows Vista, 7, 8 and 10 (for 32 bits and 64 bits).
+- Supports Windows Vista, 7, 8, 10 and 11 (for 32 bits and 64 bits).
 
 - Themes (Dark and Light) according to user preferences of Windows Theme
 
@@ -53,6 +53,10 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+
+20 Jan 2022: ver. 1.3.0
+- Added Support for Windows 11
+- Fixed resize content
 
 04 Sep 2021: ver. 1.2.0
 - Added Support for Delphi 11

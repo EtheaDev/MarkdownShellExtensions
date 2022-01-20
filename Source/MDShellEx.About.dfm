@@ -11,14 +11,13 @@ object FrmAbout: TFrmAbout
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
-  OldCreateOrder = False
   Position = poDefault
   OnClose = FormClose
   OnCreate = FormCreate
+  PixelsPerInch = 96
   DesignSize = (
     446
     316)
-  PixelsPerInch = 96
   TextHeight = 13
   object TitleLabel: TLabel
     Left = 190
@@ -231,7 +230,7 @@ object FrmAbout: TFrmAbout
       'Author:'
       'Carlo Barazzetta'
       'https://github.com/EtheaDev/MarkdownShellExtensions'
-      'Copyright '#169' 2021 all rights reserved.'
+      'Copyright '#169' 2021-2022 all rights reserved.'
       ''
       'Other libraries from Ethea:'
       'SVGIconImageList'
@@ -251,7 +250,7 @@ object FrmAbout: TFrmAbout
       'https://github.com/RRUZ/delphi-preview-handler'
       'The Initial Developer of the Original Code is Rodrigo Ruz V.'
       
-        'Portions created by Rodrigo Ruz V. are Copyright '#169' 2011-2021 Rod' +
+        'Portions created by Rodrigo Ruz V. are Copyright '#169' 2011-2022 Rod' +
         'rigo Ruz V.'
       ''
       'SynEdit http://synedit.svn.sourceforge.net/viewvc/synedit/'
@@ -271,7 +270,7 @@ object FrmAbout: TFrmAbout
       
         '- Image32 Library - http://www.angusj.com/delphi/image32/Docs/_B' +
         'ody.htm'
-      'Copyright '#169'2019-2021 Angus Johnson.'
+      'Copyright '#169'2019-2022 Angus Johnson.'
       ''
       'HTMLViewer - https://github.com/BerndGabriel/HtmlViewer'
       'Copyright (c) 1995 - 2008 by L. David Baldwin'
@@ -287,8 +286,8 @@ object FrmAbout: TFrmAbout
   object LinkLabel1: TLinkLabel
     Left = 8
     Top = 62
-    Width = 303
-    Height = 19
+    Width = 447
+    Height = 29
     Caption = 
       '<a href="https://github.com/EtheaDev/MarkdownShellExtensions">ht' +
       'tps://github.com/EtheaDev/MarkdownShellExtensions</a>'

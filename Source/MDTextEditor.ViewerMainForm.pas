@@ -1492,8 +1492,8 @@ procedure TfrmMain.UpdateHighlighter(ASynEditor: TSynEdit);
 var
   LBackgroundColor: TColor;
 begin
-  if FProcessingFiles then
-    Exit;
+  //if FProcessingFiles then
+  //  Exit;
   if (ASynEditor = nil) (*or (ASynEditor.Highlighter = nil)*) then
     Exit;
   LBackgroundColor := StyleServices.GetSystemColor(clWindow);

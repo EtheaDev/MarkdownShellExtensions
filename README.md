@@ -1,6 +1,6 @@
 ﻿# Markdown Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 1.4.0 - 11 Sep 2022**
+**Latest Version 1.4.1 - 11 Sep 2022**
 
 **A collection of extensions tools for markdown files, integrated into Microsoft Windows Explorer (Vista, 7, 8 and 10):**
 
@@ -54,10 +54,12 @@ To manually install the SVGShellExtensions.dll follow these steps:
 
 ## Release Notes ##
 
-11 Set 2022: ver. 1.4.0
+11 Set 2022: ver. 1.4.1
 - Added Combobox for easy selection Markdown Dialect
+- Added Windows 11 light and dark styles
 - Fixed load file with blanks in content menu
 - Fixed loading ANSI files
+- Fixed AV in Settings with opened files
 
 20 Jan 2022: ver. 1.3.0
 - Added Support for Windows 11

@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021 (Ethea S.r.l.)                                      }
+{       Copyright (c) 2021-2022 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -62,6 +62,9 @@ type
     Splitter: TSplitter;
     ToolBarAllegati: TToolBar;
     HtmlViewer: THtmlViewer;
+    paTop: TPanel;
+    ProcessorDialectLabel: TLabel;
+    ProcessorDialectComboBox: TComboBox;
     procedure FormCreate(Sender: TObject);
     procedure ToolButtonZoomInClick(Sender: TObject);
     procedure ToolButtonZoomOutClick(Sender: TObject);
@@ -76,6 +79,7 @@ type
     procedure SplitterMoved(Sender: TObject);
     procedure FormAfterMonitorDpiChanged(Sender: TObject; OldDPI,
       NewDPI: Integer);
+    procedure ProcessorDialectComboBoxSelect(Sender: TObject);
   private
     FMDFontSize: Integer;
     FHTMLFontSize: Integer;
@@ -136,6 +140,7 @@ uses
   , GraphUtil
   , MDShellEx.About
   , MDShellEx.SettingsForm
+  , MarkdownProcessor
   ;
 
 {$R *.dfm}
@@ -289,6 +294,19 @@ begin
   TLogPreview.Add('TFrmEditor.LoadFromStream Done');
 end;
 
+procedure TFrmPreview.ProcessorDialectComboBoxSelect(Sender: TObject);
+var
+  LDialect: TMarkdownProcessorDialect;
+begin
+  LDialect := TMarkdownProcessorDialect(ProcessorDialectComboBox.ItemIndex);
+  if FPreviewSettings.ProcessorDialect <> LDialect then
+  begin
+    FPreviewSettings.ProcessorDialect := LDialect;
+    FPreviewSettings.WriteSettings(SynEdit.Highlighter, nil);
+    ShowMarkDownAsHTML(FPreviewSettings, False);
+  end;
+end;
+
 procedure TFrmPreview.SaveSettings;
 begin
   if Assigned(FPreviewSettings) then
@@ -421,6 +439,9 @@ begin
     MDFontSize := FPreviewSettings.MDFontSize
   else
     MDFontSize := MinfontSize;
+
+  ProcessorDialectComboBox.ItemIndex := ord(FPreviewSettings.ProcessorDialect);
+
   SynEdit.Font.Name := FPreviewSettings.MDFontName;
 
   if FPreviewSettings.HTMLFontSize >= MinfontSize then

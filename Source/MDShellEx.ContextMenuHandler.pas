@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021 (Ethea S.r.l.)                                      }
+{       Copyright (c) 2021-2022 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -50,7 +50,7 @@ type
     //IContextMenu2, IContextMenu3,
     IShellExtInit)
   private
-    fFileName: string;
+    FFileName: string;
     FOwnerDrawId: UINT;
   protected
     {Declare IContextMenu methods here}
@@ -108,11 +108,15 @@ var
   medium: TStgMedium;
   fe: TFormatEtc;
   LFileExt: string;
+  LCountFile: Integer;
 begin
+  TLogPreview.Add('TMDContextMenu.InitShellExt');
+
   Result := E_FAIL;
   // check if the lpdobj pointer is nil
-  if Assigned (lpdobj) then
+  if Assigned(lpdobj) then
   begin
+    TLogPreview.Add('Assigned(lpdobj)');
     with fe do
     begin
       cfFormat := CF_HDROP;
@@ -123,16 +127,19 @@ begin
     end;
     // transform the lpdobj data to a storage medium structure
     Result := lpdobj.GetData(fe, medium);
-    if not Failed (Result) then
+    if not Failed(Result) then
     begin
+      LCountFile := DragQueryFile(medium.hGlobal, $FFFFFFFF, nil, 0);
+      TLogPreview.Add('LCountFile: '+IntToStr(LCountFile));
       // check if only one file is selected
-      if DragQueryFile(medium.hGlobal, $FFFFFFFF, nil, 0) = 1 then
+      if LCountFile = 1 then
       begin
-        SetLength(fFileName, 1000);
-        DragQueryFile(medium.hGlobal, 0, PChar (fFileName), 1000);
+        SetLength(FFileName, 1000);
+        DragQueryFile(medium.hGlobal, 0, PChar (FFileName), 1000);
         // realign string
-        fFileName := PChar(fFileName);
-        LFileExt := ExtractFileExt(fFileName);
+        FFileName := PChar(FFileName);
+        TLogPreview.Add('FFileName: '+FFileName);
+        LFileExt := ExtractFileExt(FFileName);
         // only for .md files
         if IndexText(LFileExt, ['.md']) <> -1 then
           Result := NOERROR
@@ -157,7 +164,7 @@ begin
   // add a new item to context menu
   LMenuIndex := indexMenu;
   InsertMenu(Menu, LMenuIndex, MF_STRING or MF_BYPOSITION, idCmdFirst+MENU_ITEM_EDIT_MARKDOWN,
-    'Open with Markdown Editor...');
+    'Open with "Markdown File Editor"...');
   
   // Return number of menu items added
   Result := MENU_ITEM_COUNT;
@@ -167,23 +174,24 @@ function TMDContextMenu.InvokeCommand(var lpici: TCMInvokeCommandInfo): HResult;
 var
   Reg: TRegistry;
   LCommand: string;
+  LFileName: string;
 
   procedure EditorNotInstalled;
   begin
-    MessageBox(0, 'Markdown file editor not installed!',
+    MessageBox(0, '"Markdown File Editor" not installed!',
       'Error opening file', MB_OK);
   end;
 
   procedure EditorNotFound;
   begin
-    MessageBox(0, 'Markdown file editor not found!',
+    MessageBox(0, '"Markdown File Editor" not found!',
       'Error opening file', MB_OK);
   end;
 
 begin
   Result := NOERROR;
   // Make sure we are not being called by an application
-  if HiWord(Integer(lpici.lpVerb)) <> 0 then
+  if HiWord(NativeInt(lpici.lpVerb)) <> 0 then
   begin
     Result := E_FAIL;
     Exit;
@@ -197,7 +205,8 @@ begin
   // execute the command specified by lpici.lpVerb.
   if LoWord(lpici.lpVerb) = MENU_ITEM_EDIT_MARKDOWN then
   begin
-    //TLogPreview.Add('TMDContextMenu: Menu clicked');
+    TLogPreview.Add('TMDContextMenu: Menu clicked');
+
     Reg := TRegistry.Create(KEY_READ);
     try
       Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -206,10 +215,15 @@ begin
       begin
         LCommand := Reg.ReadString('');
         LCommand := StringReplace(LCommand,' "%1"','', []);
-        LCommand := StringReplace(LCommand,'"','', [rfReplaceAll]);
-        TLogPreview.Add(Format('TMDContextMenuHandler: Open Editor: %s', [LCommand]));
-        if (LCommand <> '') and FileExists(LCommand) then
-          ShellExecute(0, 'Open', PChar(LCommand), PChar(FFileName), nil, SW_SHOWNORMAL)
+        LFileName := format('"%s"',[FFileName]);
+        TLogPreview.Add(Format('TMDContextMenuHandler: Command: %s FileName %s',
+          [LCommand, LFileName]));
+        if (FFileName <> '') and FileExists(FFileName) then
+        begin
+          TLogPreview.Add(Format('TMDContextMenuHandler: ShellExecute: %s for file %s',
+            [LCommand, LFileName]));
+          ShellExecute(0, 'Open', PChar(LCommand), PChar(LFileName), nil, SW_SHOWNORMAL);
+        end
         else
           EditorNotInstalled;
       end

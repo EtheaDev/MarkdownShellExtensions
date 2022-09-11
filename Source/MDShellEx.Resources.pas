@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021 (Ethea S.r.l.)                                      }
+{       Copyright (c) 2021-2022 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -503,7 +503,7 @@ var
 begin
   LMDProcessor := TMarkdownProcessor.CreateDialect(FProcessorDialect);
   try
-    LMDProcessor.UnSafe := False;
+    LMDProcessor.AllowUnsafe := False;
     //Convert MD To HTML
     FHTML := GetDefaultCSS+LMDProcessor.process(FMarkDownContent);
     FParsed := True;

@@ -29,15 +29,15 @@ object frmMain: TfrmMain
   object ClientPanel: TPanel
     Left = 44
     Top = 36
-    Width = 900
-    Height = 535
+    Width = 896
+    Height = 534
     Align = alClient
     TabOrder = 4
     object PageControl: TPageControl
       Left = 1
       Top = 1
-      Width = 898
-      Height = 533
+      Width = 894
+      Height = 532
       Align = alClient
       Images = VirtualImageList
       TabOrder = 0
@@ -46,8 +46,8 @@ object frmMain: TfrmMain
   end
   object StatusBar: TStatusBar
     Left = 0
-    Top = 571
-    Width = 944
+    Top = 570
+    Width = 940
     Height = 19
     Panels = <
       item
@@ -76,7 +76,7 @@ object frmMain: TfrmMain
     Left = 0
     Top = 36
     Width = 160
-    Height = 535
+    Height = 532
     CloseStyle = svcCompact
     Color = clHighlight
     CompactWidth = 44
@@ -93,7 +93,7 @@ object frmMain: TfrmMain
       Left = 0
       Top = 0
       Width = 160
-      Height = 535
+      Height = 533
       Align = alClient
       BackgroundGradientDirection = gdVertical
       BorderStyle = bsNone
@@ -196,7 +196,7 @@ object frmMain: TfrmMain
   object panlTop: TPanel
     Left = 0
     Top = 0
-    Width = 944
+    Width = 940
     Height = 36
     Align = alTop
     BevelOuter = bvNone
@@ -212,9 +212,19 @@ object frmMain: TfrmMain
       Caption = 'MarkDown Text Editor'
       Layout = tlCenter
     end
+    object ProcessorDialectLabel: TLabel
+      Left = 491
+      Top = 11
+      Width = 55
+      Height = 15
+      Alignment = taRightJustify
+      Anchors = [akTop, akRight]
+      AutoSize = False
+      Caption = 'Dialect:'
+    end
     object SettingsToolBar: TToolBar
       AlignWithMargins = True
-      Left = 741
+      Left = 737
       Top = 3
       Width = 200
       Height = 30
@@ -295,6 +305,19 @@ object frmMain: TfrmMain
         Action = actMenu
         AutoSize = True
       end
+    end
+    object ProcessorDialectComboBox: TComboBox
+      Left = 549
+      Top = 8
+      Width = 170
+      Height = 23
+      Style = csDropDownList
+      Anchors = [akTop, akRight]
+      TabOrder = 2
+      OnSelect = ProcessorDialectComboBoxSelect
+      Items.Strings = (
+        'DaringFireball'
+        'CommonMark')
     end
   end
   object OpenDialog: TOpenDialog

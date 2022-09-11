@@ -30,8 +30,8 @@ object SVGSettingsForm: TSVGSettingsForm
   object pc: TPageControl
     Left = 153
     Top = 41
-    Width = 662
-    Height = 451
+    Width = 658
+    Height = 450
     ActivePage = stGeneral
     Align = alClient
     Images = SettingsImageList
@@ -554,6 +554,15 @@ object SVGSettingsForm: TSVGSettingsForm
         AutoSize = False
         Caption = 'bottom margin'
       end
+      object SVGIconPosition: TSVGIconImage
+        Left = 313
+        Top = 51
+        Width = 186
+        Height = 154
+        AutoSize = False
+        ImageList = OrientationImageList
+        ImageIndex = 0
+      end
       object OrientationRadioGroup: TRadioGroup
         Left = 16
         Top = 16
@@ -565,16 +574,6 @@ object SVGSettingsForm: TSVGSettingsForm
           'Landscape')
         TabOrder = 0
         OnClick = OrientationRadioGroupClick
-      end
-      object SVGIconPosition: TSVGIconImage
-        Left = 313
-        Top = 51
-        Width = 186
-        Height = 154
-        AutoSize = False
-        Proportional = True
-        ImageList = OrientationImageList
-        ImageIndex = 0
       end
       object MarginLeftEdit: TNumberBox
         Left = 218
@@ -637,8 +636,8 @@ object SVGSettingsForm: TSVGSettingsForm
   end
   object StatusBar: TStatusBar
     Left = 0
-    Top = 492
-    Width = 815
+    Top = 491
+    Width = 811
     Height = 19
     Panels = <>
     ParentFont = True
@@ -649,7 +648,7 @@ object SVGSettingsForm: TSVGSettingsForm
     Left = 0
     Top = 41
     Width = 153
-    Height = 451
+    Height = 450
     Align = alLeft
     BevelOuter = bvNone
     BorderStyle = bsNone
@@ -693,7 +692,7 @@ object SVGSettingsForm: TSVGSettingsForm
   object TitlePanel: TPanel
     Left = 0
     Top = 0
-    Width = 815
+    Width = 811
     Height = 41
     Align = alTop
     Alignment = taLeftJustify

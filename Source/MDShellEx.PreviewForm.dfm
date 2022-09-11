@@ -2,7 +2,7 @@ object FrmPreview: TFrmPreview
   Left = 522
   Top = 286
   ClientHeight = 651
-  ClientWidth = 672
+  ClientWidth = 660
   Color = clBtnFace
   DoubleBuffered = True
   Font.Charset = DEFAULT_CHARSET
@@ -19,8 +19,8 @@ object FrmPreview: TFrmPreview
   TextHeight = 13
   object Splitter: TSplitter
     Left = 0
-    Top = 145
-    Width = 672
+    Top = 180
+    Width = 660
     Height = 6
     Cursor = crVSplit
     Align = alTop
@@ -33,7 +33,7 @@ object FrmPreview: TFrmPreview
   object PanelTop: TPanel
     Left = 0
     Top = 0
-    Width = 672
+    Width = 656
     Height = 35
     Align = alTop
     BevelOuter = bvNone
@@ -41,7 +41,7 @@ object FrmPreview: TFrmPreview
     object ToolBar: TToolBar
       Left = 0
       Top = 0
-      Width = 672
+      Width = 656
       Height = 35
       Align = alClient
       AutoSize = True
@@ -124,8 +124,8 @@ object FrmPreview: TFrmPreview
   end
   object PanelMD: TPanel
     Left = 0
-    Top = 35
-    Width = 672
+    Top = 70
+    Width = 656
     Height = 110
     Align = alTop
     BevelOuter = bvNone
@@ -134,7 +134,7 @@ object FrmPreview: TFrmPreview
     object SynEdit: TSynEdit
       Left = 0
       Top = 0
-      Width = 672
+      Width = 656
       Height = 110
       Align = alClient
       Font.Charset = DEFAULT_CHARSET
@@ -165,20 +165,20 @@ object FrmPreview: TFrmPreview
   end
   object StatusBar: TStatusBar
     Left = 0
-    Top = 630
-    Width = 672
+    Top = 629
+    Width = 656
     Height = 21
     Panels = <>
     ParentFont = True
     SimplePanel = True
-    SimpleText = ' Mardown file Preview - Copyright '#169' 2021 - Ethea S.r.l.'
+    SimpleText = ' Mardown file Preview - Copyright '#169' 2021-2022 - Ethea S.r.l.'
     SizeGrip = False
     UseSystemFont = False
   end
   object PanelBottom: TPanel
     Left = 0
-    Top = 600
-    Width = 672
+    Top = 599
+    Width = 656
     Height = 30
     Align = alBottom
     BevelOuter = bvNone
@@ -186,7 +186,7 @@ object FrmPreview: TFrmPreview
     object ToolBarAllegati: TToolBar
       Left = 0
       Top = 0
-      Width = 672
+      Width = 656
       Height = 30
       Align = alClient
       AutoSize = True
@@ -203,9 +203,9 @@ object FrmPreview: TFrmPreview
   end
   object HtmlViewer: THtmlViewer
     Left = 0
-    Top = 151
-    Width = 672
-    Height = 449
+    Top = 186
+    Width = 656
+    Height = 413
     BorderStyle = htFocused
     HistoryMaxCount = 0
     NoSelect = False
@@ -221,92 +221,105 @@ object FrmPreview: TFrmPreview
     Touch.InteractiveGestures = [igPan]
     Touch.InteractiveGestureOptions = [igoPanSingleFingerHorizontal, igoPanSingleFingerVertical, igoPanInertia]
   end
+  object paTop: TPanel
+    Left = 0
+    Top = 35
+    Width = 656
+    Height = 35
+    Align = alTop
+    TabOrder = 5
+    object ProcessorDialectLabel: TLabel
+      Left = 8
+      Top = 11
+      Width = 55
+      Height = 15
+      Alignment = taRightJustify
+      AutoSize = False
+      Caption = 'Dialect:'
+    end
+    object ProcessorDialectComboBox: TComboBox
+      Left = 69
+      Top = 8
+      Width = 170
+      Height = 21
+      Style = csDropDownList
+      TabOrder = 0
+      OnSelect = ProcessorDialectComboBoxSelect
+      Items.Strings = (
+        'DaringFireball'
+        'CommonMark')
+    end
+  end
   object SVGIconImageList: TVirtualImageList
-    DisabledGrayscale = False
-    DisabledSuffix = '_Disabled'
     Images = <
       item
         CollectionIndex = 42
         CollectionName = 'Show-Text'
-        Disabled = False
         Name = 'Show-Text'
       end
       item
         CollectionIndex = 43
         CollectionName = 'Hide-Text'
-        Disabled = False
         Name = 'Hide-Text'
       end
       item
         CollectionIndex = 23
         CollectionName = 'about'
-        Disabled = False
         Name = 'about'
       end
       item
         CollectionIndex = 41
         CollectionName = 'Support'
-        Disabled = False
         Name = 'Support'
       end
       item
         CollectionIndex = 0
         CollectionName = 'Style'
-        Disabled = False
         Name = 'Style'
       end
       item
         CollectionIndex = 45
         CollectionName = 'Services'
-        Disabled = False
         Name = 'Services'
       end
       item
         CollectionIndex = 26
         CollectionName = 'plus'
-        Disabled = False
         Name = 'plus'
       end
       item
         CollectionIndex = 25
         CollectionName = 'Minus'
-        Disabled = False
         Name = 'Minus'
       end
       item
         CollectionIndex = 6
         CollectionName = 'Search'
-        Disabled = False
         Name = 'Search'
       end
       item
         CollectionIndex = 38
         CollectionName = 'export'
-        Disabled = False
         Name = 'export'
       end
       item
         CollectionIndex = 19
         CollectionName = 'Reformat'
-        Disabled = False
         Name = 'Reformat'
       end
       item
         CollectionIndex = 48
         CollectionName = 'attachment'
-        Disabled = False
         Name = 'attachment'
       end
       item
         CollectionIndex = 28
         CollectionName = 'preferences-desktop'
-        Disabled = False
         Name = 'preferences-desktop'
       end
       item
         CollectionIndex = 16
         CollectionName = 'Print-preview'
-        Disabled = False
         Name = 'Print-preview'
       end>
     ImageCollection = dmResources.SVGIconImageCollection

@@ -1,8 +1,8 @@
 unit Img32.Fmt.QOI;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  4.0                                                             *
-* Date      :  10 January 2022                                                 *
+* Version   :  4.2                                                             *
+* Date      :  30 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2019-2022                                         *
 * Purpose   :  QOI file format extension for TImage32                          *
@@ -96,7 +96,7 @@ end;
 
 function ReadByte(var p: PByte): Byte; {$IFDEF INLINE} inline; {$ENDIF}
 begin
-  Result := p^;
+  Result := Byte(p^); //nb: Delphi 7 compatability
   inc(p);
 end;
 
@@ -113,7 +113,7 @@ var
   px: TARGB;
   b1, b2: byte;
   dst: PARGB;
-  src, endSrc: PByte;
+  src: PByte;
   srcTmp: TArrayOfByte;
 begin
   Result := false;
@@ -132,8 +132,6 @@ begin
     stream.Read(srcTmp[0], size);
     src := @srcTmp[0];
   end;
-  endSrc := src;
-  inc(endSrc, size - qoi_padding_size);
 
   Move(src^, desc, SizeOf(TQOI_DESC));
   inc(src, SizeOf(TQOI_DESC));
@@ -241,7 +239,7 @@ end;
 procedure qoi_write_8(var p: PByte; val: Byte);
   {$IFDEF INLINE} inline; {$ENDIF}
 begin
-  p^ := val; inc(p);
+  Byte(p^) := val; inc(p); //Delphi 7
 end;
 //------------------------------------------------------------------------------
 

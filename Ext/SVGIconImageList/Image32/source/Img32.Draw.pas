@@ -2,8 +2,8 @@ unit Img32.Draw;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  4.0                                                             *
-* Date      :  22 December 2021                                                *
+* Version   :  4.2                                                             *
+* Date      :  30 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2019-2021                                         *
 *                                                                              *
@@ -21,8 +21,7 @@ interface
 {.$DEFINE MemCheck} //for debugging only (adds a minimal cost to performance)
 
 uses
-  SysUtils, Classes, Types, Math, Img32, Img32.Vector,
-  Img32.Transform; //experimental;
+  SysUtils, Classes, Types, Math, Img32, Img32.Vector;
 
 type
   TFillRule = Img32.Vector.TFillRule;
@@ -336,8 +335,8 @@ type
   PArgbs = ^TArgbs;
   TArgbs = array [0.. (Maxint div SizeOf(TARGB)) -1] of TARGB;
 
-procedure ApplyClearType(img: TImage32;
-  textColor: TColor32 = clBlack32; bkColor: TColor32 = clWhite32);
+procedure ApplyClearType(img: TImage32; textColor: TColor32 = clBlack32;
+  bkColor: TColor32 = clWhite32);
 const
   centerWeighting = 5; //0 <= centerWeighting <= 25
 var
@@ -353,24 +352,23 @@ var
 begin
   // Precondition: the background to text drawn onto 'img' must be transparent
 
-  // multiplication tables (see Img32.pas)
   // 85 + (2 * 57) + (2 * 28) == 255
   primeTbl := PByteArray(@MulTable[85 + centerWeighting *2]);
   nearTbl  := PByteArray(@MulTable[57]);
   farTbl   := PByteArray(@MulTable[28 - centerWeighting]);
-
-  SetLength(rowBuffer, img.Width+4);
-  FillChar(rowBuffer[0], Length(rowBuffer) *  SizeOf(TColor32), 0);
+  SetLength(rowBuffer, img.Width +4);
 
   for h := 0 to img.Height -1 do
   begin
-    dst := PARGB(@img.Pixels[h * img.Width]);
     //each row of the image is copied into a temporary buffer ...
+    //noting that while 'dst' (img.Pixels) is initially the source
+    //it will later be destination (during image compression).
+    dst := PARGB(@img.Pixels[h * img.Width]);
     src := PARGB(@rowBuffer[2]);
     Move(dst^, src^, img.Width * SizeOf(TColor32));
     srcArr := PArgbs(rowBuffer);
 
-    //using this buffer update the image ...
+    //using this buffer compress the image ...
     w := 2;
     while w < img.Width do
     begin
@@ -391,7 +389,7 @@ begin
     end;
   end;
 
-  //The right 2/3 of the image can now be removed ...
+  //Following compression the right 2/3 of the image is redundant
    img.Crop(Types.Rect(0,0, img.Width div 3, img.Height));
 
   //currently text is white and the background is black
@@ -405,14 +403,15 @@ begin
   dst := PARGB(img.PixelBase);
   for h := 0 to img.Width * img.Height -1 do
   begin
-    if dst.R > 0 then
+    if dst.R = 0 then
+      dst.Color := bkColor
+    else
     begin
-      //blend font and background colors ...
+      //blend front (text) and background colors ...
       dst.R := (bg8_R + diff_R * dst.R) shr 8;
       dst.G := (bg8_G + diff_G * dst.G) shr 8;
       dst.B := (bg8_B + diff_B * dst.B) shr 8;
-    end
-    else dst.Color := 0;
+    end;
     inc(dst);
   end;
 end;
@@ -421,7 +420,7 @@ end;
 // Other miscellaneous functions
 //------------------------------------------------------------------------------
 
-////__Trunc: A very efficient Trunc() algorithm (ie rounds toward zero)
+////__Trunc: An efficient Trunc() algorithm (ie rounds toward zero)
 //function __Trunc(val: double): integer; {$IFDEF INLINE} inline; {$ENDIF}
 //var
 //  exp: integer;
@@ -1028,13 +1027,23 @@ begin
           end;
         frPositive:
           begin
+{$IFDEF REVERSE_ORIENTATION}
+            if accum < -0.002 then
+              byteBuffer[j] := Min(255, Round(-accum * 318));
+{$ELSE}
             if accum > 0.002 then
               byteBuffer[j] := Min(255, Round(accum * 318));
+{$ENDIF}
           end;
         frNegative:
           begin
+{$IFDEF REVERSE_ORIENTATION}
+            if accum > 0.002 then
+              byteBuffer[j] := Min(255, Round(accum * 318));
+{$ELSE}
             if accum < -0.002 then
               byteBuffer[j] := Min(255, Round(-accum * 318));
+{$ENDIF}
           end;
       end;
     end;
@@ -2059,10 +2068,7 @@ begin
     cr := TColorRenderer.Create(clBlack32);
     try
       if cr.Initialize(tmpImg) then
-      begin
         Rasterize(tmpPolygons, tmpImg.bounds, fillRule, cr);
-        cr.NotifyChange;
-      end;
     finally
       cr.Free;
     end;

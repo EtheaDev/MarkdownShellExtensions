@@ -2,8 +2,8 @@ unit Img32.SVG.Path;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  4.0                                                             *
-* Date      :  22 December 2021                                                *
+* Version   :  4.2                                                             *
+* Date      :  30 May 2022                                                     *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2019-2021                                         *
 *                                                                              *
@@ -1217,7 +1217,7 @@ function TSvgSubPath.GetSimplePath: TPathD;
 var
   i: integer;
 begin
-  Result := MakePathD([GetFirstPt.X, GetFirstPt.Y]);
+  Result := MakePath([GetFirstPt.X, GetFirstPt.Y]);
   for i := 0 to High(fSegs) do
     AppendPath(Result, fSegs[i].GetOnPathCtrlPts);
 end;

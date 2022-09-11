@@ -297,7 +297,7 @@ type
     FStyles : Array of TCommonMarkStyle;
     FBlockOffset : integer;
     FBlockPreSpaces : integer;
-    procedure getOffset(position : integer; var index : integer; var preSpaces : integer);
+    procedure getOffset(position : integer; out index : integer; out preSpaces : integer);
     procedure reset;
     procedure markBlock(stop : integer);
     procedure markStyle(stop : integer; style : TCommonMarkStyle);
@@ -527,8 +527,8 @@ type
 
   TCommonMarkProcessor = class (TMarkdownProcessor)
   protected
-    function GetUnSafe: boolean; override;
-    procedure SetUnSafe(const value: boolean); override;
+    function GetAllowUnSafe: boolean; override;
+    procedure SetAllowUnSafe(const value: boolean); override;
   public
     function process(source : String) : String; override; // want to process the syntax tree? Use the TCommonMarkEngine Directly
   end;
@@ -1212,7 +1212,7 @@ begin
   result := result+FLine.Substring(index-1);
 end;
 
-procedure TCMLine.getOffset(position : integer; var index, preSpaces: integer);
+procedure TCMLine.getOffset(position : integer; out index, preSpaces: integer);
 var
   c, len : integer;
 begin
@@ -1611,7 +1611,7 @@ begin
       if FStyling and (FCol - 1 >= line.FBlockPreSpaces) then
       begin
         if FCol - 1 + line.FBlockOffset - line.FBlockPreSpaces >= length(line.FStyles) then
-          raise Exception.create('problem');
+          raise EMarkdownProcessor.create('problem');
         line.FStyles[FCol - 1 + line.FBlockOffset - line.FBlockPreSpaces] := style;
       end;
     end;
@@ -1897,7 +1897,7 @@ begin
   for l in FLines do
     for i := 0 to length(l.FStyles) - 1 do
       if l.FStyles[i] = cmUnknown then
-        raise Exception.Create('Unknown style @ '+inttostr(l.FIndex)+', '+inttostr(i));
+        raise EMarkdownProcessor.Create('Unknown style @ '+inttostr(l.FIndex)+', '+inttostr(i));
 end;
 
 function TCommonMarkEngine.copyTo(s : String; chs : TSysCharSet) : String;
@@ -3616,7 +3616,7 @@ end;
 
 { TCommonMarkProcessor }
 
-function TCommonMarkProcessor.GetUnSafe: boolean;
+function TCommonMarkProcessor.GetAllowUnSafe: boolean;
 begin
   result := false;
 end;
@@ -3634,10 +3634,10 @@ begin
 
 end;
 
-procedure TCommonMarkProcessor.SetUnSafe(const value: boolean);
+procedure TCommonMarkProcessor.SetAllowUnSafe(const value: boolean);
 begin
   if value then
-    raise Exception.Create('The common mark processor cannot operate in unsafe mode+');
+    raise EMarkdownProcessor.Create('The common mark processor cannot operate in unsafe mode+');
 end;
 
 { TCMTableBlock }

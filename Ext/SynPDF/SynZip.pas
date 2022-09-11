@@ -6,7 +6,7 @@ unit SynZip;
 {
     This file is part of Synopse framework.
 
-    Synopse framework. Copyright (C) 2021 Arnaud Bouchez
+    Synopse framework. Copyright (C) 2022 Arnaud Bouchez
       Synopse Informatique - https://synopse.info
 
   *** BEGIN LICENSE BLOCK *****
@@ -25,7 +25,7 @@ unit SynZip;
 
   The Initial Developer of the Original Code is Arnaud Bouchez.
 
-  Portions created by the Initial Developer are Copyright (C) 2021
+  Portions created by the Initial Developer are Copyright (C) 2022
   the Initial Developer. All Rights Reserved.
 
   Contributor(s):
@@ -390,7 +390,7 @@ type
   TFileHeader = {$ifdef USERECORDWITHMETHODS}record
     {$else}object{$endif}
     signature     : dword;           // $02014b50 PK#1#2
-    madeBy        : word;            // $14
+    madeBy        : word;            // $0314 = OS + version
     fileInfo      : TFileInfo;
     commentLen    : word;            // 0
     firstDiskNo   : word;            // 0
@@ -727,7 +727,7 @@ type
     procedure AddStored(const aZipName: TFileName; Buf: pointer; Size: integer;
       FileAge: integer=1+1 shl 5+30 shl 9);
     /// add a file from an already compressed zip entry
-    procedure AddFromZip(const ZipEntry: TZipEntry);
+    procedure AddFromZip(Source: TZipRead; EntryIndex: integer);
     /// append a file content into the destination file
     // - useful to add the initial Setup.exe file, e.g.
     procedure Append(const Content: ZipString);
@@ -865,7 +865,7 @@ begin
   with Entry[Count] do begin
     fHr.signature := ENTRY_SIGNATURE_INC; // +1 to avoid finding it in the exe
     dec(fHr.signature);
-    fHr.madeBy := $14;
+    fHr.madeBy := $0314; // where $03=Unix (for proper UTF8 filenames) and $14=version
     fHr.fileInfo.neededVersion := $14;
     result := InternalWritePosition;
     fHr.localHeadOff := result-fAppendOffset;
@@ -886,6 +886,7 @@ begin
     end;
     {$endif}
     fHr.fileInfo.nameLen := length(intName);
+    fhr.fileInfo.extraLen := 0; // source may have something here
     InternalWrite(fMagic,sizeof(fMagic));
     InternalWrite(fhr.fileInfo,sizeof(fhr.fileInfo));
     InternalWrite(pointer(intName)^,fhr.fileInfo.nameLen);
@@ -936,16 +937,23 @@ begin
   end;
 end;
 
-procedure TZipWriteAbstract.AddFromZip(const ZipEntry: TZipEntry);
+procedure TZipWriteAbstract.AddFromZip(Source: TZipRead; EntryIndex: integer);
+var s: ^TZipEntry;
+    origZipName: TFileName;
 begin
-  if self=nil then
+  if (self=nil) or (Source=nil) then
     exit;
   if Count>=length(Entry) then
     SetLength(Entry,length(Entry)+20);
-  with Entry[Count] do begin
-    fhr.fileInfo := ZipEntry.infoLocal^;
-    InternalAdd(ZipEntry.zipName,ZipEntry.data,fhr.fileInfo.zzipSize);
-  end;
+  with Entry[Count] do
+    if Source.RetrieveFileInfo(EntryIndex, fhr.FileInfo) then begin
+      s := @Source.Entry[EntryIndex];
+      // backslash in s^.storedName are replaced to '\' by TZipRead.Create,
+      // accoding to ZIP file format "All slashes MUST be forward slashes '/' as opposed to
+      //  backwards slashes '\'"
+      SetString(origZipName,s^.storedName,s^.infoLocal.nameLen);
+      InternalAdd(origZipName,s^.data,fhr.fileInfo.zzipSize);
+    end;
 end;
 
 procedure TZipWriteAbstract.Append(const Content: ZipString);
@@ -1224,7 +1232,7 @@ begin
       // UnZip() will call RetrieveFileInfo()
     end else
       if (zzipSize=cardinal(-1)) or (zfullSize=cardinal(-1)) then
-        raise ESynZipException.Create('ZIP64 format not supported');
+        raise ESynZipException.Create('ZIP64 format not supported - use mORMot 2');
     with Entry[Count] do begin
       infoLocal := @lfhr^.fileInfo;
       infoDirectory := H;
@@ -5029,6 +5037,26 @@ begin
     Z_DEFAULT_STRATEGY, ZLIB_VERSION, sizeof(Stream))>=0
 end;
 
+function ZLibError(Code: integer): shortstring;
+begin
+  case Code of
+    Z_ERRNO:
+      result := 'Z_ERRNO';
+    Z_STREAM_ERROR:
+      result := 'Z_STREAM_ERROR';
+    Z_DATA_ERROR:
+      result := 'Z_DATA_ERROR';
+    Z_MEM_ERROR:
+      result := 'Z_MEM_ERROR';
+    Z_BUF_ERROR:
+      result := 'Z_BUF_ERROR';
+    Z_VERSION_ERROR:
+      result := 'Z_VERSION_ERROR';
+  else
+    str(Code,result);
+  end;
+end;
+
 function Check(const Code: Integer; const ValidCodes: array of Integer;
   const Context: string): integer;
 var i: Integer;
@@ -5039,7 +5067,7 @@ begin
   for i := Low(ValidCodes) to High(ValidCodes) do
     if ValidCodes[i]=Code then
       Exit;
-  raise ESynZipException.CreateFmt('Error %d during %s process',[Code,Context]);
+  raise ESynZipException.CreateFmt('Error %s during %s process',[ZLibError(Code),Context]);
 end;
 
 function CompressString(const data: ZipString; failIfGrow: boolean = false;
@@ -5196,6 +5224,8 @@ begin
   try
     repeat
       code := Check(inflate(strm, Z_FINISH),[Z_OK,Z_STREAM_END,Z_BUF_ERROR],'UnCompressStream');
+      if (code=Z_BUF_ERROR) and (TempBufSize=integer(strm.avail_out)) then
+        Check(code,[],'UnCompressStream'); // occur on invalid input
       FlushBuf;
     until code=Z_STREAM_END;
     FlushBuf;

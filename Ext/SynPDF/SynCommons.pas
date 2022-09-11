@@ -6,7 +6,7 @@ unit SynCommons;
 (*
     This file is part of Synopse framework.
 
-    Synopse framework. Copyright (C) 2021 Arnaud Bouchez
+    Synopse framework. Copyright (C) 2022 Arnaud Bouchez
       Synopse Informatique - https://synopse.info
 
   *** BEGIN LICENSE BLOCK *****
@@ -25,7 +25,7 @@ unit SynCommons;
 
   The Initial Developer of the Original Code is Arnaud Bouchez.
 
-  Portions created by the Initial Developer are Copyright (C) 2021
+  Portions created by the Initial Developer are Copyright (C) 2022
   the Initial Developer. All Rights Reserved.
 
   Contributor(s):
@@ -521,6 +521,30 @@ type
 
 
 { ************ fast UTF-8 / Unicode / Ansi types and conversion routines **** }
+
+// some constants used for UTF-8 conversion, including surrogates
+const
+  UTF16_HISURROGATE_MIN = $d800;
+  UTF16_HISURROGATE_MAX = $dbff;
+  UTF16_LOSURROGATE_MIN = $dc00;
+  UTF16_LOSURROGATE_MAX = $dfff;
+  UTF8_EXTRABYTES: array[$80..$ff] of byte = (
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3,3,3,3,3,3,3,3,4,4,4,4,5,5,0,0);
+  UTF8_EXTRA: array[0..6] of record
+    offset, minimum: cardinal;
+  end = ( // http://floodyberry.wordpress.com/2007/04/14/utf-8-conversion-tricks
+    (offset: $00000000;  minimum: $00010000),
+    (offset: $00003080;  minimum: $00000080),
+    (offset: $000e2080;  minimum: $00000800),
+    (offset: $03c82080;  minimum: $00010000),
+    (offset: $fa082080;  minimum: $00200000),
+    (offset: $82082080;  minimum: $04000000),
+    (offset: $00000000;  minimum: $04000000));
+  UTF8_EXTRA_SURROGATE = 3;
+  UTF8_FIRSTBYTE: array[2..6] of byte = ($c0,$e0,$f0,$f8,$fc);
 
 type
   /// kind of adding in a TTextWriter
@@ -1139,18 +1163,6 @@ function UTF8ToWideChar(dest: PWideChar; source: PUTF8Char;
 // - count may not match the UCS4 glyphs number, in case of UTF-16 surrogates
 // - faster than System.UTF8ToUnicode with dest=nil
 function Utf8ToUnicodeLength(source: PUTF8Char): PtrUInt;
-
-/// returns TRUE if the supplied buffer has valid UTF-8 encoding
-// - will stop when the buffer contains #0
-function IsValidUTF8(source: PUTF8Char): Boolean; overload;
-
-/// returns TRUE if the supplied buffer has valid UTF-8 encoding
-// - will also refuse #0 characters within the buffer
-function IsValidUTF8(source: PUTF8Char; sourcelen: PtrInt): Boolean; overload;
-
-/// returns TRUE if the supplied buffer has valid UTF-8 encoding
-// - will also refuse #0 characters within the buffer
-function IsValidUTF8(const source: RawUTF8): Boolean; overload;
 
 /// returns TRUE if the supplied buffer has valid UTF-8 encoding with no #1..#31
 // control characters
@@ -5059,10 +5071,17 @@ type
   /// internal set to specify some standard Delphi arrays
   TDynArrayKinds = set of TDynArrayKind;
 
-  /// internal integer type used for string/dynarray header reference counters
-  TRefCnt = {$ifdef FPC}SizeInt{$else}longint{$endif};
-  /// internal pointer integer type used for string/dynarray header reference counters
-  PRefCnt = ^TRefCnt;
+  /// cross-compiler type used for string reference counter
+  // - FPC and Delphi don't always use the same type
+  TStrCnt = {$ifdef STRCNT32} longint {$else} SizeInt {$endif};
+  /// pointer to cross-compiler type used for string reference counter
+  PStrCnt = ^TStrCnt;
+
+  /// cross-compiler type used for dynarray reference counter
+  // - FPC uses PtrInt/SizeInt, Delphi uses longint even on CPU64
+  TDACnt = {$ifdef DACNT32} longint {$else} SizeInt {$endif};
+  /// pointer to cross-compiler type used for dynarray reference counter
+  PDACnt = ^TDACnt;
 
   /// internal integer type used for string header length field
   TStrLen = {$ifdef FPC}SizeInt{$else}longint{$endif};
@@ -5078,7 +5097,7 @@ type
   // - match tdynarray type definition in dynarr.inc
   TDynArrayRec = {packed} record
     /// dynamic array reference count (basic memory management mechanism)
-    refCnt: TRefCnt;
+    refCnt: TDACnt;
     /// equals length-1
     high: tdynarrayindex;
     function GetLength: sizeint; inline;
@@ -5093,15 +5112,15 @@ const
   // - to be used inlined e.g. as PStrLen(p-_STRLEN)^
   _STRLEN = SizeOf(TStrLen);
   /// cross-compiler negative offset to TStrRec.refCnt field
-  // - to be used inlined e.g. as PRefCnt(p-_STRREFCNT)^
-  _STRREFCNT = Sizeof(TRefCnt)+_STRLEN;
+  // - to be used inlined e.g. as PStrCnt(p-_STRREFCNT)^
+  _STRREFCNT = Sizeof(TStrCnt)+_STRLEN;
 
   /// cross-compiler negative offset to TDynArrayRec.high/length field
   // - to be used inlined e.g. as PDALen(PtrUInt(Values)-_DALEN)^{$ifdef FPC}+1{$endif}
   _DALEN = SizeOf(PtrInt);
   /// cross-compiler negative offset to TDynArrayRec.refCnt field
-  // - to be used inlined e.g. as PRefCnt(PtrUInt(Values)-_DAREFCNT)^
-  _DAREFCNT = Sizeof(TRefCnt)+_DALEN;
+  // - to be used inlined e.g. as PDACnt(PtrUInt(Values)-_DAREFCNT)^
+  _DAREFCNT = Sizeof(TDACnt)+_DALEN;
 
 function ToText(k: TDynArrayKind): PShortString; overload;
 
@@ -5173,13 +5192,21 @@ const
   /// some convenient TDocVariant options, as JSON_OPTIONS[CopiedByReference]
   // - JSON_OPTIONS[false] is e.g. _Json() and _JsonFmt() functions default
   // - JSON_OPTIONS[true] are used e.g. by _JsonFast() and _JsonFastFmt() functions
+  // - warning: exclude dvoAllowDoubleValue so won't parse any float, just currency
   JSON_OPTIONS: array[Boolean] of TDocVariantOptions = (
     [dvoReturnNullForUnknownProperty],
     [dvoReturnNullForUnknownProperty,dvoValueCopiedByReference]);
 
   /// same as JSON_OPTIONS[true], but can not be used as PDocVariantOptions
+  // - warning: exclude dvoAllowDoubleValue so won't parse any float, just currency
+  // - as used by _JsonFast()
   JSON_OPTIONS_FAST =
     [dvoReturnNullForUnknownProperty,dvoValueCopiedByReference];
+
+  /// same as JSON_OPTIONS_FAST, but including dvoAllowDoubleValue to parse any float
+  // - as used by _JsonFastFloat()
+  JSON_OPTIONS_FAST_FLOAT =
+    [dvoReturnNullForUnknownProperty,dvoValueCopiedByReference,dvoAllowDoubleValue];
 
   /// TDocVariant options which may be used for plain JSON parsing
   // - this won't recognize any extended syntax
@@ -5960,7 +5987,7 @@ type
     procedure Clear;
     /// full computation of the internal hash table
     // - returns the number of duplicated values found
-    function ReHash(forced, forceGrow: boolean): integer;
+    function ReHash(forced: boolean): integer;
     /// compute the hash of a given item
     function HashOne(Elem: pointer): cardinal; {$ifdef FPC_OR_DELPHIXE4}inline;{$endif}
       { not inlined to circumvent Delphi 2007=C1632, 2010=C1872, XE3=C2130 }
@@ -6061,7 +6088,7 @@ type
     // FindHashedForAdding / FindHashedAndUpdate / FindHashedAndDelete methods
     // - returns the number of duplicated items found - which won't be available
     // by hashed FindHashed() by definition
-    function ReHash(forAdd: boolean=false; forceGrow: boolean=false): integer;
+    function ReHash(forAdd: boolean=false): integer;
     /// search for an element value inside the dynamic array using hashing
     // - Elem should be of the type expected by both the hash function and
     // Equals/Compare methods: e.g. if the searched/hashed field in a record is
@@ -6440,8 +6467,8 @@ type
   TSynLocker = object
   protected
     fSection: TRTLCriticalSection;
-    fSectionPadding: PtrInt; // paranoid to avoid FUTEX_WAKE_PRIVATE=EAGAIN
-    fLocked, fInitialized: boolean;
+    fLockCount: integer;
+    fInitialized: boolean;
     {$ifndef NOVARIANTS}
     function GetVariant(Index: integer): Variant;
     procedure SetVariant(Index: integer; const Value: Variant);
@@ -6455,8 +6482,14 @@ type
     procedure SetPointer(Index: integer; const Value: Pointer);
     function GetUTF8(Index: integer): RawUTF8;
     procedure SetUTF8(Index: integer; const Value: RawUTF8);
+    function GetIsLocked: boolean; {$ifdef HASINLINE}inline;{$endif}
     {$endif NOVARIANTS}
   public
+    /// number of values stored in the internal Padding[] array
+    // - equals 0 if no value is actually stored, or a 1..7 number otherwise
+    // - you should not have to use this field, but for optimized low-level
+    // direct access to Padding[] values, within a Lock/UnLock safe block
+    PaddingUsedCount: integer;
     /// internal padding data, also used to store up to 7 variant values
     // - this memory buffer will ensure no CPU cache line mixup occurs
     // - you should not use this field directly, but rather the Locked[],
@@ -6465,11 +6498,6 @@ type
     // using a Safe.Lock; try ... Padding[n] ... finally Safe.Unlock structure,
     // and maintain the PaddingUsedCount field accurately
     Padding: array[0..6] of TVarData;
-    /// number of values stored in the internal Padding[] array
-    // - equals 0 if no value is actually stored, or a 1..7 number otherwise
-    // - you should not have to use this field, but for optimized low-level
-    // direct access to Padding[] values, within a Lock/UnLock safe block
-    PaddingUsedCount: integer;
     /// initialize the mutex
     // - calling this method is mandatory (e.g. in the class constructor owning
     // the TSynLocker instance), otherwise you may encounter unexpected
@@ -6541,7 +6569,7 @@ type
     // !end;
     function ProtectMethod: IUnknown;
     /// returns true if the mutex is currently locked by another thread
-    property IsLocked: boolean read fLocked;
+    property IsLocked: boolean read GetIsLocked;
     /// returns true if the Init method has been called for this mutex
     // - is only relevant if the whole object has been previously filled with 0,
     // i.e. as part of a class or as global variable, but won't be accurate
@@ -8475,6 +8503,7 @@ type
   // - twoIgnoreDefaultInRecord will force custom record serialization to avoid
   // writing the fields with default values, i.e. enable soWriteIgnoreDefault
   // when TJSONCustomParserRTTI.WriteOneLevel is called
+  // - twoDateTimeWithZ appends an ending 'Z' to TDateTime/TDateTimeMS values
   TTextWriterOption = (
     twoStreamIsOwned,
     twoFlushToStreamNoAutoResize,
@@ -8486,7 +8515,8 @@ type
     twoForceJSONStandard,
     twoEndOfLineCRLF,
     twoBufferIsExternal,
-    twoIgnoreDefaultInRecord);
+    twoIgnoreDefaultInRecord,
+    twoDateTimeWithZ);
   /// options set for a TTextWriter instance
   // - allows to override e.g. AddRecordJSON() and AddDynArrayJSON() behavior;
   // or set global process customization for a TTextWriter
@@ -8625,17 +8655,20 @@ type
     procedure AddUnixMSTime(Value: PInt64; WithMS: boolean=false);
     /// append a TDateTime value, expanded as Iso-8601 encoded text
     // - use 'YYYY-MM-DDThh:mm:ss' format (with FirstChar='T')
+    // - if twoDateTimeWithZ CustomOption is set, will append an ending 'Z'
     // - if WithMS is TRUE, will append '.sss' for milliseconds resolution
     // - if QuoteChar is not #0, it will be written before and after the date
     procedure AddDateTime(Value: PDateTime; FirstChar: AnsiChar='T'; QuoteChar: AnsiChar=#0;
       WithMS: boolean=false); overload;
     /// append a TDateTime value, expanded as Iso-8601 encoded text
     // - use 'YYYY-MM-DDThh:mm:ss' format
+    // - if twoDateTimeWithZ CustomOption is set, will append an ending 'Z'
     // - append nothing if Value=0
     // - if WithMS is TRUE, will append '.sss' for milliseconds resolution
     procedure AddDateTime(const Value: TDateTime; WithMS: boolean=false); overload;
     /// append a TDateTime value, expanded as Iso-8601 text with milliseconds
     // and Time Zone designator
+    // - twoDateTimeWithZ CustomOption is ignored in favor of the TZD parameter
     // - i.e. 'YYYY-MM-DDThh:mm:ss.sssZ' format
     // - TZD is the ending time zone designator ('', 'Z' or '+hh:mm' or '-hh:mm')
     procedure AddDateTimeMS(const Value: TDateTime; Expanded: boolean=true;
@@ -11015,7 +11048,8 @@ type
     // - will handle vtPointer/vtClass/vtObject/vtVariant kind of arguments,
     // appending class name for any class or object, the hexa value for a
     // pointer, or the JSON representation of any supplied TDocVariant
-    constructor CreateLastOSError(const Format: RawUTF8; const Args: array of const);
+    constructor CreateLastOSError(const Format: RawUTF8; const Args: array of const;
+      const Trailer: RawUtf8 = 'OSError');
     {$ifndef NOEXCEPTIONINTERCEPT}
     /// can be used to customize how the exception is logged
     // - this default implementation will call the DefaultSynLogExceptionToStr()
@@ -12078,27 +12112,30 @@ type
   /// the potential features, retrieved from an Intel CPU
   // - see https://en.wikipedia.org/wiki/CPUID#EAX.3D1:_Processor_Info_and_Feature_Bits
   // - is defined on all platforms, since an ARM desktop could browse Intel logs
-  TIntelCpuFeature =
-   ( { CPUID 1 in EDX }
-   cfFPU, cfVME, cfDE, cfPSE, cfTSC, cfMSR, cfPAE, cfMCE,
-   cfCX8, cfAPIC, cf_d10, cfSEP, cfMTRR, cfPGE, cfMCA, cfCMOV,
-   cfPAT, cfPSE36, cfPSN, cfCLFSH, cf_d20, cfDS, cfACPI, cfMMX,
-   cfFXSR, cfSSE, cfSSE2, cfSS, cfHTT, cfTM, cfIA64, cfPBE,
+  TIntelCpuFeature = (
+   { CPUID 1 in EDX }
+   cfFPU,  cfVME,   cfDE,   cfPSE,   cfTSC,  cfMSR, cfPAE,  cfMCE,
+   cfCX8,  cfAPIC,  cf_d10, cfSEP,   cfMTRR, cfPGE, cfMCA,  cfCMOV,
+   cfPAT,  cfPSE36, cfPSN,  cfCLFSH, cf_d20, cfDS,  cfACPI, cfMMX,
+   cfFXSR, cfSSE,   cfSSE2, cfSS,    cfHTT,  cfTM,  cfIA64, cfPBE,
    { CPUID 1 in ECX }
-   cfSSE3, cfCLMUL, cfDS64, cfMON, cfDSCPL, cfVMX, cfSMX, cfEST,
-   cfTM2, cfSSSE3, cfCID, cfSDBG, cfFMA, cfCX16, cfXTPR, cfPDCM,
-   cf_c16, cfPCID, cfDCA, cfSSE41, cfSSE42, cfX2A, cfMOVBE, cfPOPCNT,
-   cfTSC2, cfAESNI, cfXS, cfOSXS, cfAVX, cfF16C, cfRAND, cfHYP,
-   { extended features CPUID 7 in EBX, ECX, DL }
-   cfFSGS, cf_b01, cfSGX, cfBMI1, cfHLE, cfAVX2, cf_b06, cfSMEP,
-   cfBMI2, cfERMS, cfINVPCID, cfRTM, cfPQM, cf_b13, cfMPX, cfPQE,
+   cfSSE3, cfCLMUL, cfDS64, cfMON,   cfDSCPL, cfVMX,  cfSMX,   cfEST,
+   cfTM2,  cfSSSE3, cfCID,  cfSDBG,  cfFMA,   cfCX16, cfXTPR,  cfPDCM,
+   cf_c16, cfPCID,  cfDCA,  cfSSE41, cfSSE42, cfX2A,  cfMOVBE, cfPOPCNT,
+   cfTSC2, cfAESNI, cfXS,   cfOSXS,  cfAVX,   cfF16C, cfRAND,  cfHYP,
+   { extended features CPUID 7 in EBX, ECX, EDX }
+   cfFSGS, cfTSCADJ, cfSGX,     cfBMI1,  cfHLE, cfAVX2, cfFDPEO, cfSMEP,
+   cfBMI2, cfERMS,   cfINVPCID, cfRTM,   cfPQM, cf_b13, cfMPX,   cfPQE,
    cfAVX512F, cfAVX512DQ, cfRDSEED, cfADX, cfSMAP, cfAVX512IFMA, cfPCOMMIT, cfCLFLUSH,
-   cfCLWB, cfIPT, cfAVX512PF, cfAVX512ER, cfAVX512CD, cfSHA, cfAVX512BW, cfAVX512VL,
-   cfPREFW1, cfAVX512VBMI, cfUMIP, cfPKU, cfOSPKE, cf_c05, cfAVX512VBMI2, cf_c07,
+   cfCLWB,  cfIPT, cfAVX512PF, cfAVX512ER, cfAVX512CD, cfSHA, cfAVX512BW, cfAVX512VL,
+   cfPREFW1, cfAVX512VBMI, cfUMIP, cfPKU, cfOSPKE, cf_c05, cfAVX512VBMI2, cfCETSS,
    cfGFNI, cfVAES, cfVCLMUL, cfAVX512NNI, cfAVX512BITALG, cf_c13, cfAVX512VPC, cf_c15,
-   cf_cc16, cf_c17, cf_c18, cf_c19, cf_c20, cf_c21, cfRDPID, cf_c23,
-   cf_c24, cf_c25, cf_c26, cf_c27, cf_c28, cf_c29, cfSGXLC, cf_c31,
-   cf_d0, cf_d1, cfAVX512NNIW, cfAVX512MAS, cf_d4, cf_d5, cf_d6, cf_d7);
+   cfFLP, cf_c17, cf_c18, cf_c19, cf_c20, cf_c21, cfRDPID, cf_c23,
+   cf_c24, cfCLDEMOTE, cf_c26, cfMOVDIRI, cfMOVDIR64B, cfENQCMD, cfSGXLC, cfPKS,
+   cf_d0, cf_d1, cfAVX512NNIW, cfAVX512MAPS, cfFSRM, cf_d5, cf_d6, cf_d7,
+   cfAVX512VP2I, cfSRBDS, cfMDCLR, cf_d11, cf_d12, cfTSXFA, cfSER, cfHYBRID,
+   cfTSXLDTRK,   cf_d17,  cfPCFG,  cfLBR,  cfIBT,  cf_d21,  cfAMXBF16, cf_d23,
+   cfAMXTILE, cfAMXINT8, cfIBRSPB, cfSTIBP, cfL1DFL, cfARCAB, cfCORCAB, cfSSBD);
 
   /// all features, as retrieved from an Intel CPU
   TIntelCpuFeatures = set of TIntelCpuFeature;
@@ -13298,7 +13335,8 @@ type
     wSeven, wSeven_64, wServer2008_R2, wServer2008_R2_64,
     wEight, wEight_64, wServer2012, wServer2012_64,
     wEightOne, wEightOne_64, wServer2012R2, wServer2012R2_64,
-    wTen, wTen_64, wServer2016, wServer2016_64, wServer2019_64);
+    wTen, wTen_64, wServer2016, wServer2016_64,
+    wEleven, wEleven_64, wServer2019_64);
   /// the running Operating System, encoded as a 32-bit integer
   TOperatingSystemVersion = packed record
     case os: TOperatingSystem of
@@ -13316,11 +13354,12 @@ const
     '7', '7 64bit', 'Server 2008 R2', 'Server 2008 R2 64bit',
     '8', '8 64bit', 'Server 2012', 'Server 2012 64bit',
     '8.1', '8.1 64bit', 'Server 2012 R2', 'Server 2012 R2 64bit',
-    '10', '10 64bit', 'Server 2016', 'Server 2016 64bit', 'Server 2019 64bit');
+    '10', '10 64bit', 'Server 2016', 'Server 2016 64bit',
+    '11', '11 64bit', 'Server 2019 64bit');
   /// the recognized Windows versions which are 32-bit
   WINDOWS_32 = [w2000, wXP, wServer2003, wServer2003_R2, wVista, wServer2008,
     wSeven, wServer2008_R2, wEight, wServer2012, wEightOne, wServer2012R2,
-    wTen, wServer2016];
+    wTen, wServer2016, wEleven];
   /// translate one operating system (and distribution) into a single character
   // - may be used internally e.g. for a HTTP User-Agent header, as with
   // TFileVersion.UserAgent
@@ -13595,12 +13634,16 @@ function InterlockedDecrement(var I: Integer): Integer;
 
 {$endif FPC}
 
-/// low-level string/dynarray reference counter unprocess
+/// low-level string reference counter unprocess
 // - caller should have tested that refcnt>=0
 // - returns true if the managed variable should be released (i.e. refcnt was 1)
-// - on Delphi, RefCnt field is a 32-bit longint, whereas on FPC it is a SizeInt/PtrInt
-function RefCntDecFree(var refcnt: TRefCnt): boolean;
-  {$ifndef CPUINTEL}inline;{$endif}
+function StrCntDecFree(var refcnt: TStrCnt): boolean;
+  {$ifndef CPUINTEL} inline; {$endif}
+
+/// low-level dynarray reference counter unprocess
+// - caller should have tested that refcnt>=0
+function DACntDecFree(var refcnt: TDACnt): boolean;
+  {$ifndef CPUINTEL} inline; {$endif}
 
 type
   /// stores some global information about the current executable and computer
@@ -13705,14 +13748,10 @@ type
   {$ifdef FPC} // FPC already use heap instead of GlobalAlloc()
   THeapMemoryStream = TMemoryStream;
   {$else}
-  {$ifdef MSWINDOWS}
+  {$ifndef UNICODE} // old Delphi used GlobalAlloc()
   THeapMemoryStream = class(TMemoryStream)
   protected
-    {$if CompilerVersion >= 35.0}
-    function Realloc(var NewCapacity: Nativeint): Pointer; override;
-    {$else}
-    function Realloc(var NewCapacity: Longint): Pointer; override;
-    {$ifend}
+    function Realloc(var NewCapacity: longint): Pointer; override;
   end;
   {$else}
   THeapMemoryStream = TMemoryStream;
@@ -14429,6 +14468,7 @@ type
     // properties can be slow - if you expect the data to be read-only or not
     // propagated into another place, add dvoValueCopiedByReference in Options
     // will increase the process speed a lot
+    // - warning: exclude dvoAllowDoubleValue so won't parse any float, just currency
     // - in practice, you should better use the function _Json()/_JsonFast()
     // which are handy wrappers around this class method
     class function NewJSON(const JSON: RawUTF8;
@@ -15497,6 +15537,7 @@ function _Arr(const Items: array of const;
 // from a supplied (extended) JSON content
 // - this global function is an alias to TDocVariant.NewJSON(), and
 // will return an Unassigned variant if JSON content was not correctly converted
+// - warning: exclude dvoAllowDoubleValue so won't parse any float, just currency
 // - object or array will be initialized from the supplied JSON content, e.g.
 // ! aVariant := _Json('{"id":10,"doc":{"name":"John","birthyear":1972}}');
 // ! // now you can access to the properties via late binding
@@ -15531,6 +15572,7 @@ function _Json(const JSON: RawUTF8;
 // - wrapper around the _Json(FormatUTF8(...,JSONFormat=true)) function,
 // i.e. every Args[] will be inserted for each % and Params[] for each ?,
 // with proper JSON escaping of string values, and writing nested _Obj() /
+// - warning: exclude dvoAllowDoubleValue so won't parse any float, just currency
 // _Arr() instances as expected JSON objects / arrays
 // - typical use (in the context of SynMongoDB unit) could be:
 // ! aVariant := _JSONFmt('{%:{$in:[?,?]}}',['type'],['food','snack']);
@@ -15560,6 +15602,7 @@ procedure _JsonFmt(const Format: RawUTF8; const Args,Params: array of const;
 // from a supplied (extended) JSON content
 // - this global function is an alias to TDocVariant.NewJSON(), and
 // will return TRUE if JSON content was correctly converted into a variant
+// - warning: exclude dvoAllowDoubleValue so won't parse any float, just currency
 // - in addition to the JSON RFC specification strict mode, this method will
 // handle some BSON-like extensions, e.g. unquoted field names or ObjectID()
 // - by default, every internal value will be copied, so access of nested
@@ -15591,14 +15634,21 @@ function _ArrFast(const Items: array of const): variant; overload;
 
 /// initialize a variant instance to store some document-based content
 // from a supplied (extended) JSON content
+// - warning: exclude dvoAllowDoubleValue so won't parse any float, just currency
 // - this global function is an handy alias to:
-// ! _Json(JSON,JSON_OPTIONS[true]);
+// ! _Json(JSON,JSON_OPTIONS[true]); or _Json(JSON,JSON_OPTIONS_FAST)
 // so it will return an Unassigned variant if JSON content was not correct
 // - so all created objects and arrays will be handled by reference, for best
 // speed - but you should better write on the resulting variant tree with caution
 // - in addition to the JSON RFC specification strict mode, this method will
 // handle some BSON-like extensions, e.g. unquoted field names or ObjectID()
 function _JsonFast(const JSON: RawUTF8): variant;
+  {$ifdef HASINLINE}inline;{$endif}
+
+/// initialize a variant instance to store some document-based content
+// from a supplied (extended) JSON content, parsing any kind of float
+// - use JSON_OPTIONS_FAST_FLOAT including the dvoAllowDoubleValue option
+function _JsonFastFloat(const JSON: RawUTF8): variant;
   {$ifdef HASINLINE}inline;{$endif}
 
 /// initialize a variant instance to store some extended document-based content
@@ -15609,6 +15659,7 @@ function _JsonFastExt(const JSON: RawUTF8): variant;
 
 /// initialize a variant instance to store some document-based content
 // from a supplied (extended) JSON content, with parameters formating
+// - warning: exclude dvoAllowDoubleValue so won't parse any float, just currency
 // - this global function is an handy alias e.g. to:
 // ! aVariant := _JSONFmt('{%:{$in:[?,?]}}',['type'],['food','snack'],JSON_OPTIONS[true]);
 // - so all created objects and arrays will be handled by reference, for best
@@ -16933,30 +16984,6 @@ uses
 var
   // internal list of TSynAnsiConvert instances
   SynAnsiConvertList: TSynObjectList = nil;
-
-// some constants used for UTF-8 conversion, including surrogates
-const
-  UTF16_HISURROGATE_MIN = $d800;
-  UTF16_HISURROGATE_MAX = $dbff;
-  UTF16_LOSURROGATE_MIN = $dc00;
-  UTF16_LOSURROGATE_MAX = $dfff;
-  UTF8_EXTRABYTES: array[$80..$ff] of byte = (
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-    2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2, 3,3,3,3,3,3,3,3,4,4,4,4,5,5,0,0);
-  UTF8_EXTRA: array[0..6] of record
-    offset, minimum: cardinal;
-  end = ( // http://floodyberry.wordpress.com/2007/04/14/utf-8-conversion-tricks
-    (offset: $00000000;  minimum: $00010000),
-    (offset: $00003080;  minimum: $00000080),
-    (offset: $000e2080;  minimum: $00000800),
-    (offset: $03c82080;  minimum: $00010000),
-    (offset: $fa082080;  minimum: $00200000),
-    (offset: $82082080;  minimum: $04000000),
-    (offset: $00000000;  minimum: $04000000));
-  UTF8_EXTRA_SURROGATE = 3;
-  UTF8_FIRSTBYTE: array[2..6] of byte = ($c0,$e0,$f0,$f8,$fc);
 
 {$ifdef HASINLINE}
 {$ifdef USE_VTYPE_STATIC} // circumvent weird bug on BSD + ARM (Alfred)
@@ -18430,56 +18457,6 @@ NoSource:
     dest^ := #0; // always append a WideChar(0) to the end of the buffer
 end;
 
-function IsValidUTF8(source: PUTF8Char): Boolean;
-var extra, i: integer;
-    c: cardinal;
-begin
-  result := false;
-  if source<>nil then
-  repeat
-    c := byte(source^);
-    inc(source);
-    if c=0 then break else
-    if c and $80<>0 then begin
-      extra := UTF8_EXTRABYTES[c];
-      if extra=0 then exit else // invalid leading byte
-      for i := 1 to extra do
-        if byte(source^) and $c0<>$80 then
-          exit else
-          inc(source); // check valid UTF-8 content
-    end;
-  until false;
-  result := true;
-end;
-
-function IsValidUTF8(const source: RawUTF8): Boolean;
-begin
-  result := IsValidUTF8(pointer(Source),length(Source));
-end;
-
-function IsValidUTF8(source: PUTF8Char; sourcelen: PtrInt): Boolean;
-var extra, i: integer;
-    c: cardinal;
-begin
-  result := false;
-  inc(sourcelen,PtrInt(source));
-  if source<>nil then
-    while PtrInt(PtrUInt(source))<sourcelen do begin
-      c := byte(source^);
-      inc(source);
-      if c=0 then exit else
-      if c and $80<>0 then begin
-        extra := UTF8_EXTRABYTES[c];
-        if extra=0 then exit else // invalid leading byte
-        for i := 1 to extra do
-          if (PtrInt(PtrUInt(source))>=sourcelen) or (byte(source^) and $c0<>$80) then
-            exit else
-            inc(source); // check valid UTF-8 content
-      end;
-    end;
-  result := true;
-end;
-
 function IsValidUTF8WithoutControlChars(source: PUTF8Char): Boolean;
 var extra, i: integer;
     c: cardinal;
@@ -19896,7 +19873,7 @@ begin
     s := pointer(Value);
     d := s;
     for i := 1 to Safe.Padding[0].VInteger do begin
-      if PRefCnt(PAnsiChar(s^)-_STRREFCNT)^<=aMaxRefCount then begin
+      if PStrCnt(PAnsiChar(s^)-_STRREFCNT)^<=aMaxRefCount then begin
         {$ifdef FPC}
         Finalize(PRawUTF8(s)^);
         {$else}
@@ -20494,11 +20471,11 @@ type
   {$ifdef ISFPC27}
     codePage: TSystemCodePage; // =Word
     elemSize: Word;
+    {$ifndef STRCNT32}
     {$ifdef CPU64}
     _PaddingToQWord: DWord;
-    {$endif}
-  {$endif}
-    refCnt: TRefCnt; // =SizeInt
+    {$endif} {$endif} {$endif}
+    refCnt: TStrCnt; // =SizeInt on older FPC, =longint since FPC 3.4
     length: SizeInt;
   end;
 {$else FPC}
@@ -20509,7 +20486,7 @@ type
     _Padding: LongInt;
     {$endif}
     /// dynamic array reference count (basic garbage memory mechanism)
-    refCnt: TRefCnt;
+    refCnt: TDACnt;
     /// length in element count
     // - size in bytes = length*ElemSize
     length: PtrInt;
@@ -20535,7 +20512,7 @@ type
     elemSize: Word;
   {$endif UNICODE}
     /// COW string reference count (basic garbage memory mechanism)
-    refCnt: TRefCnt;
+    refCnt: TStrCnt;
     /// length in characters
     // - size in bytes = length*elemSize
     length: Longint;
@@ -20813,9 +20790,15 @@ asm
         jz      @z
         mov     qword ptr[p], rdx
         mov     p, rax
+        {$ifdef STRCNT32}
+        cmp     dword ptr[rax - _STRREFCNT], rdx
+        jl      @z
+lock    dec     dword ptr[rax - _STRREFCNT]
+        {$else}
         cmp     qword ptr[rax - _STRREFCNT], rdx
         jl      @z
 lock    dec     qword ptr[rax - _STRREFCNT]
+        {$endif STRCNT32}
         jbe     @free
 @z:     ret
 @free:  sub     p, STRRECSIZE
@@ -20826,9 +20809,15 @@ procedure _ansistr_incr_ref(p: pointer); nostackframe; assembler;
 asm
         test    p, p
         jz      @z
+        {$ifdef STRCNT32}
+        cmp     dword ptr[p - _STRREFCNT], 0
+        jl      @z
+lock    inc     dword ptr[p - _STRREFCNT]
+        {$else}
         cmp     qword ptr[p - _STRREFCNT], 0
         jl      @z
 lock    inc     qword ptr[p - _STRREFCNT]
+        {$endif STRCNT32}
 @z:
 end;
 
@@ -20839,6 +20828,19 @@ asm
         jz      @eq
         test    s, s
         jz      @ns
+        {$ifdef STRCNT32}
+        cmp     dword ptr[s - _STRREFCNT], 0
+        jl      @ns
+lock    inc     dword ptr[s - _STRREFCNT]
+@ns:    mov     qword ptr[d], s
+        test    rax, rax
+        jnz     @z
+@eq:    ret
+@z:     mov     d, rax
+        cmp     dword ptr[rax - _STRREFCNT], 0
+        jl      @n
+ lock   dec     dword ptr[rax - _STRREFCNT]
+        {$else}
         cmp     qword ptr[s - _STRREFCNT], 0
         jl      @ns
 lock    inc     qword ptr[s - _STRREFCNT]
@@ -20850,6 +20852,7 @@ lock    inc     qword ptr[s - _STRREFCNT]
         cmp     qword ptr[rax - _STRREFCNT], 0
         jl      @n
  lock   dec     qword ptr[rax - _STRREFCNT]
+        {$endif STRCNT32}
         ja      @n
 @free:  sub     d, STRRECSIZE
         jmp     _Freemem
@@ -20974,9 +20977,15 @@ asm
         test    rax, rax
         jz      @z
         mov     d, rax
+        {$ifdef STRCNT32}
+        cmp     dword ptr[rax - _STRREFCNT], 0
+        jl      @z
+lock    dec     dword ptr[rax - _STRREFCNT]
+        {$else}
         cmp     qword ptr[rax - _STRREFCNT], 0
         jl      @z
 lock    dec     qword ptr[rax - _STRREFCNT]
+        {$endif STRCNT32}
         jbe     @free
 @z:     ret
 @free:  sub     d, STRRECSIZE
@@ -21014,7 +21023,11 @@ asm
         jle     _ansistr_decr_ref
         test    rax, rax
         jz      _ansistr_setlength_new
+        {$ifdef STRCNT32}
+        cmp     dword ptr[rax - _STRREFCNT], 1
+        {$else}
         cmp     qword ptr[rax - _STRREFCNT], 1
+        {$endif STRCNT32}
         jne     _ansistr_setlength_new
         push    len
         push    s
@@ -21248,7 +21261,7 @@ begin
   if sr = nil then
     exit;
   dec(sr);
-  if (sr^.refcnt >= 0) and RefCntDecFree(sr^.refcnt) then
+  if (sr^.refcnt >= 0) and StrCntDecFree(sr^.refcnt) then
     FreeMem(sr);
 end;
 {$endif FPC_X64}
@@ -27393,9 +27406,10 @@ begin
       inc(Vers,2); // e.g. wEight -> wServer2012
       if (Vers=wServer2016) and (OSVersionInfo.dwBuildNumber>=17763) then
         Vers := wServer2019_64; // https://stackoverflow.com/q/53393150
-    end;
+    end else if (Vers=wTen) and (OSVersionInfo.dwBuildNumber>=22000) then
+      Vers := wEleven; // waiting for an official mean of Windows 11 identification
     if (SystemInfo.wProcessorArchitecture=PROCESSOR_ARCHITECTURE_AMD64) and
-       (Vers < wServer2019_64) then
+       (Vers<wServer2019_64) then
       inc(Vers);   // e.g. wEight -> wEight64
   end;
   OSVersion := Vers;
@@ -27664,23 +27678,43 @@ begin
   end;
 end;
 
-function RefCntDecFree(var refcnt: TRefCnt): boolean;
+function StrCntDecFree(var refcnt: TStrCnt): boolean;
 {$ifdef CPUINTEL} {$ifdef FPC}nostackframe; assembler; {$endif}
 asm {$ifdef CPU64DELPHI} .noframe {$endif}
-        {$ifdef FPC_64}
-        lock dec qword ptr[refcnt]  // TRefCnt=SizeInt=PtrInt=Int64 for FPC_64
+        {$ifdef STRCNT32}
+        lock dec dword ptr[refcnt]
         {$else}
-        lock dec dword ptr[refcnt]  // TRefCnt=longint on Delphi and FPC_32
-        {$endif}
+        lock dec qword ptr[refcnt]
+        {$endif STRCNT32}
         setbe   al
 end; // we don't check for ismultithread global since lock is cheap on new CPUs
 {$else}
 begin // fallback to RTL asm e.g. for ARM
-  {$ifdef FPC_64}
-  result := InterLockedDecrement64(refcnt)<=0;
-  {$else}
+  {$ifdef STRCNT32}
   result := InterLockedDecrement(refcnt)<=0;
-  {$endif FPC_64}
+  {$else}
+  result := InterLockedDecrement64(refcnt)<=0;
+  {$endif STRCNT32}
+end;
+{$endif CPUINTEL}
+
+function DACntDecFree(var refcnt: TDACnt): boolean;
+{$ifdef CPUINTEL} {$ifdef FPC}nostackframe; assembler; {$endif}
+asm {$ifdef CPU64DELPHI} .noframe {$endif}
+        {$ifdef DACNT32}
+        lock dec dword ptr[refcnt]
+        {$else}
+        lock dec qword ptr[refcnt]
+        {$endif DACNT32}
+        setbe   al
+end; // we don't check for ismultithread global since lock is cheap on new CPUs
+{$else}
+begin // fallback to RTL asm e.g. for ARM
+  {$ifdef DACNT32}
+  result := InterLockedDecrement(refcnt)<=0;
+  {$else}
+  result := InterLockedDecrement64(refcnt)<=0;
+  {$endif DACNT32}
 end;
 {$endif CPUINTEL}
 
@@ -31489,7 +31523,7 @@ begin
     exit; // wrong Index
   dec(n);
   if n>Index then begin
-    if PRefCnt(PtrUInt(Values)-_DAREFCNT)^>1 then
+    if PDACnt(PtrUInt(Values)-_DAREFCNT)^>1 then
       DynArrayMakeUnique(@Values,TypeInfo(TWordDynArray));
     MoveFast(Values[Index+1],Values[Index],(n-Index)*SizeOf(Word));
   end;
@@ -31504,7 +31538,7 @@ begin
     exit; // wrong Index
   dec(n);
   if n>Index then begin
-    if PRefCnt(PtrUInt(Values)-_DAREFCNT)^>1 then
+    if PDACnt(PtrUInt(Values)-_DAREFCNT)^>1 then
       DynArrayMakeUnique(@Values,TypeInfo(TIntegerDynArray));
     MoveFast(Values[Index+1],Values[Index],(n-Index)*SizeOf(Integer));
   end;
@@ -31519,7 +31553,7 @@ begin
     exit; // wrong Index
   dec(n,Index+1);
   if n>0 then begin
-    if PRefCnt(PtrUInt(Values)-_DAREFCNT)^>1 then
+    if PDACnt(PtrUInt(Values)-_DAREFCNT)^>1 then
       DynArrayMakeUnique(@Values,TypeInfo(TIntegerDynArray));
     MoveFast(Values[Index+1],Values[Index],n*SizeOf(Integer));
   end;
@@ -31534,7 +31568,7 @@ begin
     exit; // wrong Index
   dec(n);
   if n>Index then begin
-    if PRefCnt(PtrUInt(Values)-_DAREFCNT)^>1 then
+    if PDACnt(PtrUInt(Values)-_DAREFCNT)^>1 then
       DynArrayMakeUnique(@Values,TypeInfo(TInt64DynArray));
     MoveFast(Values[Index+1],Values[Index],(n-Index)*SizeOf(Int64));
   end;
@@ -31549,7 +31583,7 @@ begin
     exit; // wrong Index
   dec(n,Index+1);
   if n>0 then begin
-    if PRefCnt(PtrUInt(Values)-_DAREFCNT)^>1 then
+    if PDACnt(PtrUInt(Values)-_DAREFCNT)^>1 then
       DynArrayMakeUnique(@Values,TypeInfo(TInt64DynArray));
     MoveFast(Values[Index+1],Values[Index],n*SizeOf(Int64));
   end;
@@ -31561,9 +31595,9 @@ var i,v,x,n: PtrInt;
 begin
   if (Values=nil) or (Excluded=nil) then
     exit; // nothing to exclude
-  if PRefCnt(PtrUInt(Values)-_DAREFCNT)^>1 then
+  if PDACnt(PtrUInt(Values)-_DAREFCNT)^>1 then
     DynArrayMakeUnique(@Values,TypeInfo(TIntegerDynArray));
-  if PRefCnt(PtrUInt(Excluded)-_DAREFCNT)^>1 then
+  if PDACnt(PtrUInt(Excluded)-_DAREFCNT)^>1 then
     DynArrayMakeUnique(@Excluded,TypeInfo(TIntegerDynArray));
   v := length(Values);
   n := 0;
@@ -31596,9 +31630,9 @@ begin
     Values := nil;
     exit;
   end;
-  if PRefCnt(PtrUInt(Values)-_DAREFCNT)^>1 then
+  if PDACnt(PtrUInt(Values)-_DAREFCNT)^>1 then
     DynArrayMakeUnique(@Values,TypeInfo(TIntegerDynArray));
-  if PRefCnt(PtrUInt(Included)-_DAREFCNT)^>1 then
+  if PDACnt(PtrUInt(Included)-_DAREFCNT)^>1 then
     DynArrayMakeUnique(@Included,TypeInfo(TIntegerDynArray));
   v := length(Values);
   n := 0;
@@ -33810,14 +33844,14 @@ begin
     _80 := PtrUInt($8080808080808080); // use registers for constants
     _61 := $6161616161616161;
     _7b := $7b7b7b7b7b7b7b7b;
-    for i := 0 to sourceLen shr 3 do begin
+    for i := 0 to (sourceLen-1) shr 3 do begin
       c := PPtrUIntArray(source)^[i];
       d := c or _80;
       PPtrUIntArray(dest)^[i] := c-((d-PtrUInt(_61)) and not(d-_7b)) and
         ((not c) and _80)shr 2;
     end;
     {$else} // unbranched uppercase conversion of 4 chars blocks
-    for i := 0 to sourceLen shr 2 do begin
+    for i := 0 to (sourceLen-1) shr 2 do begin
       c := PPtrUIntArray(source)^[i];
       d := c or PtrUInt($80808080);
       PPtrUIntArray(dest)^[i] := c-((d-PtrUInt($61616161)) and not(d-PtrUInt($7b7b7b7b))) and
@@ -34765,7 +34799,7 @@ procedure CSVToRawUTF8DynArray(const CSV,Sep,SepEnd: RawUTF8; var Result: TRawUT
 var offs,i: integer;
 begin
   offs := 1;
-  while offs<length(CSV) do begin
+  while offs<=length(CSV) do begin
     SetLength(Result,length(Result)+1);
     i := PosEx(Sep,CSV,offs);
     if i=0 then begin
@@ -40374,7 +40408,7 @@ function FastFindUpperPUTF8CharSorted(P: PPUTF8CharArray; R: PtrInt;
   Value: PUTF8Char; ValueLen: PtrInt): PtrInt;
 var tmp: array[byte] of AnsiChar;
 begin
-  UpperCopy255Buf(@tmp,Value,ValueLen);
+  UpperCopy255Buf(@tmp,Value,ValueLen)^ := #0;
   result := FastFindPUTF8CharSorted(P,R,@tmp);
 end;
 
@@ -40511,7 +40545,7 @@ begin
   if cardinal(Index)>=cardinal(n) then
     result := false else begin
     dec(n);
-    if PRefCnt(PtrUInt(Values)-_DAREFCNT)^>1 then
+    if PDACnt(PtrUInt(Values)-_DAREFCNT)^>1 then
       DynArrayMakeUnique(@Values,TypeInfo(TRawUTF8DynArray));
     Values[Index] := ''; // avoid GPF
     if n>Index then begin
@@ -40532,7 +40566,7 @@ begin
     result := false else begin
     dec(n);
     ValuesCount := n;
-    if PRefCnt(PtrUInt(Values)-_DAREFCNT)^>1 then
+    if PDACnt(PtrUInt(Values)-_DAREFCNT)^>1 then
       DynArrayMakeUnique(@Values,TypeInfo(TRawUTF8DynArray));
     Values[Index] := ''; // avoid GPF
     dec(n,Index);
@@ -41112,16 +41146,12 @@ end;
 
 {$ifndef LVCL}
 {$ifndef FPC}
-{$ifdef MSWINDOWS}
+{$ifndef UNICODE}
 
 const
   MemoryDelta = $8000; // 32 KB granularity (must be a power of 2)
 
-{$if CompilerVersion >= 35.0}
-function THeapMemoryStream.Realloc(var NewCapacity: Nativeint): Pointer;
-{$else}
-function THeapMemoryStream.Realloc(var NewCapacity: Longint): Pointer;
-{$ifend}
+function THeapMemoryStream.Realloc(var NewCapacity: longint): Pointer;
 // allocates memory from Delphi heap (FastMM4/SynScaleMM) and not windows.Global*()
 // and uses bigger growing size -> a lot faster
 var i: PtrInt;
@@ -41153,7 +41183,7 @@ begin
   end;
 end;
 
-{$endif MSWINDOWS}
+{$endif UNICODE}
 {$endif FPC}
 {$endif LVCL}
 
@@ -44324,7 +44354,7 @@ begin
     UpperCaseCopy(TypeName,TypeNameLen,ItemTypeName^);
     up := pointer(ItemTypeName^);
   end else begin
-    UpperCopy255Buf(@tmp,TypeName,TypeNameLen);
+    UpperCopy255Buf(@tmp,TypeName,TypeNameLen)^ := #0;
     up := @tmp;
   end;
 //for ndx := 1 to SORTEDMAX do assert(StrComp(SORTEDNAMES[ndx],SORTEDNAMES[ndx-1])>0,SORTEDNAMES[ndx]);
@@ -44572,7 +44602,7 @@ begin
   p := pointer(Data);
   dec(p);
   Data := 0;
-  if (p^.refCnt>=0) and RefCntDecFree(p^.refCnt) then begin
+  if (p^.refCnt>=0) and DACntDecFree(p^.refCnt) then begin
     for i := 1 to p^.length do
       FinalizeNestedRecord(ItemData);
     FreeMem(p);
@@ -47798,11 +47828,11 @@ begin
     result := false else begin
     dec(VCount);
     if VName<>nil then begin
-      if PRefCnt(PtrUInt(VName)-_DAREFCNT)^>1 then
+      if PDACnt(PtrUInt(VName)-_DAREFCNT)^>1 then
         DynArrayMakeUnique(@VName,TypeInfo(TRawUTF8DynArray));
       VName[Index] := '';
     end;
-    if PRefCnt(PtrUInt(VValue)-_DAREFCNT)^>1 then
+    if PDACnt(PtrUInt(VValue)-_DAREFCNT)^>1 then
       DynArrayMakeUnique(@VValue,TypeInfo(TVariantDynArray));
     VarClear(VValue[Index]);
     if Index<VCount then begin
@@ -47890,7 +47920,7 @@ function TDocVariantData.GetValueIndex(aName: PUTF8Char; aNameLen: PtrInt;
   aCaseSensitive: boolean): integer;
 var err: integer;
 begin
-  if (integer(VType)=DocVariantVType) and (VCount>0) then
+  if (integer(VType)=DocVariantVType) and (VCount>0) and (aName<>nil) and(aNameLen>0) then
     if dvoIsArray in VOptions then begin // try index text in array document
       result := GetInteger(aName,err);
       if (err<>0) or (cardinal(result)>=cardinal(VCount)) then
@@ -49110,6 +49140,11 @@ begin
   _Json(JSON,result,JSON_OPTIONS_FAST);
 end;
 
+function _JsonFastFloat(const JSON: RawUTF8): variant;
+begin
+  _Json(JSON,result,JSON_OPTIONS_FAST_FLOAT);
+end;
+
 function _JsonFastExt(const JSON: RawUTF8): variant;
 begin
   _Json(JSON,result,JSON_OPTIONS_FAST_EXTENDED);
@@ -49338,7 +49373,7 @@ begin
     if p<>nil then begin
       v^ := nil;
       dec(p);
-      if (p^.refCnt>=0) and RefCntDecFree(p^.refCnt) then
+      if (p^.refCnt>=0) and StrCntDecFree(p^.refCnt) then
         freemem(p);
     end;
     inc(v);
@@ -49403,7 +49438,7 @@ begin
     p := Value^;
     if p<>nil then begin
       dec(p);
-      if (p^.refCnt>=0) and RefCntDecFree(p^.refCnt) then begin
+      if (p^.refCnt>=0) and DACntDecFree(p^.refCnt) then begin
         if ElemTypeInfo<>nil then
           FastFinalizeArray(Value^,ElemTypeInfo,p^.length);
         Freemem(p);
@@ -49761,7 +49796,7 @@ begin
   n := GetCount;
   if PtrUInt(aIndex)>=PtrUInt(n) then
     exit; // out of range
-  if PRefCnt(PtrUInt(fValue^)-_DAREFCNT)^>1 then
+  if PDACnt(PtrUInt(fValue^)-_DAREFCNT)^>1 then
     InternalSetLength(n,n); // unique
   dec(n);
   P := pointer(PtrUInt(fValue^)+PtrUInt(aIndex)*ElemSize);
@@ -51310,7 +51345,7 @@ begin // this method is faster than default System.DynArraySetLength() function
   if NewLength=0 then begin
     if p<>nil then begin // FastDynArrayClear() with ObjArray support
       dec(p);
-      if (p^.refCnt>=0) and RefCntDecFree(p^.refCnt) then begin
+      if (p^.refCnt>=0) and DACntDecFree(p^.refCnt) then begin
         if OldLength<>0 then
           if ElemType<>nil then
             FastFinalizeArray(fValue^,ElemType,OldLength) else
@@ -51335,7 +51370,7 @@ begin // this method is faster than default System.DynArraySetLength() function
     OldLength := NewLength;    // no FillcharFast() below
   end else begin
     dec(PtrUInt(p),SizeOf(TDynArrayRec)); // p^ = start of heap object
-    if (p^.refCnt>=0) and RefCntDecFree(p^.refCnt) then begin
+    if (p^.refCnt>=0) and DACntDecFree(p^.refCnt) then begin
       if NewLength<OldLength then // reduce array in-place
         if ElemType<>nil then // release managed types in trailing items
           FastFinalizeArray(pointer(PAnsiChar(p)+NeededSize),ElemType,OldLength-NewLength) else
@@ -51998,7 +52033,7 @@ begin // on input: HashTable[result] slot is already computed
   if HashTableSize<n then
     RaiseFatalCollision('HashAdd HashTableSize',aHashCode);
   if HashTableSize-n<n shr 2 then begin // grow hash table when 25% void
-    ReHash({foradd=}true,{grow=}true);
+    ReHash({foradd=}true);
     result := Find(aHashCode,{foradd=}true); // recompute position
     if result>=0 then
       RaiseFatalCollision('HashAdd',aHashCode);
@@ -52245,7 +52280,7 @@ begin
     end;
   end;
   if not(canHash in State) then
-    ReHash({forced=}true,{grow=}false); // hash previous CountTrigger items
+    ReHash({forced=}true); // hash previous CountTrigger items
   result := FindOrNew(aHashCode,Elem,nil);
   if result<0 then begin // found no matching item
     wasAdded := true;
@@ -52319,7 +52354,7 @@ begin
     inc(ScanCounter);
     if ScanCounter>=CountTrigger*2 then begin
       CountTrigger := 2; // rather use hashing from now on
-      ReHash(false,false);   // set HashTable[] and canHash
+      ReHash(false);   // set HashTable[] and canHash
     end;
   end;
 end;
@@ -52336,34 +52371,30 @@ begin
     result := -1; // for coherency with most search methods
 end;
 
-function TDynArrayHasher.ReHash(forced, forceGrow: boolean): integer;
+function TDynArrayHasher.ReHash(forced: boolean): integer;
 var i, n, cap, siz, ndx: integer;
     P: PAnsiChar;
     hc: cardinal;
 begin
   result := 0;
-  // initialize a new void HashTable[]=0
-  siz := HashTableSize;
-  Clear;
-  if not(hasHasher in State) then
-    exit;
   n := DynArray^.Count;
-  if not forced and ((n=0) or (n<CountTrigger)) then
+  if not (Assigned(HashElement) or Assigned(EventHash)) or
+     (not forced and ((n=0) or (n<CountTrigger))) then begin
+    Clear; // reset HashTable[]
     exit; // hash only if needed, and avoid GPF after TDynArray.Clear (Count=0)
-  if forceGrow and (siz>0) then // next power of two or next prime
-    {$ifdef CPU32DELPHI}
-    if siz<HASH_PO2 then
-      siz := siz shl 1 else {$endif}
-      siz := NextPrime(siz) else begin
-    cap := DynArray^.Capacity*2; // Capacity better than Count - *2 for void slots
-    {$ifdef CPU32DELPHI}
-    if cap<=HASH_PO2 then begin
-      siz := 256; // find nearest power of two for fast bitwise division
-      while siz<cap do
-        siz := siz shl 1;
-    end else {$endif}
-      siz := NextPrime(cap);
   end;
+  cap := DynArray^.Capacity * 2; // to reserve some void slots
+  {$ifdef CPU32DELPHI}
+  if cap<=HASH_PO2 then begin
+    siz := 256;
+    while siz<cap do // find nearest power of two for fast bitwise division
+      siz := siz shl 1;
+  end else
+  {$endif CPU32DELPHI}
+    siz := NextPrime(cap);
+  if (not forced) and (siz=HashTableSize) then
+    exit; // was a paranoid ReHash() call
+  Clear;
   HashTableSize := siz;
   SetLength(HashTable,siz); // fill with 0 (void slot)
   // fill HashTable[]=index+1 from all existing items
@@ -52641,9 +52672,9 @@ begin
   result := fHash.GetHashFromIndex(aIndex);
 end;
 
-function TDynArrayHashed.ReHash(forAdd: boolean; forceGrow: boolean): integer;
+function TDynArrayHashed.ReHash(forAdd: boolean): integer;
 begin
-  result := fHash.ReHash(forAdd,forceGrow);
+  result := fHash.ReHash(forAdd);
 end;
 
 
@@ -53202,10 +53233,9 @@ const
 
 procedure TSynLocker.Init;
 begin
-  fSectionPadding := 0;
+  fLockCount := 0;
   PaddingUsedCount := 0;
   InitializeCriticalSection(fSection);
-  fLocked := false;
   fInitialized := true;
 end;
 
@@ -53225,22 +53255,28 @@ begin
   FreeMem(@self);
 end;
 
+function TSynLocker.GetIsLocked: boolean;
+begin
+  result := fLockCount <> 0;
+end;
+
 procedure TSynLocker.Lock;
 begin
   EnterCriticalSection(fSection);
-  fLocked := true;
+  inc(fLockCount);
 end;
 
 procedure TSynLocker.UnLock;
 begin
-  fLocked := false;
+  dec(fLockCount);
   LeaveCriticalSection(fSection);
 end;
 
 function TSynLocker.TryLock: boolean;
 begin
-  result := not fLocked and
-    (TryEnterCriticalSection(fSection){$ifdef LINUX}{$ifdef FPC}<>0{$endif}{$endif});
+  result := TryEnterCriticalSection(fSection){$ifdef LINUX}{$ifdef FPC}<>0{$endif}{$endif};
+  if result then
+    inc(fLockCount);
 end;
 
 function TSynLocker.TryLockMS(retryms: integer): boolean;
@@ -53265,12 +53301,10 @@ function TSynLocker.GetVariant(Index: integer): Variant;
 begin
   if cardinal(Index)<cardinal(PaddingUsedCount) then
     try
-      EnterCriticalSection(fSection);
-      fLocked := true;
+      Lock;
       result := variant(Padding[Index]);
     finally
-      fLocked := false;
-      LeaveCriticalSection(fSection);
+      UnLock;
     end else
     VarClear(result);
 end;
@@ -53279,14 +53313,12 @@ procedure TSynLocker.SetVariant(Index: integer; const Value: Variant);
 begin
   if cardinal(Index)<=high(Padding) then
     try
-      EnterCriticalSection(fSection);
-      fLocked := true;
+      Lock;
       if Index>=PaddingUsedCount then
         PaddingUsedCount := Index+1;
       variant(Padding[Index]) := Value;
     finally
-      fLocked := false;
-      LeaveCriticalSection(fSection);
+      UnLock;
     end;
 end;
 
@@ -53294,13 +53326,11 @@ function TSynLocker.GetInt64(Index: integer): Int64;
 begin
   if cardinal(Index)<cardinal(PaddingUsedCount) then
     try
-      EnterCriticalSection(fSection);
-      fLocked := true;
+      Lock;
       if not VariantToInt64(variant(Padding[index]),result) then
         result := 0;
     finally
-      fLocked := false;
-      LeaveCriticalSection(fSection);
+      UnLock;
     end else
     result := 0;
 end;
@@ -53314,13 +53344,11 @@ function TSynLocker.GetBool(Index: integer): boolean;
 begin
   if cardinal(Index)<cardinal(PaddingUsedCount) then
     try
-      EnterCriticalSection(fSection);
-      fLocked := true;
+      Lock;
       if not VariantToBoolean(variant(Padding[index]),result) then
         result := false;
     finally
-      fLocked := false;
-      LeaveCriticalSection(fSection);
+      UnLock;
     end else
     result := false;
 end;
@@ -53350,15 +53378,13 @@ function TSynLocker.GetPointer(Index: integer): Pointer;
 begin
   if cardinal(Index)<cardinal(PaddingUsedCount) then
     try
-      EnterCriticalSection(fSection);
-      fLocked := true;
+      Lock;
       with Padding[index] do
         if VType=varUnknown then
           result := VUnknown else
           result := nil;
     finally
-      fLocked := false;
-      LeaveCriticalSection(fSection);
+      UnLock;
     end else
     result := nil;
 end;
@@ -53367,8 +53393,7 @@ procedure TSynLocker.SetPointer(Index: integer; const Value: Pointer);
 begin
   if cardinal(Index)<=high(Padding) then
     try
-      EnterCriticalSection(fSection);
-      fLocked := true;
+      Lock;
       if Index>=PaddingUsedCount then
         PaddingUsedCount := Index+1;
       with Padding[index] do begin
@@ -53378,8 +53403,7 @@ begin
         VUnknown := Value;
       end;
     finally
-      fLocked := false;
-      LeaveCriticalSection(fSection);
+      UnLock;
     end;
 end;
 
@@ -53388,14 +53412,12 @@ var wasString: Boolean;
 begin
   if cardinal(Index)<cardinal(PaddingUsedCount) then
     try
-      EnterCriticalSection(fSection);
-      fLocked := true;
+      Lock;
       VariantToUTF8(variant(Padding[Index]),result,wasString);
       if not wasString then
         result := '';
     finally
-      fLocked := false;
-      LeaveCriticalSection(fSection);
+      UnLock;
     end else
     result := '';
 end;
@@ -53404,14 +53426,12 @@ procedure TSynLocker.SetUTF8(Index: integer; const Value: RawUTF8);
 begin
   if cardinal(Index)<=high(Padding) then
     try
-      EnterCriticalSection(fSection);
-      fLocked := true;
+      Lock;
       if Index>=PaddingUsedCount then
         PaddingUsedCount := Index+1;
       RawUTF8ToVariant(Value,Padding[Index],varString);
     finally
-      fLocked := false;
-      LeaveCriticalSection(fSection);
+      UnLock;
     end;
 end;
 
@@ -53419,16 +53439,14 @@ function TSynLocker.LockedInt64Increment(Index: integer; const Increment: Int64)
 begin
   if cardinal(Index)<=high(Padding) then
     try
-      EnterCriticalSection(fSection);
-      fLocked := true;
+      Lock;
       result := 0;
       if Index<PaddingUsedCount then
         VariantToInt64(variant(Padding[index]),result) else
         PaddingUsedCount := Index+1;
       variant(Padding[Index]) := Int64(result+Increment);
     finally
-      fLocked := false;
-      LeaveCriticalSection(fSection);
+      UnLock;
     end else
     result := 0;
 end;
@@ -53437,8 +53455,7 @@ function TSynLocker.LockedExchange(Index: integer; const Value: Variant): Varian
 begin
   if cardinal(Index)<=high(Padding) then
     try
-      EnterCriticalSection(fSection);
-      fLocked := true;
+      Lock;
       with Padding[index] do begin
         if Index<PaddingUsedCount then
           result := PVariant(@VType)^ else begin
@@ -53448,8 +53465,7 @@ begin
         PVariant(@VType)^ := Value;
       end;
     finally
-      fLocked := false;
-      LeaveCriticalSection(fSection);
+      UnLock;
     end else
     VarClear(result);
 end;
@@ -53458,8 +53474,7 @@ function TSynLocker.LockedPointerExchange(Index: integer; Value: pointer): point
 begin
   if cardinal(Index)<=high(Padding) then
     try
-      EnterCriticalSection(fSection);
-      fLocked := true;
+      Lock;
       with Padding[index] do begin
         if Index<PaddingUsedCount then
           if VType=varUnknown then
@@ -53474,8 +53489,7 @@ begin
         VUnknown := Value;
       end;
     finally
-      fLocked := false;
-      LeaveCriticalSection(fSection);
+      UnLock;
     end else
     result := nil;
 end;
@@ -53912,7 +53926,7 @@ procedure TTextWriter.AddDateTime(Value: PDateTime; FirstChar: AnsiChar;
 begin
   if (Value^=0) and (QuoteChar=#0) then
     exit;
-  if BEnd-B<=25 then
+  if BEnd-B<=26 then
     FlushToStream;
   inc(B);
   if QuoteChar<>#0 then
@@ -53926,6 +53940,10 @@ begin
       B := TimeToIso8601PChar(Value^,B,true,FirstChar,WithMS);
     dec(B);
   end;
+  if twoDateTimeWithZ in fCustomOptions then begin
+    inc(B);
+    B^ := 'Z';
+  end;
   if QuoteChar<>#0 then begin
     inc(B);
     B^ := QuoteChar;
@@ -53936,14 +53954,16 @@ procedure TTextWriter.AddDateTime(const Value: TDateTime; WithMS: boolean);
 begin
   if Value=0 then
     exit;
-  if BEnd-B<=23 then
+  if BEnd-B<=24 then
     FlushToStream;
   inc(B);
   if trunc(Value)<>0 then
     B := DateToIso8601PChar(Value,B,true);
   if frac(Value)<>0 then
     B := TimeToIso8601PChar(Value,B,true,'T',WithMS);
-  dec(B);
+  if twoDateTimeWithZ in fCustomOptions then
+    B^ := 'Z' else
+    dec(B);
 end;
 
 procedure TTextWriter.AddDateTimeMS(const Value: TDateTime; Expanded: boolean;
@@ -59038,12 +59058,12 @@ end;
 
 procedure TAutoLocker.Enter;
 begin
-  EnterCriticalSection(fSafe.fSection);
+  fSafe.Lock;
 end;
 
 procedure TAutoLocker.Leave;
 begin
-  LeaveCriticalSection(fSafe.fSection);
+  fSafe.UnLock;
 end;
 
 function TAutoLocker.Safe: PSynLocker;
@@ -59295,7 +59315,8 @@ begin
     {$elseif defined(VER320)}'Delphi 10.2 Tokyo'
     {$elseif defined(VER330)}'Delphi 10.3 Rio'
     {$elseif defined(VER340)}'Delphi 10.4 Sydney'
-    {$elseif defined(VER350)}'Delphi 10.5 Next'
+    {$elseif defined(VER350)}'Delphi 11 Alexandria'
+    {$elseif defined(VER360)}'Delphi 11.1 Next'
     {$ifend}
   {$endif CONDITIONALEXPRESSIONS}
 {$endif FPC}
@@ -62002,13 +62023,14 @@ begin
   inherited Create(msg);
 end;
 
-constructor ESynException.CreateLastOSError(const Format: RawUTF8; const Args: array of const);
+constructor ESynException.CreateLastOSError(
+  const Format: RawUTF8; const Args: array of const; const Trailer: RawUtf8);
 var tmp: RawUTF8;
     error: integer;
 begin
   error := GetLastError;
   FormatUTF8(Format,Args,tmp);
-  CreateUTF8('OSError % [%] %',[error,SysErrorMessage(error),tmp]);
+  CreateUTF8('% % [%] %',[Trailer,error,SysErrorMessage(error),tmp]);
 end;
 
 {$ifndef NOEXCEPTIONINTERCEPT}
@@ -62884,7 +62906,7 @@ begin
   GetCPUID(7,regs);
   PIntegerArray(@CpuFeatures)^[2] := regs.ebx;
   PIntegerArray(@CpuFeatures)^[3] := regs.ecx;
-  PByte(@PIntegerArray(@CpuFeatures)^[4])^ := regs.edx;
+  PIntegerArray(@CpuFeatures)^[4] := regs.edx;
   {$ifdef DISABLE_SSE42} // paranoid execution on Darwin x64 (as reported by alf)
   CpuFeatures := CpuFeatures-[cfSSE42,cfAESNI];
   {$endif DISABLE_SSE42}

@@ -2,8 +2,8 @@ unit Img32.Layers;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  4.0                                                             *
-* Date      :  10 January 2022                                                 *
+* Version   :  4.2                                                             *
+* Date      :  28 July 2022                                                    *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2019-2022                                         *
 *                                                                              *
@@ -47,7 +47,6 @@ type
     priorPosition : TRectD; //ie update the previous position when moved.
   end;
 
-
   TLayerNotifyImage32 = class(TImage32)
   protected
     fOwnerLayer: TLayer32;
@@ -60,7 +59,8 @@ type
   {$ZEROBASEDSTRINGS OFF}
 {$ENDIF}
 
-  TLayer32 = class(TStorage)  //base layer class (rarely if ever instantiated)
+  //TLayer32 - base layer class
+  TLayer32 = class(TStorage)
   private
     fLeft           : double;
     fTop            : double;
@@ -77,7 +77,10 @@ type
     fBlendFunc      : TBlendFunction; //defaults to BlendToAlpha
     fLayeredImage   : TLayeredImage32;
     fClipPath       : TPathsD;  //used in conjunction with fClipImage
+{$IFNDEF NO_STORAGE}
     fStreamingRec   : TRectWH;
+{$ENDIF}
+    fDesignerLayer  : Boolean;
     function  GetMidPoint: TPointD;
     procedure SetVisible(value: Boolean);
     procedure SetHeight(value: double);
@@ -95,6 +98,7 @@ type
     procedure CreateInternal(parent: TStorage = nil; const name: string = '');
   protected
     UpdateInfo : TUpdateInfo;
+    procedure SetDesignerLayer(value: Boolean);
     function  GetUpdateNeeded: Boolean;
     procedure DoBeforeMerge; virtual;
     procedure PreMerge(hideDesigners: Boolean); virtual;
@@ -104,10 +108,12 @@ type
     function  GetInnerRectD: TRectD;
     function  GetInnerBounds: TRectD;
     function  GetOuterBounds: TRectD;
+{$IFNDEF NO_STORAGE}
     procedure BeginRead; override;
     function  ReadProperty(const propName, propVal: string): Boolean; override;
     procedure WriteProperties; override;
     procedure EndRead; override;
+{$ENDIF}
     procedure SetOpacity(value: Byte); virtual;
     procedure ImageChanged(Sender: TImage32); virtual;
     procedure UpdateLayeredImage(newLayeredImage: TLayeredImage32);
@@ -150,6 +156,7 @@ type
     //Portions of child layers residing outside this region  will be clipped.
     property   ClipPath: TPathsD read fClipPath write SetClipPath;
     procedure  Offset(dx, dy: double); overload; virtual;
+    property   IsDesignerLayer: Boolean read fDesignerLayer;
     property   InnerBounds: TRectD read GetInnerBounds;
     property   InnerRect: TRectD read GetInnerRectD;
     property   OuterBounds: TRectD read GetOuterBounds;
@@ -177,12 +184,13 @@ type
     procedure  UpdateBounds;
     procedure  PreMerge(hideDesigners: Boolean); override;
   public
+    constructor Create(parent: TLayer32 = nil; const name: string = ''); override;
     procedure  Invalidate; override;
     procedure  ClearChildren; override;
     procedure  Offset(dx, dy: double); override;
   end;
 
-  THitTestLayer32 = class(TLayer32) //abstract classs
+  THitTestLayer32 = class(TLayer32) //abstract class
   private
     fHitTest  : THitTest;
     procedure ClearHitTesting;
@@ -198,7 +206,9 @@ type
     property HitTestEnabled: Boolean read GetEnabled write SetEnabled;
   end;
 
-  TRotatableLayer32 = class(THitTestLayer32) //abstract rotating layer class
+  //TRotLayer32: rotation methods added
+  //(abstract base layer for TVectorLayer32 and TRasterLayer32)
+  TRotLayer32 = class(THitTestLayer32)
   private
     fAngle      : double;
     fPivotPt    : TPointD;
@@ -208,8 +218,10 @@ type
     procedure SetAngle(newAngle: double);
   protected
     procedure SetPivotPt(const pivot: TPointD); virtual;
+{$IFNDEF NO_STORAGE}
     function  ReadProperty(const propName, propVal: string): Boolean; override;
     procedure WriteProperties; override;
+{$ENDIF}
   public
     constructor Create(parent: TLayer32 = nil; const name: string = ''); override;
     function    Rotate(angleDelta: double): Boolean; virtual;
@@ -222,7 +234,7 @@ type
 
   //TVectorLayer32: either repositions when Paths change,
   //or transforms Paths when bounds change
-  TVectorLayer32 = class(TRotatableLayer32)
+  TVectorLayer32 = class(TRotLayer32)
   private
     fPaths    : TPathsD;
     fOnDraw   : TNotifyEvent;
@@ -241,7 +253,7 @@ type
     property  OnDraw: TNotifyEvent read fOnDraw write fOnDraw;
   end;
 
-  TRasterLayer32 = class(TRotatableLayer32) //display laer for raster images
+  TRasterLayer32 = class(TRotLayer32) //display laer for raster images
   private
     fMasterImg    : TImage32;
     //fMatrix: allows combining any number of scaling & rotating ops.
@@ -272,7 +284,6 @@ type
     property  Matrix: TMatrixD read GetMatrix;
   end;
 
-  TDesignerLayer32 = class;
   TButtonDesignerLayer32 = class;
   TButtonDesignerLayer32Class = class of TButtonDesignerLayer32;
 
@@ -291,14 +302,15 @@ type
     function GetPivot: TPointD;
     function GetAngleBtn: TButtonDesignerLayer32;
     function GetPivotBtn: TButtonDesignerLayer32;
-    function GetDesignLayer: TDesignerLayer32;
+    function GetDesignLayer: TLayer32;
   protected
     procedure Init(const rec: TRect; buttonSize: integer;
       centerButtonColor, movingButtonColor: TColor32;
       startingAngle: double; startingZeroOffset: double;
       buttonLayerClass: TButtonDesignerLayer32Class); virtual;
-    property DesignLayer: TDesignerLayer32 read GetDesignLayer;
+    property DesignLayer: TLayer32 read GetDesignLayer;
   public
+    constructor Create(parent: TLayer32 = nil; const name: string = ''); override;
     property Angle: double read GetAngle;
     property PivotPoint: TPointD read GetPivot;
     property AngleButton: TButtonDesignerLayer32 read GetAngleBtn;
@@ -314,19 +326,14 @@ type
     fBtnLayerClass: TButtonDesignerLayer32Class;
     fBtnCount : integer;
   public
+    constructor Create(parent: TLayer32 = nil; const name: string = ''); override;
     function AddButton(const pt: TPointD): TButtonDesignerLayer32;
     function InsertButton(const pt: TPointD; btnIdx: integer): TButtonDesignerLayer32;
     property ButtonCnt: integer read fBtnCount;
 
   end;
 
-  TDesignerLayer32 = class(THitTestLayer32) //generic design layer
-  public
-    constructor Create(parent: TLayer32 = nil; const name: string = ''); override;
-    procedure UpdateHitTestMask(const vectorRegions: TPathsD); virtual;
-  end;
-
-  TButtonDesignerLayer32 = class(TDesignerLayer32) //button (design) layer
+  TButtonDesignerLayer32 = class(THitTestLayer32) //button (design) layer
   private
     fSize     : integer;
     fColor    : TColor32;
@@ -341,6 +348,7 @@ type
   public
     constructor Create(parent: TLayer32 = nil; const name: string = ''); override;
     procedure Draw; virtual;
+    procedure UpdateHitTestMask(const vectorRegions: TPathsD); virtual;
 
     property Enabled  : Boolean read fEnabled write SetEnabled;
     property Size     : integer read fSize write fSize;
@@ -373,8 +381,10 @@ type
     procedure SetResampler(newSamplerId: integer);
     function GetRepaintNeeded: Boolean;
   protected
+{$IFNDEF NO_STORAGE}
     function  ReadProperty(const propName, propVal: string): Boolean; override;
     procedure WriteProperties; override;
+{$ENDIF}
     property  InvalidRect: TRectD read fInvalidRect;
   public
     constructor Create(parent: TStorage = nil; const name: string = ''); overload; override;
@@ -456,7 +466,11 @@ const
 
 implementation
 
-{$IFNDEF MSWINDOWS} uses Img32.FMX;{$ENDIF}
+  {$IFNDEF MSWINDOWS}
+  {$IFNDEF FPC}
+  uses Img32.FMX;
+  {$ENDIF}
+  {$ENDIF}
 
 resourcestring
   rsRoot                   = 'root';
@@ -577,9 +591,11 @@ end;
 
 constructor TLayer32.Create(parent: TStorage; const name: string);
 begin
+  fDesignerLayer := true; //must do this first
   if not Assigned(parent) then
     CreateInternal(nil, name)
   else if parent.InheritsFrom(TLayer32) then
+    //this constructor is commonly overrided in descendant layer classes
     Create(TLayer32(parent), name)
   else
   begin
@@ -619,6 +635,12 @@ begin
   FreeAndNil(fMergeImage);
   FreeAndNil(fClipImage);
   inherited;
+end;
+//------------------------------------------------------------------------------
+
+procedure TLayer32.SetDesignerLayer(value: Boolean);
+begin
+  fDesignerLayer := value;
 end;
 //------------------------------------------------------------------------------
 
@@ -743,6 +765,7 @@ begin
     Ceil(fHeight + fOuterMargin *2));
   Image.UnBlockNotify;
   PositionAt(newBounds.Left, newBounds.Top);
+  Invalidate;
 end;
 //------------------------------------------------------------------------------
 
@@ -837,6 +860,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+{$IFNDEF NO_STORAGE}
 procedure TLayer32.BeginRead;
 var
   stgParent: TStorage;
@@ -895,6 +919,7 @@ begin
   if not Visible then WriteBoolProp('Visible', false);
 end;
 //------------------------------------------------------------------------------
+{$ENDIF}
 
 procedure TLayer32.SetOpacity(value: Byte);
 begin
@@ -1138,7 +1163,7 @@ begin
     with childLayer do
     begin
       if not Visible or
-        (hideDesigners and (childLayer is TDesignerLayer32)) then
+        (hideDesigners and IsDesignerLayer) then
           Continue;
 
       with UpdateInfo do
@@ -1206,8 +1231,8 @@ begin
     with childLayer do
     begin
       if not Visible or
-        not IntersectRect(Rect(outerbounds) , updateRect) or
-        (hideDesigners and (childLayer is TDesignerLayer32)) then
+        not RectsIntersect(Rect(outerbounds) , updateRect) or
+        (hideDesigners and IsDesignerLayer) then
           Continue;
 
       //recursive merge
@@ -1325,10 +1350,10 @@ begin
   for i := ChildCount -1 downto 0 do
   begin
     childLayer := Child[i];
-
-    if not childLayer.Visible or not PtInRect(childLayer.InnerBounds, pt2) or
-      (ignoreDesigners and (childLayer is TDesignerLayer32)) then
-        Continue;
+    with childLayer do
+      if not Visible or not PtInRect(InnerBounds, pt2) or
+        (ignoreDesigners and IsDesignerLayer) then
+          Continue;
 
     if (childLayer is THitTestLayer32) then
       with THitTestLayer32(childLayer) do
@@ -1395,6 +1420,13 @@ end;
 // TGroupLayer32 class
 //------------------------------------------------------------------------------
 
+constructor TGroupLayer32.Create(parent: TLayer32; const name: string);
+begin
+  inherited;
+  SetDesignerLayer(false);
+end;
+//------------------------------------------------------------------------------
+
 procedure TGroupLayer32.UpdateBounds;
 var
   i: integer;
@@ -1454,6 +1486,7 @@ end;
 constructor THitTestLayer32.Create(parent: TLayer32; const name: string);
 begin
   inherited;
+  SetDesignerLayer(false);
   fHitTest := THitTest.Create;
   fHitTest.enabled := true;
 end;
@@ -1504,7 +1537,7 @@ end;
 // TRotateLayer32 class
 //------------------------------------------------------------------------------
 
-constructor TRotatableLayer32.Create(parent: TLayer32; const name: string);
+constructor TRotLayer32.Create(parent: TLayer32; const name: string);
 begin
   inherited;
   fAutoPivot := true;
@@ -1512,7 +1545,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRotatableLayer32.SetAngle(newAngle: double);
+procedure TRotLayer32.SetAngle(newAngle: double);
 begin
   NormalizeAngle(newAngle);
   if newAngle = fAngle then Exit;
@@ -1522,7 +1555,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRotatableLayer32.Rotate(angleDelta: double): Boolean;
+function TRotLayer32.Rotate(angleDelta: double): Boolean;
 begin
   Result := (angleDelta <> 0) and not HasChildren;
   if not Result then Exit;
@@ -1533,14 +1566,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRotatableLayer32.ResetAngle;
+procedure TRotLayer32.ResetAngle;
 begin
   fAngle := 0;
   fPivotPt := InvalidPointD;
 end;
 //------------------------------------------------------------------------------
 
-procedure TRotatableLayer32.Offset(dx, dy: double);
+procedure TRotLayer32.Offset(dx, dy: double);
 begin
   inherited;
   if fAutoPivot then
@@ -1551,7 +1584,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRotatableLayer32.GetPivotPt: TPointD;
+function TRotLayer32.GetPivotPt: TPointD;
 begin
   if PointsEqual(fPivotPt, InvalidPointD) then
     Result := MidPoint else
@@ -1559,14 +1592,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRotatableLayer32.SetPivotPt(const pivot: TPointD);
+procedure TRotLayer32.SetPivotPt(const pivot: TPointD);
 begin
   if fAutoPivot then fAutoPivot := false;
   fPivotPt := pivot;
 end;
 //------------------------------------------------------------------------------
 
-procedure TRotatableLayer32.SetAutoPivot(val: Boolean);
+procedure TRotLayer32.SetAutoPivot(val: Boolean);
 begin
   if val = fAutoPivot then Exit;
   fAutoPivot := val;
@@ -1574,7 +1607,8 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRotatableLayer32.ReadProperty(const propName, propVal: string): Boolean;
+{$IFNDEF NO_STORAGE}
+function TRotLayer32.ReadProperty(const propName, propVal: string): Boolean;
 begin
   Result := inherited ReadProperty(propName, propVal);
   if Result then Exit
@@ -1588,13 +1622,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TRotatableLayer32.WriteProperties;
+procedure TRotLayer32.WriteProperties;
 begin
   inherited;
   WriteDoubleProp('Angle', Angle);
   WritePointDProp('PivotPt', PivotPt);
   WriteBoolProp('AutoPivot', AutoPivot)
 end;
+{$ENDIF}
 
 //------------------------------------------------------------------------------
 // TVectorLayer32 class
@@ -1924,6 +1959,13 @@ end;
 // TRotatingGroupLayer32 class
 //------------------------------------------------------------------------------
 
+constructor TRotatingGroupLayer32.Create(parent: TLayer32; const name: string);
+begin
+  inherited;
+  SetDesignerLayer(true);
+end;
+//------------------------------------------------------------------------------
+
 procedure TRotatingGroupLayer32.Init(const rec: TRect;
   buttonSize: integer; centerButtonColor, movingButtonColor: TColor32;
   startingAngle: double; startingZeroOffset: double;
@@ -1949,7 +1991,7 @@ begin
     pivot.X -dist, pivot.Y -dist,
     pivot.X +dist,pivot.Y +dist);
 
-  with AddChild(TDesignerLayer32) do    //Layer 0 - design layer
+  with AddChild(TLayer32) do //Layer 0 - design layer
   begin
     SetInnerBounds(rec2);
     q := DPIAware(2);
@@ -2000,9 +2042,9 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TRotatingGroupLayer32.GetDesignLayer: TDesignerLayer32;
+function TRotatingGroupLayer32.GetDesignLayer: TLayer32;
 begin
-  Result := Child[0] as TDesignerLayer32;
+  Result := Child[0];
 end;
 //------------------------------------------------------------------------------
 
@@ -2020,23 +2062,14 @@ begin
 end;
 
 //------------------------------------------------------------------------------
-// TDesignerLayer32
+// TButtonGroupLayer32 class
 //------------------------------------------------------------------------------
 
-constructor TDesignerLayer32.Create(parent: TLayer32; const name: string);
+constructor TButtonGroupLayer32.Create(parent: TLayer32 = nil; const name: string = '');
 begin
   inherited;
-  fHitTest.enabled := false;
+  SetDesignerLayer(true);
 end;
-//------------------------------------------------------------------------------
-
-procedure  TDesignerLayer32.UpdateHitTestMask(const vectorRegions: TPathsD);
-begin
-  UpdateHitTestMaskUsingPath(self, vectorRegions);
-end;
-
-//------------------------------------------------------------------------------
-// TButtonGroupLayer32 class
 //------------------------------------------------------------------------------
 
 function TButtonGroupLayer32.AddButton(const pt: TPointD): TButtonDesignerLayer32;
@@ -2066,6 +2099,7 @@ end;
 constructor TButtonDesignerLayer32.Create(parent: TLayer32; const name: string);
 begin
   inherited;
+  SetDesignerLayer(true);
   fEnabled := true;
   fHitTest.enabled := fEnabled;
   SetButtonAttributes(bsRound, DefaultButtonSize, clGreen32);
@@ -2091,6 +2125,12 @@ begin
   OuterMargin := size / 4; //add room for button shadow
   SetSize(size, size);
   Draw;
+end;
+//------------------------------------------------------------------------------
+
+procedure TButtonDesignerLayer32.UpdateHitTestMask(const vectorRegions: TPathsD);
+begin
+  UpdateHitTestMaskUsingPath(self, vectorRegions);
 end;
 //------------------------------------------------------------------------------
 
@@ -2127,6 +2167,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+{$IFNDEF NO_STORAGE}
 function  TLayeredImage32.ReadProperty(const propName, propVal: string): Boolean;
 begin
   if propName = 'Resampler' then
@@ -2151,6 +2192,7 @@ begin
   WriteIntProp('Height', Height);
 end;
 //------------------------------------------------------------------------------
+{$ENDIF}
 
 procedure TLayeredImage32.SetSize(width, height: integer);
 begin
@@ -2591,7 +2633,7 @@ var
   radius: double;
 begin
   if not assigned(targetLayer) or
-    not (targetLayer is TRotatableLayer32) then
+    not (targetLayer is TRotLayer32) then
       raise Exception.Create(rsCreateButtonGroupError);
 
   Result := TRotatingGroupLayer32(targetLayer.RootOwner.AddLayer(
@@ -2609,7 +2651,7 @@ begin
     angleOffset, buttonLayerClass);
 
 
-  if TRotatableLayer32(targetLayer).AutoPivot then
+  if TRotLayer32(targetLayer).AutoPivot then
     Result.PivotButton.HitTestEnabled := false;
 end;
 //------------------------------------------------------------------------------
@@ -2635,7 +2677,7 @@ var
   rec: TRectD;
   mp, pt2: TPointD;
   radius: double;
-  designer: TDesignerLayer32;
+  designer: TLayer32;
   rotateGroup: TRotatingGroupLayer32;
 begin
 
@@ -2703,8 +2745,10 @@ initialization
   InitDashes;
   DefaultButtonSize := dpiAware1*10;
 
+{$IFNDEF NO_STORAGE}
   RegisterStorageClass(TLayeredImage32);
   RegisterStorageClass(TLayer32);
   RegisterStorageClass(TGroupLayer32);
+{$ENDIF}
 
 end.

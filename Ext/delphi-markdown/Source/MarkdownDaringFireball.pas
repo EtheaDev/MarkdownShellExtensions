@@ -495,8 +495,8 @@ Type
     procedure recurse(root: TBlock; listMode: boolean);
 
   protected
-    function GetUnSafe: boolean; override;
-    procedure SetUnSafe(const value: boolean); override;
+    function GetAllowUnSafe: boolean; override;
+    procedure SetAllowUnSafe(const value: boolean); override;
   public
     Constructor Create;
     Destructor Destroy; override;
@@ -571,7 +571,7 @@ begin
   inherited;
 end;
 
-function TMarkdownDaringFireball.GetUnSafe: boolean;
+function TMarkdownDaringFireball.GetAllowUnSafe: boolean;
 begin
   result := not FConfig.safeMode;
 end;
@@ -1001,7 +1001,7 @@ begin
   end;
 end;
 
-procedure TMarkdownDaringFireball.SetUnSafe(const value: boolean);
+procedure TMarkdownDaringFireball.SetAllowUnSafe(const value: boolean);
 begin
   FConfig.safeMode := not value;
 end;
@@ -3377,7 +3377,7 @@ end;
 function TStringBuilder.GetChar(index: integer): char;
 begin
   if (index < 0) or (index >= Length) then
-    raise Exception.Create('Out of bounds');
+    raise EMarkdownProcessor.Create('Out of bounds');
   result := FContent[index+1];
 end;
 

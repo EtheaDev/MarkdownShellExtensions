@@ -14,7 +14,6 @@ object FrmAbout: TFrmAbout
   Position = poDefault
   OnClose = FormClose
   OnCreate = FormCreate
-  PixelsPerInch = 96
   DesignSize = (
     446
     316)
@@ -29,10 +28,11 @@ object FrmAbout: TFrmAbout
     WordWrap = True
   end
   object LabelVersion: TLabel
-    Left = 316
+    Left = 327
     Top = 64
-    Width = 35
+    Width = 108
     Height = 13
+    Alignment = taRightJustify
     Caption = 'Version'
   end
   object SVGIconImage1: TSVGIconImage
@@ -187,12 +187,14 @@ object FrmAbout: TFrmAbout
     Color = clWindow
     ParentBackground = False
     TabOrder = 0
+    ExplicitTop = 264
+    ExplicitWidth = 442
     object btnOK: TButton
       Left = 360
       Top = 16
       Width = 75
       Height = 25
-      Caption = 'OK'
+      Caption = 'CLOSE'
       Default = True
       TabOrder = 2
       OnClick = btnOKClick
@@ -282,12 +284,13 @@ object FrmAbout: TFrmAbout
     ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 1
+    ExplicitHeight = 171
   end
   object LinkLabel1: TLinkLabel
     Left = 8
     Top = 62
-    Width = 447
-    Height = 29
+    Width = 313
+    Height = 19
     Caption = 
       '<a href="https://github.com/EtheaDev/MarkdownShellExtensions">ht' +
       'tps://github.com/EtheaDev/MarkdownShellExtensions</a>'

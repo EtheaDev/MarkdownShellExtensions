@@ -198,6 +198,7 @@ var
   LFullName: String;
   LHtmlViewer: THtmlViewer;
   LDownLoadFromWeb: boolean;
+  LDownloadFromFolder: boolean;
   LMaxWidth: Integer;
 Begin
   LHtmlViewer := sender as THtmlViewer;
@@ -208,20 +209,26 @@ Begin
   // is "fullName" a local file, if not aquire file from internet
   If FileExists(ASource) then
     LFullName := ASource
-  else If FileExists(LHtmlViewer.ServerRoot+ASource) then
-    LFullName := LHtmlViewer.ServerRoot+ASource
   else
-    LFullName := ASource;
+  begin
+    LFullName := IncludeTrailingPathDelimiter(LHtmlViewer.ServerRoot)+ASource;
+    If not FileExists(LFullName) then
+      LFullName := ASource;
+  end;
 
   LFullName := LHtmlViewer.HTMLExpandFilename(LFullName);
 
   LMaxWidth := LHtmlViewer.ClientWidth - LHtmlViewer.VScrollBar.Width - (LHtmlViewer.MarginWidth * 2);
   if FileExists(LFullName) then  // if local file, load it..
   Begin
-    FStream.LoadFromFile(LFullName);
-    //Convert image to stretch size of HTMLViewer
-    ConvertImage(LFullName, LMaxWidth, LHtmlViewer.DefBackground);
-    AStream := FStream;
+    LDownloadFromFolder := Assigned(Settings) and Settings.SearchInFolder;
+    if LDownloadFromFolder then
+    begin
+      FStream.LoadFromFile(LFullName);
+      //Convert image to stretch size of HTMLViewer
+      ConvertImage(LFullName, LMaxWidth, LHtmlViewer.DefBackground);
+      AStream := FStream;
+    end;
   end 
   else if SameText('http', Copy(ASource,1,4)) then
   Begin

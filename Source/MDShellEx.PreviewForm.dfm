@@ -1,33 +1,22 @@
-object FrmPreview: TFrmPreview
+inherited FrmPreview: TFrmPreview
   Left = 522
   Top = 286
-  ClientHeight = 651
-  ClientWidth = 660
-  Color = clBtnFace
+  ClientHeight = 617
+  ClientWidth = 617
   DoubleBuffered = True
-  Font.Charset = DEFAULT_CHARSET
-  Font.Color = clWindowText
-  Font.Height = -11
   Font.Name = 'Segoe UI'
-  Font.Style = []
-  OldCreateOrder = False
-  OnAfterMonitorDpiChanged = FormAfterMonitorDpiChanged
-  OnCreate = FormCreate
-  OnDestroy = FormDestroy
   OnResize = FormResize
-  PixelsPerInch = 96
   TextHeight = 13
   object Splitter: TSplitter
     Left = 0
-    Top = 180
-    Width = 660
+    Top = 329
+    Width = 617
     Height = 6
     Cursor = crVSplit
     Align = alTop
     AutoSnap = False
     MinSize = 100
     OnMoved = SplitterMoved
-    ExplicitTop = 329
     ExplicitWidth = 888
   end
   object PanelTop: TPanel
@@ -70,9 +59,9 @@ object FrmPreview: TFrmPreview
         Left = 85
         Top = 0
         Cursor = crHandPoint
-        Hint = 'Zoom + (aumento lo zoom)'
+        Hint = 'Zoom in (increase font size)'
         AutoSize = True
-        Caption = 'Zoom +'
+        Caption = 'Zoom In'
         ImageIndex = 6
         ImageName = 'plus'
         OnClick = ToolButtonZoomInClick
@@ -83,9 +72,9 @@ object FrmPreview: TFrmPreview
         Left = 164
         Top = 0
         Cursor = crHandPoint
-        Hint = 'Zoom - (diminuisce lo zoom)'
+        Hint = 'Zoom out (decrease font size)'
         AutoSize = True
-        Caption = 'Zoom -'
+        Caption = 'Zoom Out'
         ImageIndex = 7
         ImageName = 'minus'
         OnClick = ToolButtonZoomOutClick
@@ -96,7 +85,7 @@ object FrmPreview: TFrmPreview
         Left = 239
         Top = 0
         Cursor = crHandPoint
-        Hint = 'Modifica impostazioni...'
+        Hint = 'Preview settings...'
         AutoSize = True
         Caption = 'Settings...'
         ImageIndex = 12
@@ -110,7 +99,7 @@ object FrmPreview: TFrmPreview
         Left = 329
         Top = 0
         Cursor = crHandPoint
-        Hint = 'Mostra info...'
+        Hint = 'Show about...'
         AutoSize = True
         Caption = 'About...'
         ImageIndex = 2

@@ -1,8 +1,8 @@
 ﻿# Markdown Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 1.4.1 - 11 Sep 2022**
+**Latest Version 1.4.3 - 1 Nov 2022**
 
-**A collection of extensions tools for markdown files, integrated into Microsoft Windows Explorer (Vista, 7, 8 and 10):**
+**A collection of extensions tools for markdown files, integrated into Microsoft Windows Explorer (Vista, 7, 8, 10 and 11):**
 
 - A [Preview handler][1]  which allows you to see the content of the markdown file without open it, in the "Preview Panel".
 
@@ -19,8 +19,6 @@
 ### Setup using the Installer
 
 Click to download the [MDShellExtensionsSetup.exe][3] located also in the Release area. The Installer works both for 32 and 64 bit system.
-
-INFO: the installer is signed with a certificate!
 
 ![Markdown Setup_Program](./Images/Setup.png)
 
@@ -53,6 +51,10 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+
+1 Nov 2022: ver. 1.4.3
+- Fixed loading images into Preview
+- Fixed the setting for local loading
 
 11 Set 2022: ver. 1.4.1
 - Added Combobox for easy selection Markdown Dialect
@@ -106,7 +108,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 4: https://github.com/grahamegrieve/delphi-markdown
 
-![Delphi 10.4 Sydney Support](/Setup/SupportingDelphi.jpg)
+![Delphi 11 Alexandria Support](/Setup/SupportingDelphi.jpg)
 
 Related links: [embarcadero.com][10] - [learndelphi.org][11]
 

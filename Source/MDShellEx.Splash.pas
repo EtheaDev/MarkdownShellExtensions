@@ -34,7 +34,7 @@ uses
 type
   TSplashForm = class(TForm)
     Image1: TImage;
-    SVGIconImage1: TSVGIconImage;
+    SVGIconImage: TSVGIconImage;
     lbVersion: TLabel;
     lbLoad: TLabel;
     procedure FormShow(Sender: TObject);

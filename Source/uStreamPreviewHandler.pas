@@ -33,7 +33,6 @@ uses
 type
   TStreamPreviewHandler = class abstract(TPreviewHandler)
   public
-    procedure DoPreview(Stream: TIStreamAdapter); virtual; abstract;
     class function GetComClass: TComClass; override; final;
   end;
 
@@ -72,12 +71,11 @@ end;
 
 function TComStreamPreviewHandler.IInitializeWithStream_Initialize(const pstream: IStream; grfMode: Cardinal): HRESULT;
 begin
-  TLogPreview.Add('TComStreamPreviewHandler.IInitializeWithStream_Initialize');
+  TLogPreview.Add('TComStreamPreviewHandler.IInitializeWithStream_Initialize Init');
   FIStream := pstream;
   FMode := grfMode;
   Result := S_OK;
-  //Result := E_NOTIMPL;
-  TLogPreview.Add('TComStreamPreviewHandler.IInitializeWithStream_Initialize');
+  TLogPreview.Add('TComStreamPreviewHandler.IInitializeWithStream_Initialize Done');
 end;
 
 procedure TComStreamPreviewHandler.InternalUnload;
@@ -94,7 +92,8 @@ begin
   AStream := TIStreamAdapter.Create(FIStream);
   try
     CheckContainer;
-    PreviewHandler.DoPreview(AStream);
+    Container.LoadFromStream(AStream);
+    Container.Show;
   finally
     AStream.Free;
   end;

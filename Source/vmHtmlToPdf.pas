@@ -127,7 +127,6 @@ type
     procedure SetSrcViewer(const Value: THTMLViewer);
     procedure SetTextPageNumber(const Value: string);
   public
-
     property PDFMarginTop: Double write SetPDFMarginTop;
     property PDFMarginLeft: Double write SetPDFMarginLeft;
     property PDFMarginRight: Double write SetPDFMarginRight;
@@ -369,7 +368,7 @@ begin
     for I := 0 to LPages.Count - 1 do
     begin
       lMFPage := TMetafile(lPages[I]);
-      AddPage;
+      Self.AddPage;
 
       VCLCanvas.Draw(Trunc(lMarginL), Trunc(lMarginTop), LMFPage);
 

@@ -67,7 +67,7 @@
         <Icon_MainIcon>..\Icons\logo.ico</Icon_MainIcon>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
         <VerInfo_Locale>1040</VerInfo_Locale>
-        <VerInfo_Keys>CompanyName=Ethea S.r.l.;FileDescription=Markdown files Editor;FileVersion=1.4.1.0;InternalName=;LegalCopyright=Copyright © 2021-2022 - Ethea S.r.l.;LegalTrademarks=;OriginalFilename=;ProductName=Markdown files Editor;ProductVersion=1.4;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=Ethea S.r.l.;FileDescription=Markdown files Editor;FileVersion=1.4.3.0;InternalName=;LegalCopyright=Copyright © 2021-2022 - Ethea S.r.l.;LegalTrademarks=;OriginalFilename=;ProductName=Markdown files Editor;ProductVersion=1.4;Comments=</VerInfo_Keys>
         <Custom_Styles>Glow|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Glow.vsf;Sky|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Sky.vsf;Windows10|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows10.vsf;&quot;Windows10 Dark|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows10Dark.vsf&quot;;&quot;Windows10 SlateGray|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows10SlateGray.vsf&quot;;&quot;Windows11 Modern Dark|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows11_Modern_Dark.vsf&quot;;&quot;Windows11 Modern Light|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows11_Modern_Light.vsf&quot;</Custom_Styles>
         <DCC_DebugInformation>0</DCC_DebugInformation>
         <DCC_ImportedDataReferences>false</DCC_ImportedDataReferences>
@@ -76,7 +76,7 @@
         <DCC_DcuOutput>..\Dcu\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_DependencyCheckOutputName>..\..\exe\InstantXMLEditor.exe</DCC_DependencyCheckOutputName>
         <VerInfo_MinorVer>4</VerInfo_MinorVer>
-        <VerInfo_Release>1</VerInfo_Release>
+        <VerInfo_Release>3</VerInfo_Release>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <DCC_Namespace>System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
@@ -84,6 +84,7 @@
         <UWP_DelphiLogo150>$(BDS)\bin\Artwork\Windows\UWP\delphi_UwpDefault_150.png</UWP_DelphiLogo150>
         <BT_BuildType>Debug</BT_BuildType>
         <DCC_ExeOutput>..\Bin32</DCC_ExeOutput>
+        <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
         <UWP_DelphiLogo44>$(BDS)\bin\Artwork\Windows\UWP\delphi_UwpDefault_44.png</UWP_DelphiLogo44>
@@ -91,6 +92,7 @@
         <DCC_Namespace>System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;$(DCC_Namespace)</DCC_Namespace>
         <BT_BuildType>Debug</BT_BuildType>
         <DCC_ExeOutput>..\Bin64</DCC_ExeOutput>
+        <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
@@ -104,17 +106,14 @@
         <DCC_IncludePath>..\..\ext\LibXML2\src;..\..\ext\SynEdit\Source;..\..\ext\CBLib\src;$(DCC_IncludePath)</DCC_IncludePath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
-        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
-        <AppEnableRuntimeThemes>true</AppEnableRuntimeThemes>
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
         <Debugger_RunParams>D:\ETHEA\CBLib7\images\svg\system-help.svg</Debugger_RunParams>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_DebugInformation>true</DCC_DebugInformation>
-        <DCC_LocalDebugSymbols>true</DCC_LocalDebugSymbols>
         <DCC_DebugDCUs>true</DCC_DebugDCUs>
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
         <Version>7.0</Version>
@@ -123,13 +122,15 @@
         <DCC_ResourcePath>..\..\ext\LibXML2\src;..\..\ext\SynEdit\Source;..\..\ext\CBLib\src;$(DCC_ResourcePath)</DCC_ResourcePath>
         <DCC_ObjPath>..\..\ext\LibXML2\src;..\..\ext\SynEdit\Source;..\..\ext\CBLib\src;$(DCC_ObjPath)</DCC_ObjPath>
         <DCC_IncludePath>..\..\ext\LibXML2\src;..\..\ext\SynEdit\Source;..\..\ext\CBLib\src;$(DCC_IncludePath)</DCC_IncludePath>
+        <DCC_LocalDebugSymbols>true</DCC_LocalDebugSymbols>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
         <BT_BuildType>Debug</BT_BuildType>
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
         <DCC_MapFile>3</DCC_MapFile>
         <DCC_DebugInformation>2</DCC_DebugInformation>
-        <Debugger_RunParams>d:\users\carlo\documents\Readme - pippo.md</Debugger_RunParams>
+        <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
+        <DCC_RangeChecking>true</DCC_RangeChecking>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
@@ -174,6 +175,8 @@
                     <Excluded_Packages Name="$(BDSBIN)\dcloffice2k280.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dclofficexp280.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
                 </Excluded_Packages>
+                <WelcomePageFile Path="..\README.md"/>
+                <WelcomePageFolder/>
             </Delphi.Personality>
             <Platforms>
                 <Platform value="Win32">True</Platform>

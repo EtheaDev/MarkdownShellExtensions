@@ -47,7 +47,7 @@ uses
   ;
 
 const
-  SVGIconImageListVersion = '3.9.2';
+  SVGIconImageListVersion = '3.9.4';
   DEFAULT_SIZE = 32;
   ZOOM_DEFAULT = 100;
   SVG_INHERIT_COLOR = TAlphaColors.Null;
@@ -205,6 +205,10 @@ type
     function InsertIcon(const AIndex: Integer;
       const ASVGText: string; const AIconName: string = ''): TSVGIconSourceItem;
     function CloneIcon(const AIndex: Integer; const AInsertIndex: Integer = -1): TSVGIconSourceItem;
+    function GetIcon(const AIndex: Integer): TSVGIconSourceItem;
+    function GetIconByName(const AName: string): TSVGIconSourceItem;
+    function ExtractSVG(const AIndex: Integer): TFmxImageSVG;
+    function ExtractSVGByName(const AName: string): TFmxImageSVG;
     //Multiple icons methods
     function LoadFromFiles(const AFileNames: TStrings;
       const AAppend: Boolean = True): Integer;
@@ -681,7 +685,7 @@ var
   LItem: TSVGIconSourceItem;
   LNewIndex: Integer;
 begin
-  LItem := Self.Source.Items[AIndex] as TSVGIconSourceItem;
+  LItem := Self.GetIcon(AIndex);
 
   if AInsertIndex >= 0 then LNewIndex := AInsertIndex
   else LNewIndex := AIndex;
@@ -692,6 +696,57 @@ begin
   Result.GrayScale := LItem.GrayScale;
   Result.SVG.LoadFromText(LItem.SVG.Source);
   RefreshAllIcons;
+end;
+
+function TSVGIconImageList.GetIcon(const AIndex: Integer): TSVGIconSourceItem;
+begin
+  Result := Self.Source.Items[AIndex] as TSVGIconSourceItem;
+end;
+
+function TSVGIconImageList.GetIconByName(const AName: string): TSVGIconSourceItem;
+var
+  LItemIndex: Integer;
+begin
+  LItemIndex := Self.Source.IndexOf(AName);
+  if LItemIndex >= 0 then
+    Result := Self.GetIcon(LItemIndex)
+  else
+    Result := nil;
+end;
+
+function TSVGIconImageList.ExtractSVG(const AIndex: Integer): TFmxImageSVG;
+var
+  LItem: TSVGIconSourceItem;
+begin
+  LItem := Self.GetIcon(AIndex);
+
+  if Assigned(LItem) then
+  begin
+    {$IFDEF Image32_SVGEngine}
+    Result := TFmxImage32SVG.Create;
+    {$ENDIF}
+    {$IFDEF Skia_SVGEngine}
+    Result := TFmxImageSKIASVG.Create;
+    {$ENDIF}
+
+    Result.LoadFromText(LItem.SVG.Source);
+    Result.Opacity := LItem.Opacity;
+    Result.FixedColor := LItem.FixedColor;
+    Result.GrayScale := LItem.GrayScale;
+  end
+  else
+    Result := nil;
+end;
+
+function TSVGIconImageList.ExtractSVGByName(const AName: string): TFmxImageSVG;
+var
+  LItemIndex: Integer;
+begin
+  LItemIndex := Self.Source.IndexOf(AName);
+  if LItemIndex >= 0 then
+    Result := Self.ExtractSVG(LItemIndex)
+  else
+    Result := nil;
 end;
 
 function TSVGIconImageList.LoadFromFiles(const AFileNames: TStrings;

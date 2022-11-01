@@ -112,7 +112,8 @@ type
     procedure UpdateSettings(const AMDFontName, AHTMLFontName: string;
       AMDFontSize, AHTMLFontSize: Integer; AEditorVisible: Boolean);
     procedure ReadSettings(const ASynEditHighilighter: TSynCustomHighlighter;
-      const ASynEditorOptions: TSynEditorOptionsContainer); virtual;
+      const ASynEditorOptions: TSynEditorOptionsContainer;
+      const LoadFileList: Boolean = False); virtual;
     procedure WriteSettings(const ASynEditHighilighter: TSynCustomHighlighter;
       const ASynEditorOptions: TSynEditorOptionsContainer); virtual;
 
@@ -151,7 +152,8 @@ type
     OpenedFileList: TStrings;
     CurrentFileName: string;
     procedure ReadSettings(const ASynEditHighilighter: TSynCustomHighlighter;
-      const ASynEditorOptions: TSynEditorOptionsContainer); override;
+      const ASynEditorOptions: TSynEditorOptionsContainer;
+      const LoadFileList: Boolean = False); override;
     procedure WriteSettings(const ASynEditHighilighter: TSynCustomHighlighter;
       const ASynEditorOptions: TSynEditorOptionsContainer); override;
     constructor CreateSettings(const ASynEditHighilighter: TSynCustomHighlighter;
@@ -279,13 +281,13 @@ begin
   FSettingsPath := ExtractFilePath(ASettingFileName);
   System.SysUtils.ForceDirectories(FSettingsPath);
 
-  ReadSettings(ASynEditHighilighter, ASynEditorOptions);
+  ReadSettings(ASynEditHighilighter, ASynEditorOptions, True);
 end;
 
 destructor TSettings.Destroy;
 begin
   FIniFile.UpdateFile;
-  FIniFile.Free;
+  FreeAndNil(FIniFile);
   inherited;
 end;
 
@@ -325,7 +327,8 @@ begin
 end;
 
 procedure TSettings.ReadSettings(const ASynEditHighilighter: TSynCustomHighlighter;
-  const ASynEditorOptions: TSynEditorOptionsContainer);
+  const ASynEditorOptions: TSynEditorOptionsContainer;
+  const LoadFileList: Boolean = False);
 var
   LThemeSection: string;
   I: Integer;
@@ -492,36 +495,49 @@ end;
 
 procedure TEditorSettings.ReadSettings(
   const ASynEditHighilighter: TSynCustomHighlighter;
-  const ASynEditorOptions: TSynEditorOptionsContainer);
+  const ASynEditorOptions: TSynEditorOptionsContainer;
+  const LoadFileList: Boolean = False);
 var
   I: Integer;
   LValue: string;
   LFileName: string;
+  LPos: Integer;
 begin
   inherited;
   if ASynEditHighilighter = nil then
   begin
     DownloadFromWEB := Boolean(FIniFile.ReadInteger('Global', 'DownloadFromWEB', 0));
 
-    //Leggo la lista dei files aperti di recente
-    FIniFile.ReadSectionValues(LAST_OPENED_SECTION, HistoryFileList);
-    for I := 0 to HistoryFileList.Count -1 do
+    if LoadFileList then
     begin
-      LValue := HistoryFileList.strings[i];
-      //tolgo la chiave
-      LFileName := Copy(LValue, pos('=',LValue)+1,MaxInt);
-      if FileExists(LFileName) then
-        HistoryFileList.strings[i] := LFileName;
-    end;
-    //Leggo la lista dei files aperti l'ultima volta
-    FIniFile.ReadSectionValues(FILES_OPENED_SECTION, OpenedFileList);
-    for I := 0 to OpenedFileList.Count -1 do
-    begin
-      LValue := OpenedFileList.strings[i];
-      //tolgo la chiave
-      LFileName := Copy(LValue, pos('=',LValue)+1,MaxInt);
-      if FileExists(LFileName) then
-        OpenedFileList.strings[i] := LFileName;
+      //Leggo la lista dei files aperti di recente
+      FIniFile.ReadSectionValues(LAST_OPENED_SECTION, HistoryFileList);
+      for I := 0 to HistoryFileList.Count -1 do
+      begin
+        LValue := HistoryFileList.strings[i];
+        //tolgo la chiave
+        LPos := pos('=',LValue)+1;
+        if LPos > 0 then
+          LFileName := Copy(LValue, LPos,MaxInt)
+        else
+          LFileName := LValue;
+        if FileExists(LFileName) then
+          HistoryFileList.strings[i] := LFileName;
+      end;
+      //Leggo la lista dei files aperti l'ultima volta
+      FIniFile.ReadSectionValues(FILES_OPENED_SECTION, OpenedFileList);
+      for I := 0 to OpenedFileList.Count -1 do
+      begin
+        LValue := OpenedFileList.strings[i];
+        //tolgo la chiave
+        LPos := pos('=',LValue)+1;
+        if LPos > 0 then
+          LFileName := Copy(LValue, LPos,MaxInt)
+        else
+          LFileName := LValue;
+        if FileExists(LFileName) then
+          OpenedFileList.strings[i] := LFileName;
+      end;
     end;
     CurrentFileName := FIniFile.ReadString('Global', 'CurrentFileName', '');
   end;

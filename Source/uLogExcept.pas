@@ -97,7 +97,8 @@ class procedure TLogPreview.Add(const AException: Exception);
 begin
   try
     InitLogFile;
-    AppendAllText(FLogFile, Format('%s %s StackTrace %s %s', [FormatDateTime('hh:nn:ss.zzz', Now), AException.Message,
+    AppendAllText(FLogFile, Format('%s %s StackTrace %s %s', [FormatDateTime('hh:nn:ss.zzz', Now),
+      AException.ClassName+': '+AException.Message,
       AException.StackTrace, sLineBreak]));
   except
     on e: EFOpenError do;

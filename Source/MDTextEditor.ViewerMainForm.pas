@@ -86,7 +86,7 @@ type
     FShowXMLText: Boolean;
     FMarkDownFile: TMarkDownFile;
     FHTMLViewer: THTMLViewer;
-    FSettings: TSettings;
+    FUseDarkStyle: Boolean;
     procedure ReadFromFile;
     procedure SaveToFile;
     function GetFileName: string;
@@ -100,7 +100,7 @@ type
     TabSheet: TTabSheet;
     Splitter: TSplitter;
     Constructor Create(const EditFileName : string;
-      const ASettings: TSettings);
+      const AUseDarkStyle: Boolean);
     Destructor Destroy; override;
     procedure ShowMarkDownAsHTML(const ASettings: TEditorSettings;
       const AReloadImages: Boolean);
@@ -266,6 +266,7 @@ type
     procedure acSavePDFFileExecute(Sender: TObject);
     procedure ProcessorDialectComboBoxSelect(Sender: TObject);
   private
+    FirstAction: Boolean;
     MinFormWidth, MinFormHeight, MaxFormWidth, MaxFormHeight: Integer;
     FProcessingFiles: Boolean;
     FEditorSettings: TEditorSettings;
@@ -297,7 +298,7 @@ type
     procedure AdjustCompactWidth;
     function OpenFile(const FileName: string;
       const ARaiseError: Boolean = True): Boolean;
-    function AddEditingFile(EditingFile: TEditingFile): Integer;
+    function AddEditingFile(const EditingFile: TEditingFile): Integer;
     procedure RemoveEditingFile(EditingFile: TEditingFile);
     function CurrentEditFile: TEditingFile;
     function CurrentEditor: TSynEdit;
@@ -423,12 +424,12 @@ begin
 end;
 
 constructor TEditingFile.Create(const EditFileName: string;
-  const ASettings: TSettings);
+  const AUseDarkStyle: Boolean);
 var
   Filter : Word;
 begin
   inherited Create;
-  FSettings := ASettings;
+  FUseDarkStyle := AUseDarkStyle;
   FShowXMLText := False;
 
   if not IsStyleHookRegistered(TCustomSynEdit, TScrollingStyleHook) then
@@ -449,7 +450,7 @@ end;
 
 function TEditingFile.GetImageName: string;
 begin
-  if FSettings.UseDarkStyle then
+  if FUseDarkStyle then
     Result := 'markdown-white'
   else
     Result := 'markdown-black';
@@ -556,7 +557,7 @@ begin
       Try
         if not Assigned(EditingFile) then
         begin
-          EditingFile := TEditingFile.Create(FileName, FEditorSettings);
+          EditingFile := TEditingFile.Create(FileName, FEditorSettings.UseDarkStyle);
           //Add file to list
           I := AddEditingFile(EditingFile);
         end;
@@ -870,9 +871,7 @@ end;
 
 procedure TfrmMain.FormCreate(Sender: TObject);
 var
-  InitialDir : string;
   FileVersionStr: string;
-  LFileName: string;
 begin
   //Build opened-files list
   EditFileList := TObjectList.Create(True);
@@ -906,25 +905,6 @@ begin
   //Initialize print output
   InitSynEditPrint;
 
-  //Load previous opened-files
-  LoadOpenedFiles;
-
-  //Initialize Open and Save Dialog with application path
-  LFileName := ParamStr(1);
-  if LFileName <> '' then
-  begin
-    TLogPreview.Add(Format('ParamStr(1): %s', [LFileName]));
-    //Load file passed at command line
-    InitialDir := ExtractFilePath(LFileName);
-    OpenFile(LFileName);
-    UpdateMDViewer(True);
-  end
-  else
-    InitialDir := '.';
-
-  OpenDialog.InitialDir := InitialDir;
-  SaveDialog.InitialDir := InitialDir;
-
   //Update all editor options
   UpdateEditorsOptions;
 end;
@@ -938,7 +918,7 @@ begin
 
   //Create object to manage new file
   EditingFile := TEditingFile.Create(CurrentDir+'New.'+NewExt,
-    FEditorSettings);
+    FEditorSettings.UseDarkStyle);
   Try
     AddEditingFile(EditingFile);
     if EditingFile.SynEditor.CanFocus then
@@ -1016,7 +996,7 @@ begin
   CloseSplitViewMenu;
 end;
 
-function TfrmMain.AddEditingFile(EditingFile: TEditingFile): Integer;
+function TfrmMain.AddEditingFile(const EditingFile: TEditingFile): Integer;
 var
   LTabSheet: TTabSheet;
   LEditor: TSynEdit;
@@ -1033,26 +1013,12 @@ begin
     LTabSheet := TTabSheet.Create(self);
     LTabSheet.PageControl := PageControl;
     //Use TAG of tabsheet to store the object pointer
-    LTabSheet.Tag := NativeInt(EditingFile);
+    LTabSheet.Tag := NativeInt(Pointer(EditingFile));
     LTabSheet.Caption := EditingFile.Name;
     LTabSheet.Imagename := EditingFile.ImageName+'-gray';
     LTabSheet.Parent := PageControl;
     LTabSheet.TabVisible := True;
     EditingFile.TabSheet := LTabSheet;
-
-    //Create the SynEdit object editor into the TabSheet that is the owner
-    LEditor := TSynEdit.Create(nil);
-    LEditor.OnChange := SynEditChange;
-    LEditor.OnEnter := SynEditEnter;
-    LEditor.MaxUndo := 5000;
-    LEditor.Align := alClient;
-    LEditor.Parent := LTabSheet;
-    LEditor.SearchEngine := SynEditSearch;
-    LEditor.PopupMenu := popEditor;
-    //Assign user preferences to the editor
-    FEditorOptions.AssignTo(LEditor);
-    LEditor.MaxScrollWidth := 3000;
-    EditingFile.SynEditor := LEditor;
 
     LFEViewer := THtmlViewer.Create(nil);
     LFEViewer.ScrollBars := ssNone;
@@ -1078,8 +1044,23 @@ begin
     EditingFile.Splitter := LSplitter;
     EditingFile.HTMLViewer := LFEViewer;
 
+    //Create the SynEdit object editor into the TabSheet that is the owner
+    LEditor := TSynEdit.Create(LTabSheet);
+    LEditor.OnChange := SynEditChange;
+    LEditor.OnEnter := SynEditEnter;
+    LEditor.MaxUndo := 5000;
+    LEditor.Align := alClient;
+    LEditor.Parent := LTabSheet;
+    LEditor.SearchEngine := SynEditSearch;
+    LEditor.PopupMenu := popEditor;
+
+    //Assign user preferences to the editor
+    FEditorOptions.AssignTo(LEditor);
+    LEditor.MaxScrollWidth := 3000;
+    EditingFile.SynEditor := LEditor;
     UpdateFromSettings(LEditor);
     UpdateHighlighter(LEditor);
+
     LEditor.Visible := True;
 
     //Show the tabsheet
@@ -1104,15 +1085,20 @@ begin
     Exit;
   if (CurrentEditor <> nil) then
   begin
-    if CurrentEditor.Modified then
-      pageControl.ActivePage.Imagename := CurrentEditFile.ImageName
-    else
-      pageControl.ActivePage.Imagename := CurrentEditFile.ImageName+'-gray';
+    Screen.Cursor := crHourGlass;
+    try
+      if CurrentEditor.Modified then
+        pageControl.ActivePage.Imagename := CurrentEditFile.ImageName
+      else
+        pageControl.ActivePage.Imagename := CurrentEditFile.ImageName+'-gray';
 
-    StatusBar.Panels[STATUSBAR_MESSAGE].Text := CurrentEditFile.FileName;
+      StatusBar.Panels[STATUSBAR_MESSAGE].Text := CurrentEditFile.FileName;
 
-    //Show HTML content of MarkDown
-    CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings, AReloadImages);
+      //Show HTML content of MarkDown
+      CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings, AReloadImages);
+    finally
+      Screen.Cursor := crDefault;
+    end;
   end;
 end;
 
@@ -1465,7 +1451,7 @@ end;
 procedure TfrmMain.UpdateFromSettings(AEditor: TSynEdit);
 begin
   UpdateApplicationStyle(FEditorSettings.StyleName);
-  if (AEditor <> nil) then
+  if AEditor <> nil then
   begin
   FEditorSettings.ReadSettings(AEditor.Highlighter, self.FEditorOptions);
     AEditor.ReadOnly := False;
@@ -1492,9 +1478,7 @@ procedure TfrmMain.UpdateHighlighter(ASynEditor: TSynEdit);
 var
   LBackgroundColor: TColor;
 begin
-  //if FProcessingFiles then
-  //  Exit;
-  if (ASynEditor = nil) (*or (ASynEditor.Highlighter = nil)*) then
+  if ASynEditor = nil then
     Exit;
   LBackgroundColor := StyleServices.GetSystemColor(clWindow);
   ASynEditor.Highlighter := dmResources.GetSynHighlighter(
@@ -1668,8 +1652,33 @@ end;
 
 procedure TfrmMain.ActionListUpdate(Action: TBasicAction;
   var Handled: Boolean);
+var
+  InitialDir : string;
+  LFileName: string;
 begin
   UpdateStatusBarPanels;
+  if not FirstAction then
+  begin
+    FirstAction := True;
+    //Initialize Open and Save Dialog with application path
+    LFileName := ParamStr(1);
+    if LFileName <> '' then
+    begin
+      TLogPreview.Add(Format('ParamStr(1): %s', [LFileName]));
+      //Load file passed at command line
+      InitialDir := ExtractFilePath(LFileName);
+      OpenFile(LFileName);
+      UpdateMDViewer(True);
+    end
+    else
+      InitialDir := '.';
+
+    OpenDialog.InitialDir := InitialDir;
+    SaveDialog.InitialDir := InitialDir;
+
+    //Load previous opened-files
+    LoadOpenedFiles;
+  end;
 end;
 
 procedure TfrmMain.actMenuExecute(Sender: TObject);

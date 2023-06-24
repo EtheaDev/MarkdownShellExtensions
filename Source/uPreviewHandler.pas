@@ -109,7 +109,7 @@ uses
     SysUtils,
     Graphics,
     ExtCtrls,
-    uMisc,
+    MDShellEx.Misc,
     uLogExcept,
     MDShellEx.PreviewHandlerRegister;
 

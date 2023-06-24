@@ -503,6 +503,7 @@ object BegaCustomPreviewFrame: TBegaCustomPreviewFrame
       Height = 403
       BevelOuter = bvNone
       BevelWidth = 0
+      Color = clBtnShadow
       CommonColumnWidth = 0
       CommonRowHeight = 0
       TabOrder = 0

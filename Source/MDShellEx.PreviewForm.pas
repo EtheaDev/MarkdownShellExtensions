@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2022 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2023 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -132,7 +132,7 @@ uses
   , System.Types
   , System.NetEncoding
   , Registry
-  , uMisc
+  , MDShellEx.Misc
   , IOUtils
   , ShellAPI
   , ComObj
@@ -234,7 +234,7 @@ var
 begin
   inherited;
   TLogPreview.Add('TFrmEditor.FormCreate');
-  FileVersionStr := uMisc.GetFileVersion(GetModuleLocation());
+  FileVersionStr := GetVersionString(GetModuleLocation());
   FSimpleText := Format(StatusBar.SimpleText,
     [FileVersionStr, {$IFDEF WIN32}32{$ELSE}64{$ENDIF}]);
   StatusBar.SimpleText := FSimpleText;

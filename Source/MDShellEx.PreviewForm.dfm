@@ -6,10 +6,12 @@ inherited FrmPreview: TFrmPreview
   DoubleBuffered = True
   Font.Name = 'Segoe UI'
   OnResize = FormResize
+  ExplicitWidth = 633
+  ExplicitHeight = 656
   TextHeight = 13
   object Splitter: TSplitter
     Left = 0
-    Top = 329
+    Top = 180
     Width = 617
     Height = 6
     Cursor = crVSplit
@@ -17,16 +19,18 @@ inherited FrmPreview: TFrmPreview
     AutoSnap = False
     MinSize = 100
     OnMoved = SplitterMoved
+    ExplicitTop = 329
     ExplicitWidth = 888
   end
   object PanelTop: TPanel
     Left = 0
     Top = 0
-    Width = 656
+    Width = 617
     Height = 35
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 2
+    ExplicitWidth = 656
     object ToolBar: TToolBar
       Left = 0
       Top = 0
@@ -114,12 +118,13 @@ inherited FrmPreview: TFrmPreview
   object PanelMD: TPanel
     Left = 0
     Top = 70
-    Width = 656
+    Width = 617
     Height = 110
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
     Visible = False
+    ExplicitWidth = 656
     object SynEdit: TSynEdit
       Left = 0
       Top = 0
@@ -154,8 +159,8 @@ inherited FrmPreview: TFrmPreview
   end
   object StatusBar: TStatusBar
     Left = 0
-    Top = 629
-    Width = 656
+    Top = 596
+    Width = 617
     Height = 21
     Panels = <>
     ParentFont = True
@@ -163,15 +168,19 @@ inherited FrmPreview: TFrmPreview
     SimpleText = ' Mardown file Preview - Copyright '#169' 2021-2022 - Ethea S.r.l.'
     SizeGrip = False
     UseSystemFont = False
+    ExplicitTop = 629
+    ExplicitWidth = 656
   end
   object PanelBottom: TPanel
     Left = 0
-    Top = 599
-    Width = 656
+    Top = 566
+    Width = 617
     Height = 30
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
+    ExplicitTop = 599
+    ExplicitWidth = 656
     object ToolBarAllegati: TToolBar
       Left = 0
       Top = 0
@@ -193,8 +202,8 @@ inherited FrmPreview: TFrmPreview
   object HtmlViewer: THtmlViewer
     Left = 0
     Top = 186
-    Width = 656
-    Height = 413
+    Width = 617
+    Height = 380
     BorderStyle = htFocused
     HistoryMaxCount = 0
     NoSelect = False
@@ -209,14 +218,17 @@ inherited FrmPreview: TFrmPreview
     TabOrder = 4
     Touch.InteractiveGestures = [igPan]
     Touch.InteractiveGestureOptions = [igoPanSingleFingerHorizontal, igoPanSingleFingerVertical, igoPanInertia]
+    ExplicitWidth = 656
+    ExplicitHeight = 413
   end
   object paTop: TPanel
     Left = 0
     Top = 35
-    Width = 656
+    Width = 617
     Height = 35
     Align = alTop
     TabOrder = 5
+    ExplicitWidth = 656
     object ProcessorDialectLabel: TLabel
       Left = 8
       Top = 11

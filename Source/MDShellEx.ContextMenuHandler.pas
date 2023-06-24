@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2022 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2023 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -99,6 +99,7 @@ uses
 {$ENDIF}
   , dlgExportPNG
   , MDShellEx.Resources
+  , MDShellEx.Misc
   , SVGIconUtils;
 
 // IShellExtInit method
@@ -107,7 +108,6 @@ function TMDContextMenu.InitShellExt(pidlFolder: PItemIDList;
 var
   medium: TStgMedium;
   fe: TFormatEtc;
-  LFileExt: string;
   LCountFile: Integer;
 begin
   TLogPreview.Add('TMDContextMenu.InitShellExt');
@@ -139,9 +139,8 @@ begin
         // realign string
         FFileName := PChar(FFileName);
         TLogPreview.Add('FFileName: '+FFileName);
-        LFileExt := ExtractFileExt(FFileName);
-        // only for .md files
-        if IndexText(LFileExt, ['.md']) <> -1 then
+        // only for markdown files
+        if IsFileNameWithExt(FFileName, AMarkDownFileExt) then
           Result := NOERROR
         else
           Result := E_FAIL;
@@ -315,7 +314,7 @@ begin
   try
     if Register then
     begin
-      //New registration only for .md files
+      //New registration only for markdown files
       {$IFDEF WIN64}
       if Reg.OpenKey('\*\ShellEx\ContextMenuHandlers\MDContextMenu', True) then
         Reg.WriteString('', GUIDToString(MyClass_MDContextMenu_64))
@@ -329,7 +328,7 @@ begin
       //Old registration
       if Reg.OpenKey('\*\ShellEx\ContextMenuHandlers\MDContextMenu', False) then
         Reg.DeleteKey('\*\ShellEx\ContextMenuHandlers\MDContextMenu');
-      //New registration only for .md files
+      //New registration only for markdown files
       {$IFDEF WIN64}
       if Reg.OpenKey('\*\ShellEx\ContextMenuHandlers\MDContextMenu', True) then
         Reg.DeleteKey('\*\ShellEx\ContextMenuHandlers\MDContextMenu');

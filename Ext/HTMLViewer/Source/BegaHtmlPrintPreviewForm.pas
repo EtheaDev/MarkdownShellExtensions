@@ -24,6 +24,8 @@ unit BegaHtmlPrintPreviewForm;
 {$include htmlcons.inc}
 
 interface
+{$ifndef NoFlatScrollbars}
+{$ifndef NoMetaFile}
 
 uses
 {$ifdef LCL}
@@ -31,7 +33,7 @@ uses
 {$else}
   Windows,
 {$endif}
-  Graphics, Controls, Forms, Types, Printers, //Math,
+  Controls, Forms, Types, Printers, //Math,
   // shared units
   HtmlView,
   FramView,
@@ -58,7 +60,11 @@ type
     property HtmlViewer: THtmlViewer read FHtmlViewer write setHtmlViewer;
   end;
 
+{$endif NoMetaFile}
+{$endif NoFlatScrollbars}
 implementation
+{$ifndef NoFlatScrollbars}
+{$ifndef NoMetaFile}
 
 //- BG ----------------------------------------------------------- 26.03.2007 --
 function TBegaHtmlPrintPreviewForm.canPrint: Boolean;
@@ -79,8 +85,6 @@ end;
 
 //- BG ----------------------------------------------------------- 26.03.2007 --
 procedure TBegaHtmlPrintPreviewForm.PreviewCreatePages(Sender: TObject; MFPrinter: TBegaMetaFilePrinter; var Done: Boolean);
-const
-  PrintMarginFactor = 10.0;
 var
   OldCursor: TCursor;
   Viewer: THtmlViewer;
@@ -92,10 +96,10 @@ begin
     Screen.Cursor := crHourGlass;
     try
       MFPrinter.PrintMargins := Rect(
-        round(Viewer.PrintMarginLeft   * PrintMarginFactor),
-        round(Viewer.PrintMarginTop    * PrintMarginFactor),
-        round(Viewer.PrintMarginRight  * PrintMarginFactor),
-        round(Viewer.PrintMarginBottom * PrintMarginFactor));
+        round(Viewer.PrintMarginLeft   * 10.0),
+        round(Viewer.PrintMarginTop    * 10.0),
+        round(Viewer.PrintMarginRight  * 10.0),
+        round(Viewer.PrintMarginBottom * 10.0));
       Viewer.PrintScale := 1.0 / MFPrinter.PrintScale;
       Viewer.PrintPreview(MFPrinter);
       Done := True;
@@ -107,8 +111,6 @@ end;
 
 //- BG ----------------------------------------------------------- 14.03.2006 --
 function TBegaHtmlPrintPreviewForm.PreviewGetSize(Sender: TObject; MFPrinter: TBegaMetaFilePrinter; out Width, Height: Integer): Boolean;
-const
-  MarginFactor = 10.0;
 var
   OldCursor: TCursor;
   Viewer: THtmlViewer;
@@ -121,10 +123,10 @@ begin
     Screen.Cursor := crHourGlass;
     try
       MFPrinter.PrintMargins := Rect(
-        round(Viewer.PrintMarginLeft   * MarginFactor),
-        round(Viewer.PrintMarginTop    * MarginFactor),
-        round(Viewer.PrintMarginRight  * MarginFactor),
-        round(Viewer.PrintMarginBottom * MarginFactor));
+        round(Viewer.PrintMarginLeft   * 10.0),
+        round(Viewer.PrintMarginTop    * 10.0),
+        round(Viewer.PrintMarginRight  * 10.0),
+        round(Viewer.PrintMarginBottom * 10.0));
       Viewer.PrintScale := 1.0 / MFPrinter.PrintScale;
       Viewer.NumPrinterPages(MFPrinter, Width, Height);
     finally
@@ -191,4 +193,6 @@ begin
   end;
 end;
 
+{$endif NoMetaFile}
+{$endif NoFlatScrollbars}
 end.

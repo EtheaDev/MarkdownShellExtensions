@@ -42,7 +42,7 @@ uses
   // own units
   BegaMetaFilePrinter,
   BegaPreviewPanel,
-  BegaZoom, BegaScrollBox, System.ImageList;
+  BegaZoom, BegaScrollBox;
 
 const
    crZoom = 40;

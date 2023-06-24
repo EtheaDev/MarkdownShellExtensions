@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2022 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2023 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -90,6 +90,7 @@ type
     procedure DataModuleDestroy(Sender: TObject);
   private
     FStream: TMemoryStream;
+    FStopImageRequest: Boolean;
     procedure ConvertImage(AFileName: string;
       const AMaxWidth: Integer; const ABackgroundColor: TColor);
     function getStreamData(const AFileName : String;
@@ -97,6 +98,7 @@ type
     function OpenURL(const AUrl: string): Boolean;
   public
     Settings: TSettings;
+    procedure StopLoadingImages(const AStop: Boolean);
     procedure HtmlViewerImageRequest(Sender: TObject; const ASource: UnicodeString;
       var AStream: TStream);
     procedure HtmlViewerHotSpotClick(Sender: TObject; const ASource: ThtString;
@@ -118,7 +120,6 @@ uses
   , Winapi.GDIPOBJ
   , Winapi.GDIPAPI
   , System.IOUtils
-  , System.NetEncoding
   , System.UITypes
   , Winapi.ShellAPI
   , SynPDF
@@ -137,7 +138,6 @@ uses
 procedure TdmResources.DataModuleCreate(Sender: TObject);
 begin
   FStream := TMemoryStream.Create;
-  ImageCollection1.InterpolationMode := icIMModeHighQualityCubic;
 end;
 
 procedure TdmResources.DataModuleDestroy(Sender: TObject);
@@ -198,9 +198,11 @@ var
   LFullName: String;
   LHtmlViewer: THtmlViewer;
   LDownLoadFromWeb: boolean;
-  LDownloadFromFolder: boolean;
   LMaxWidth: Integer;
 Begin
+  if FStopImageRequest then
+    Exit;
+
   LHtmlViewer := sender as THtmlViewer;
 
   // HTMLViewer needs to be nil'ed
@@ -221,15 +223,11 @@ Begin
   LMaxWidth := LHtmlViewer.ClientWidth - LHtmlViewer.VScrollBar.Width - (LHtmlViewer.MarginWidth * 2);
   if FileExists(LFullName) then  // if local file, load it..
   Begin
-    LDownloadFromFolder := Assigned(Settings) and Settings.SearchInFolder;
-    if LDownloadFromFolder then
-    begin
-      FStream.LoadFromFile(LFullName);
-      //Convert image to stretch size of HTMLViewer
-      ConvertImage(LFullName, LMaxWidth, LHtmlViewer.DefBackground);
-      AStream := FStream;
-    end;
-  end 
+    FStream.LoadFromFile(LFullName);
+    //Convert image to stretch size of HTMLViewer
+    ConvertImage(LFullName, LMaxWidth, LHtmlViewer.DefBackground);
+    AStream := FStream;
+  end
   else if SameText('http', Copy(ASource,1,4)) then
   Begin
     LDownLoadFromWeb := (Settings is TEditorSettings) and
@@ -247,6 +245,11 @@ function TdmResources.OpenURL(const AUrl: string): Boolean;
 begin
   ShellExecute(0, 'open', PChar(AURL), nil, nil, SW_SHOWNORMAL);
   Result := True;
+end;
+
+procedure TdmResources.StopLoadingImages(const AStop: Boolean);
+begin
+  FStopImageRequest := AStop;
 end;
 
 function TdmResources.getStreamData(const AFileName : String;
@@ -268,10 +271,11 @@ Begin
   try
     LIdHTTP := TIdHTTP.Create;
     LIdHTTP.AllowCookies := True;
+    LIdHTTP.HandleRedirects := True;
     sl := TStringList.Create;
     LIdSSLIOHandler := TIdSSLIOHandlerSocketOpenSSL.Create(LIdHTTP);
     LIdSSLIOHandler.DefaultPort := 0;
-    LIdSSLIOHandler.SSLOptions.SSLVersions := [sslvTLSv1, sslvTLSv1_1, sslvTLSv1_2];
+    LIdSSLIOHandler.SSLOptions.SSLVersions := [sslvTLSv1_2];
     LIdHTTP.IOHandler := LIdSSLIOHandler;
 
     LIdHTTP.Request.UserAgent :=
@@ -280,7 +284,7 @@ Begin
     try
       LIdHTTP.Get(LFileName, FStream);
     except
-      On E: EIdHTTPProtocolException do
+      On Exception do
         FStream.Clear
       else
         raise;
@@ -469,7 +473,7 @@ begin
     '  color: #A00;'#10+
     '}'#10+
     'pre{'#10+
-    '  background: #f4f4f4;'#10+
+//    '  background: #f4f4f4;'#10+
     '  border: 1px solid #ddd;'#10+
     '  border-left: 3px solid #f36d33;'#10+
     '  color: #555;'#10+
@@ -494,7 +498,7 @@ begin
     '}'#10+
     'th{'+
     '  padding:5px;'#10+
-    '  background: #e0e0e0;'#10+
+//    '  background: #e0e0e0;'#10+
     '  border:1px solid;'#10+
     '}'#10+
     'td{'#10+

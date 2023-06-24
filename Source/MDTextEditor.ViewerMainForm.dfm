@@ -2,8 +2,8 @@ object frmMain: TfrmMain
   Left = 250
   Top = 217
   Caption = 'MarkDown Text Editor'
-  ClientHeight = 589
-  ClientWidth = 940
+  ClientHeight = 587
+  ClientWidth = 932
   Color = clWindow
   Ctl3D = False
   Font.Charset = DEFAULT_CHARSET
@@ -22,35 +22,57 @@ object frmMain: TfrmMain
   OnMouseWheelUp = FormMouseWheelUp
   OnResize = FormResize
   DesignSize = (
-    940
-    589)
+    932
+    587)
   TextHeight = 15
   object ClientPanel: TPanel
     Left = 44
     Top = 36
-    Width = 896
-    Height = 534
+    Width = 888
+    Height = 532
     Align = alClient
     TabOrder = 4
-    ExplicitWidth = 892
-    ExplicitHeight = 533
     object PageControl: TPageControl
       Left = 1
       Top = 1
-      Width = 894
-      Height = 532
+      Width = 886
+      Height = 530
       Align = alClient
       Images = VirtualImageList
       TabOrder = 0
       OnChange = PageControlChange
-      ExplicitWidth = 890
-      ExplicitHeight = 531
+      OnMouseEnter = PageControlMouseEnter
+      OnMouseLeave = PageControlMouseLeave
+      OnMouseMove = PageControlMouseMove
+    end
+    object PanelCloseButton: TPanel
+      Left = 122
+      Top = 16
+      Width = 22
+      Height = 22
+      Cursor = crHandPoint
+      BevelOuter = bvNone
+      ParentBackground = False
+      TabOrder = 1
+      Visible = False
+      object SVGIconImageCloseButton: TSVGIconImage
+        Left = 0
+        Top = 0
+        Width = 22
+        Height = 22
+        AutoSize = False
+        ImageList = VirtualImageList20
+        ImageIndex = 0
+        ImageName = 'close-circle-outline'
+        Align = alClient
+        OnClick = SVGIconImageCloseButtonClick
+      end
     end
   end
   object StatusBar: TStatusBar
     Left = 0
-    Top = 570
-    Width = 940
+    Top = 568
+    Width = 932
     Height = 19
     Panels = <
       item
@@ -74,14 +96,12 @@ object frmMain: TfrmMain
       item
         Width = 80
       end>
-    ExplicitTop = 569
-    ExplicitWidth = 936
   end
   object SV: TSplitView
     Left = 0
     Top = 36
     Width = 160
-    Height = 531
+    Height = 529
     CloseStyle = svcCompact
     Color = clHighlight
     CompactWidth = 44
@@ -94,12 +114,11 @@ object frmMain: TfrmMain
     OnClosing = SVClosing
     OnOpened = SVOpened
     OnOpening = SVOpening
-    ExplicitHeight = 530
     object catMenuItems: TCategoryButtons
       Left = 0
       Top = 0
       Width = 160
-      Height = 531
+      Height = 529
       Align = alClient
       BackgroundGradientDirection = gdVertical
       BorderStyle = bsNone
@@ -172,6 +191,7 @@ object frmMain: TfrmMain
             end
             item
               Action = acReplace
+              ImageName = 'Replace'
             end>
         end
         item
@@ -184,6 +204,7 @@ object frmMain: TfrmMain
             end
             item
               Action = actnPrintPreview
+              ImageName = 'Print-preview'
             end>
         end>
       Color = clBtnFace
@@ -197,47 +218,45 @@ object frmMain: TfrmMain
       OnGetHint = catMenuItemsGetHint
       OnMouseLeave = catMenuItemsMouseLeave
       OnMouseMove = catMenuItemsMouseMove
-      ExplicitHeight = 530
     end
   end
   object panlTop: TPanel
     Left = 0
     Top = 0
-    Width = 940
+    Width = 932
     Height = 36
     Align = alTop
     BevelOuter = bvNone
     ParentBackground = False
     TabOrder = 1
-    ExplicitWidth = 936
     DesignSize = (
-      940
+      932
       36)
     object lblTitle: TLabel
       AlignWithMargins = True
-      Left = 40
+      Left = 41
       Top = 3
       Width = 116
       Height = 30
       Align = alLeft
       Caption = 'MarkDown Text Editor'
       Layout = tlCenter
+      ExplicitLeft = 40
       ExplicitHeight = 15
     end
     object ProcessorDialectLabel: TLabel
-      Left = 483
+      Left = 427
       Top = 11
-      Width = 55
+      Width = 83
       Height = 15
       Alignment = taRightJustify
       Anchors = [akTop, akRight]
-      AutoSize = False
-      Caption = 'Dialect:'
-      ExplicitLeft = 491
+      Caption = 'Transformation:'
+      ExplicitLeft = 455
     end
     object SettingsToolBar: TToolBar
       AlignWithMargins = True
-      Left = 737
+      Left = 729
       Top = 3
       Width = 200
       Height = 30
@@ -253,11 +272,10 @@ object frmMain: TfrmMain
       ParentColor = False
       TabOrder = 0
       Transparent = True
-      ExplicitLeft = 733
       object ColorSettingsToolButton: TToolButton
         Left = 0
         Top = 0
-        Action = actnColorSettings
+        Action = actnSettings
       end
       object EditOptionsToolButton: TToolButton
         Left = 32
@@ -298,7 +316,7 @@ object frmMain: TfrmMain
       AlignWithMargins = True
       Left = 3
       Top = 3
-      Width = 31
+      Width = 32
       Height = 30
       Align = alLeft
       AutoSize = True
@@ -312,7 +330,7 @@ object frmMain: TfrmMain
       ParentColor = False
       TabOrder = 1
       Transparent = True
-      object ToolButton1: TToolButton
+      object MenuToolButton: TToolButton
         AlignWithMargins = True
         Left = 0
         Top = 0
@@ -321,7 +339,7 @@ object frmMain: TfrmMain
       end
     end
     object ProcessorDialectComboBox: TComboBox
-      Left = 541
+      Left = 513
       Top = 8
       Width = 170
       Height = 23
@@ -332,7 +350,6 @@ object frmMain: TfrmMain
       Items.Strings = (
         'DaringFireball'
         'CommonMark')
-      ExplicitLeft = 537
     end
   end
   object OpenDialog: TOpenDialog
@@ -569,14 +586,14 @@ object frmMain: TfrmMain
       OnExecute = actnSaveAsExecute
       OnUpdate = actnEditingUpdate
     end
-    object actnColorSettings: TAction
+    object actnSettings: TAction
       Category = 'Settings'
       Caption = 'Theme settings'
       Hint = 'Theme settings (colors, font, themes)'
       ImageIndex = 28
       ImageName = 'preferences-desktop'
-      OnExecute = actnColorSettingsExecute
-      OnUpdate = actnColorSettingsUpdate
+      OnExecute = actnSettingsExecute
+      OnUpdate = actnSettingsUpdate
     end
     object actMenu: TAction
       Caption = 'Collapse'
@@ -1055,5 +1072,18 @@ object frmMain: TfrmMain
     object Chiuditutto1: TMenuItem
       Action = acCloseAll
     end
+  end
+  object VirtualImageList20: TVirtualImageList
+    Images = <
+      item
+        CollectionIndex = 62
+        CollectionName = 'close-circle-outline'
+        Name = 'close-circle-outline'
+      end>
+    ImageCollection = dmResources.SVGIconImageCollection
+    Width = 20
+    Height = 20
+    Left = 448
+    Top = 368
   end
 end

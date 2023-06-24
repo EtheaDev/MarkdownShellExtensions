@@ -14,7 +14,6 @@ object SVGSettingsForm: TSVGSettingsForm
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
-  OldCreateOrder = False
   Position = poDefault
   ShowHint = True
   OnCreate = FormCreate
@@ -44,32 +43,24 @@ object SVGSettingsForm: TSVGSettingsForm
         Left = 10
         Top = 104
         Width = 238
-        Height = 121
+        Height = 89
         Caption = 'Images loading options'
-        TabOrder = 0
-        object SearchInFolderCheckBox: TCheckBox
-          Left = 15
-          Top = 29
-          Width = 156
-          Height = 17
-          Caption = 'Search in same folder'
-          TabOrder = 0
-        end
+        TabOrder = 1
         object DownloadFromWebCheckBox: TCheckBox
           Left = 15
-          Top = 82
+          Top = 52
           Width = 156
           Height = 17
           Caption = 'Download from WEB'
-          TabOrder = 2
+          TabOrder = 1
         end
         object RescalingImageCheckBox: TCheckBox
           Left = 15
-          Top = 55
+          Top = 24
           Width = 156
           Height = 17
           Caption = 'Rescaling to viewer size'
-          TabOrder = 1
+          TabOrder = 0
         end
       end
       object MarkdownGroupBox: TGroupBox
@@ -78,7 +69,7 @@ object SVGSettingsForm: TSVGSettingsForm
         Width = 238
         Height = 82
         Caption = 'Markdown processor options'
-        TabOrder = 1
+        TabOrder = 0
         object ProcessorDialectLabel: TLabel
           Left = 15
           Top = 19

@@ -1,20 +1,27 @@
-﻿# Markdown Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
+﻿# Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 1.4.3 - 1 Nov 2022**
+**Latest Version 1.5.0 - 24 Jun 2023**
 
-**A collection of extensions tools for markdown files, integrated into Microsoft Windows Explorer (Vista, 7, 8, 10 and 11):**
+**A collection of tools for markdown files, to edit and view content:**
 
-- A [Preview handler][1]  which allows you to see the content of the markdown file without open it, in the "Preview Panel".
+- A **Markdown Text Editor**[2] to manually edit a markdown file, with instant preview of the output in a HTML Viewer.
 
-- A [Markdown Text Editor][2] to manually edit with instant preview of markdown files.
+- A **Preview handler**[1] which allows you to see the content of the markdown file without open it, in the "Preview Panel", integrated into Windows Explorer.
 
 ### Features
+
+- No need to built the project with Delphi: an easy Setup is provided.
 
 - Supports Windows Vista, 7, 8, 10 and 11 (for 32 bits and 64 bits).
 
 - Themes (Dark and Light) according to user preferences of Windows Theme
 
 - Integrated also with other Shell Applications (like XYplorer)
+
+### Delphi: integration with MarkDown Help Viewer
+
+- For Delphi developers: use this tool to prepare and integrate a Help System in your application, using the ["MarkDown Help Viewer"](https://github.com/EtheaDev/MarkdownHelpViewer) project.
+- Use the **Markdown Text Editor** to edit your help files and use the **Markdown Help Viewer** to show them.
 
 ### Setup using the Installer
 
@@ -36,9 +43,9 @@ A useful Text editor with instant preview of Markdown formatted content:
 
 ![Markdown Text Editor Dark](./Images/MDTextEditorLight.png)
 
-### Manual Build and Installation (for Delphi developers) ###
+### Manual Build and Installation (only for Delphi developers) ###
 
-If you have Delphi 10.4 Sydney, you can manually build the project:
+If you have Delphi 10.4 Sydney or 11.3 Alexandria, you can manually build the project:
 
 ***Warning: To simplyfy build of the projects, some third parties libraries are located into ext folder***
 
@@ -51,6 +58,15 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+
+24 Jun 2023: ver. 1.5.0
+- Autoload local markdown files when clicked into Preview
+- The editor can open all markdown extensions: .md, .mkd, .mdwn, .mdown, .mdtxt, .mdtext, .markdown, .txt, .text'
+- Stopped image rendering during editing to speed-up
+- Added useful close button on Tabs
+- Hint full filename on Tabs
+- Save/Discard messaged default response inverted
+- Removed Settings "Search In Folder"
 
 1 Nov 2022: ver. 1.4.3
 - Fixed loading images into Preview

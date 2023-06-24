@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2022 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2023 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -197,6 +197,12 @@ begin
 
       //Add extension for .md files
       CreateRegKey(RootPrefix + '.md' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
+      CreateRegKey(RootPrefix + '.mkd' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
+      CreateRegKey(RootPrefix + '.mdwn' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
+      CreateRegKey(RootPrefix + '.mdown' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
+      CreateRegKey(RootPrefix + '.mdtxt' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
+      CreateRegKey(RootPrefix + '.mdtext' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
+      CreateRegKey(RootPrefix + '.markdown' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
 
       CreateRegKey(sComServerKey, 'VersionIndependentProgID', ProgID, RootKey);
       CreateRegKey(RootPrefix + ProgID + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);

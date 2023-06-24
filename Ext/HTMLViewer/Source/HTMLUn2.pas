@@ -2935,7 +2935,7 @@ end;
 //-- BG ---------------------------------------------------------- 24.11.2011 --
 constructor TViewerBase.Create(AOwner: TComponent);
 const
-  defaultPrintMargin = 0.8;//1.0;
+  defaultPrintMargin = 0.8;//2.0;
 begin
   inherited;
   PrintMarginLeft := defaultPrintMargin;

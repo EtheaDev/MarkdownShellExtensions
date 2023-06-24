@@ -28,9 +28,9 @@ object FrmAbout: TFrmAbout
     WordWrap = True
   end
   object LabelVersion: TLabel
-    Left = 327
+    Left = 400
     Top = 64
-    Width = 108
+    Width = 35
     Height = 13
     Alignment = taRightJustify
     Caption = 'Version'
@@ -232,7 +232,7 @@ object FrmAbout: TFrmAbout
       'Author:'
       'Carlo Barazzetta'
       'https://github.com/EtheaDev/MarkdownShellExtensions'
-      'Copyright '#169' 2021-2022 all rights reserved.'
+      'Copyright '#169' 2021-2023 all rights reserved.'
       ''
       'Other libraries from Ethea:'
       'SVGIconImageList'
@@ -284,18 +284,17 @@ object FrmAbout: TFrmAbout
     ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 1
-    ExplicitHeight = 171
   end
   object LinkLabel1: TLinkLabel
     Left = 8
     Top = 62
-    Width = 313
+    Width = 303
     Height = 19
     Caption = 
       '<a href="https://github.com/EtheaDev/MarkdownShellExtensions">ht' +
       'tps://github.com/EtheaDev/MarkdownShellExtensions</a>'
     TabOrder = 2
     UseVisualStyle = True
-    OnClick = LinkLabel1Click
+    OnLinkClick = LinkLabel1LinkClick
   end
 end

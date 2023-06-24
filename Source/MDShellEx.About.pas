@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2022 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2023 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -43,6 +43,8 @@ resourcestring
   Title_SVGPreview = 'Markdown file preview';
   FReeware_Caption = ' - Freeware';
 
+const
+  HELP_URL = 'https://github.com/EtheaDev/MarkdownShellExtensions';
 type
   TFrmAbout = class(TForm)
     Panel1:    TPanel;
@@ -59,8 +61,9 @@ type
     procedure FormCreate(Sender: TObject);
     procedure btnIssuesClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure LinkLabel1Click(Sender: TObject);
     procedure btnCheckUpdatesClick(Sender: TObject);
+    procedure LinkLabel1LinkClick(Sender: TObject; const Link: string;
+      LinkType: TSysLinkType);
   private
     FTitle: string;
     procedure SetTitle(const Value: string);
@@ -77,7 +80,7 @@ procedure HideAboutForm;
 implementation
 
 uses
-  ShellApi, uMisc;
+  ShellApi, MDShellEx.Misc;
 
 {$R *.dfm}
 
@@ -146,7 +149,7 @@ end;
 procedure TFrmAbout.btnIssuesClick(Sender: TObject);
 begin
    ShellExecute(Handle, 'open',
-    PChar('https://github.com/EtheaDev/MarkdownShellExtensions/issues'),
+    PChar(HELP_URL+'/issues'),
     nil, nil, SW_SHOW);
 end;
 
@@ -167,7 +170,7 @@ var
 begin
   TitleLabel.Font.Height := Round(TitleLabel.Font.Height * 1.6);
 
-  FileVersionStr:=uMisc.GetFileVersion(GetModuleLocation());
+  FileVersionStr := MDShellEx.Misc.GetVersionString(GetModuleLocation());
   {$IFDEF WIN32}
   LabelVersion.Caption := Format('Versione %s (32bit)', [FileVersionStr]);
   {$ELSE}
@@ -175,10 +178,10 @@ begin
   {$ENDIF}
 end;
 
-procedure TFrmAbout.LinkLabel1Click(Sender: TObject);
+procedure TFrmAbout.LinkLabel1LinkClick(Sender: TObject; const Link: string;
+  LinkType: TSysLinkType);
 begin
-   ShellExecute(Handle, 'open',
-    PChar('https://github.com/EtheaDev/MarkdownShellExtensions'), nil, nil, SW_SHOW);
+  ShellExecute(Handle, 'open', PChar(Link), nil, nil, SW_SHOW);
 end;
 
 procedure TFrmAbout.SetTitle(const Value: string);

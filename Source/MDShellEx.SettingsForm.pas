@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2022 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2023 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -92,7 +92,6 @@ type
     HTMLUpDown: TUpDown;
     ShowMDCheckBox: TCheckBox;
     RenderingGroupBox: TGroupBox;
-    SearchInFolderCheckBox: TCheckBox;
     DownloadFromWebCheckBox: TCheckBox;
     RescalingImageCheckBox: TCheckBox;
     tsPDFLayout: TTabSheet;
@@ -568,7 +567,6 @@ begin
 
   ProcessorDialectComboBox.ItemIndex := ord(ASettings.ProcessorDialect);
 
-  SearchInFolderCheckBox.Checked := ASettings.SearchInFolder;
   RescalingImageCheckBox.Checked := ASettings.RescalingImage;
   DownloadFromWebCheckBox.Visible := ASettings is TEditorSettings;
   if DownloadFromWebCheckBox.Visible then
@@ -621,7 +619,6 @@ begin
   ASettings.ProcessorDialect := TMarkdownProcessorDialect(ProcessorDialectComboBox.ItemIndex);
 
   ASettings.StyleName := SelectedStyleName;
-  ASettings.SearchInFolder := SearchInFolderCheckBox.Checked;
   ASettings.RescalingImage := RescalingImageCheckBox.Checked;
   if ASettings is TEditorSettings then
     TEditorSettings(ASettings).DownloadFromWEB := DownloadFromWEBCheckBox.Checked;

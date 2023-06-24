@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2022 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2023 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -81,7 +81,6 @@ type
     FUseDarkStyle: boolean;
     FMDFontName: string;
     FShowMarkDown: Boolean;
-    FSearchInFolder: Boolean;
     FActivePageIndex: Integer;
     FThemeSelection: TThemeSelection;
     FHTMLFontSize: Integer;
@@ -89,7 +88,6 @@ type
     FRescalingImage: Boolean;
     FProcessorDialect: TMarkdownProcessorDialect;
     function GetUseDarkStyle: Boolean;
-    procedure SetSearchInFolder(const Value: Boolean);
     function GetThemeSectionName: string;
     function GetButtonTextColor: TColor;
     class function GetSettingsFileName: string; static;
@@ -128,7 +126,6 @@ type
     property ShowMarkDown: Boolean read FShowMarkDown write FShowMarkDown;
     property SplitterPos: Integer read FSplitterPos write FSplitterPos;
     property RescalingImage: Boolean read FRescalingImage write SetRescalingImage;
-    property SearchInFolder: Boolean read FSearchInFolder write SetSearchInFolder;
     property ActivePageIndex: Integer read FActivePageIndex write FActivePageIndex;
     property ThemeSelection: TThemeSelection read FThemeSelection write FThemeSelection;
     property ProcessorDialect: TMarkdownProcessorDialect read FProcessorDialect write SetProcessorDialect;
@@ -179,7 +176,7 @@ uses
 {$ENDIF}
   , uLogExcept
   , uRegistry
-  , uMisc
+  , MDShellEx.Misc
   , SynEdit
   , Winapi.Messages
   ;
@@ -342,11 +339,10 @@ begin
   FShowMarkDown := FIniFile.ReadInteger('Global', 'ShowMarkDown', 0) = 1;
   FSplitterPos := FIniFile.ReadInteger('Global', 'SplitterPos', 33);
   RescalingImage := Boolean(FIniFile.ReadInteger('Global', 'RescalingImage', 0));
-  SearchInFolder := Boolean(FIniFile.ReadInteger('Global', 'SearchInFolder', 1));
   FActivePageIndex := FIniFile.ReadInteger('Global', 'ActivePageIndex', 0);
   FStyleName := FIniFile.ReadString('Global', 'StyleName', DefaultStyleName);
   FThemeSelection := TThemeSelection(FIniFile.ReadInteger('Global', 'ThemeSelection', 0));
-  FProcessorDialect := TMarkdownProcessorDialect(FIniFile.ReadInteger('Global', 'ProcessorDialect', 0));
+  FProcessorDialect := TMarkdownProcessorDialect(FIniFile.ReadInteger('Global', 'ProcessorDialect', 1));
   //Select Style by default on Actual Windows Theme
   if FThemeSelection = tsAsWindows then
   begin
@@ -393,11 +389,6 @@ begin
   FRescalingImage := Value;
 end;
 
-procedure TSettings.SetSearchInFolder(const Value: Boolean);
-begin
-  FSearchInFolder := Value;
-end;
-
 procedure TSettings.UpdateSettings(const AMDFontName, AHTMLFontName: string;
   AMDFontSize, AHTMLFontSize: Integer; AEditorVisible: Boolean);
 begin
@@ -425,7 +416,6 @@ begin
   FIniFile.WriteInteger('Global', 'ShowMarkDown', Ord(FShowMarkDown));
   FIniFile.WriteInteger('Global', 'SplitterPos', FSplitterPos);
   FIniFile.WriteInteger('Global', 'RescalingImage', Ord(FRescalingImage));
-  FIniFile.WriteInteger('Global', 'SearchInFolder', Ord(FSearchInFolder));
   FIniFile.WriteInteger('Global', 'ActivePageIndex', FActivePageIndex);
 
   FIniFile.WriteInteger('Global', 'ThemeSelection', Ord(FThemeSelection));

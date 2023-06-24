@@ -42,7 +42,7 @@ type
 implementation
 
 uses
-  uMisc,
+  MDShellEx.Misc,
   IOUtils;
 
 {$IFDEF DEBUG}

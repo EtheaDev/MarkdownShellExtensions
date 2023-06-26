@@ -62,6 +62,7 @@ uses
   SysUtils,
   ShlObj,
   System.Win.ComConst,
+  MDShellEx.Misc,
   ComServ;
 
 constructor TPreviewHandlerRegister.Create(APreviewHandlerClass: TPreviewHandlerClass;
@@ -170,6 +171,13 @@ var
   sAppID: string;
   sClassID: string;
   LRegKey: string;
+  LExtension: string;
+
+  procedure RegisterExtension(const AExtension: string);
+  begin
+    LRegKey := RootPrefix + AExtension + '\shellex\' + SID_IPreviewHandler;
+    CreateRegKey(LRegKey, '', sClassID, RootKey);
+  end;
 begin
 
   if Instancing = ciInternal then
@@ -195,15 +203,9 @@ begin
     begin
       CreateRegKey(sComServerKey, 'ProgID', ProgID, RootKey);
 
-      //Add extension for .md files
-      CreateRegKey(RootPrefix + '.md' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
-      CreateRegKey(RootPrefix + '.mkd' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
-      CreateRegKey(RootPrefix + '.mdwn' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
-      CreateRegKey(RootPrefix + '.mdown' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
-      CreateRegKey(RootPrefix + '.mdtxt' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
-      CreateRegKey(RootPrefix + '.mdtext' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
-      CreateRegKey(RootPrefix + '.markdown' + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
-
+      //Register for supported files ('.md','.mkd','.mdwn','.mdown','.mdtxt','.mdtext','.markdown')
+      for LExtension in AMarkDownFileExt do
+        RegisterExtension(LExtension);
       CreateRegKey(sComServerKey, 'VersionIndependentProgID', ProgID, RootKey);
       CreateRegKey(RootPrefix + ProgID + '\shellex\' + SID_IPreviewHandler, '', sClassID, RootKey);
       CreateRegKey('SOFTWARE\Microsoft\Windows\CurrentVersion\PreviewHandlers', sClassID, Description, RootUserReg);

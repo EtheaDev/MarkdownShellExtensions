@@ -209,11 +209,11 @@ Begin
   AStream := nil;
 
   // is "fullName" a local file, if not aquire file from internet
-  If FileExists(ASource) then
-    LFullName := ASource
-  else
+  // replace %20 spaces to normal spaces
+  LFullName := StringReplace(ASource,'%20',' ',[rfReplaceAll]);
+  If not FileExists(LFullName) then
   begin
-    LFullName := IncludeTrailingPathDelimiter(LHtmlViewer.ServerRoot)+ASource;
+    LFullName := IncludeTrailingPathDelimiter(LHtmlViewer.ServerRoot)+LFullName;
     If not FileExists(LFullName) then
       LFullName := ASource;
   end;

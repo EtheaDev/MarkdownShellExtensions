@@ -197,6 +197,7 @@ type
     VirtualImageList20: TVirtualImageList;
     PanelCloseButton: TPanel;
     SVGIconImageCloseButton: TSVGIconImage;
+    LoadTimer: TTimer;
     procedure WMGetMinMaxInfo(var Message: TWMGetMinMaxInfo); message WM_GETMINMAXINFO;
     procedure acOpenFileExecute(Sender: TObject);
     procedure acSaveExecute(Sender: TObject);
@@ -274,7 +275,10 @@ type
     procedure PageControlMouseEnter(Sender: TObject);
     procedure PageControlMouseLeave(Sender: TObject);
     procedure SVGIconImageCloseButtonClick(Sender: TObject);
+    procedure FormKeyPress(Sender: TObject; var Key: Char);
+    procedure LoadTimerTimer(Sender: TObject);
   private
+    FEditingInProgress: Boolean;
     FirstAction: Boolean;
     MinFormWidth, MinFormHeight, MaxFormWidth, MaxFormHeight: Integer;
     FProcessingFiles: Boolean;
@@ -631,6 +635,12 @@ begin
   inherited;
 end;
 
+procedure TfrmMain.FormKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = Chr(27) then
+    dmResources.StopLoadingImages(True);
+end;
+
 procedure TfrmMain.FormMouseWheelDown(Sender: TObject; Shift: TShiftState;
   MousePos: TPoint; var Handled: Boolean);
 begin
@@ -889,6 +899,16 @@ begin
   UpdateMDViewer(True);
 end;
 
+procedure TfrmMain.LoadTimerTimer(Sender: TObject);
+begin
+  if FEditingInProgress then
+  begin
+    FEditingInProgress := False;
+    dmResources.StopLoadingImages(False);
+    UpdateMDViewer(True);
+  end;
+end;
+
 procedure TfrmMain.FormCreate(Sender: TObject);
 var
   FileVersionStr: string;
@@ -1012,6 +1032,8 @@ procedure TfrmMain.SynEditChange(Sender: TObject);
 begin
   if Sender = CurrentEditor then
   begin
+    FEditingInProgress := True;
+    LoadTimer.Enabled := False;
     dmResources.StopLoadingImages(True);
     UpdateMDViewer(False);
   end;
@@ -1260,6 +1282,8 @@ begin
   //Confirm save changes
   ConfirmChanges(EditingFile);
 
+  PanelCloseButton.Visible := False;
+
   //Rimuovo il riferimento
   if FMDFile = EditingFile then
     FMDFile := nil;
@@ -1287,6 +1311,7 @@ procedure TfrmMain.acCloseAllExecute(Sender: TObject);
 begin
   FProcessingFiles := True;
   try
+    PanelCloseButton.Visible := False;
     while EditFileList.Count > 0 do
       RemoveEditingFile(TEditingFile(EditFileList.items[0]));
   finally
@@ -1755,6 +1780,7 @@ begin
     OpenDialog.InitialDir := InitialDir;
     SaveDialog.InitialDir := InitialDir;
   end;
+  LoadTimer.Enabled := True;
 end;
 
 procedure TfrmMain.actMenuExecute(Sender: TObject);

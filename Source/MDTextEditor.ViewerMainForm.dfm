@@ -11,6 +11,7 @@ object frmMain: TfrmMain
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
+  KeyPreview = True
   Position = poScreenCenter
   ShowHint = True
   OnAfterMonitorDpiChanged = FormAfterMonitorDpiChanged
@@ -18,6 +19,7 @@ object frmMain: TfrmMain
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnKeyPress = FormKeyPress
   OnMouseWheelDown = FormMouseWheelDown
   OnMouseWheelUp = FormMouseWheelUp
   OnResize = FormResize
@@ -234,7 +236,7 @@ object frmMain: TfrmMain
       36)
     object lblTitle: TLabel
       AlignWithMargins = True
-      Left = 41
+      Left = 40
       Top = 3
       Width = 116
       Height = 30
@@ -245,7 +247,7 @@ object frmMain: TfrmMain
       ExplicitHeight = 15
     end
     object ProcessorDialectLabel: TLabel
-      Left = 427
+      Left = 423
       Top = 11
       Width = 83
       Height = 15
@@ -316,7 +318,7 @@ object frmMain: TfrmMain
       AlignWithMargins = True
       Left = 3
       Top = 3
-      Width = 32
+      Width = 31
       Height = 30
       Align = alLeft
       AutoSize = True
@@ -339,7 +341,7 @@ object frmMain: TfrmMain
       end
     end
     object ProcessorDialectComboBox: TComboBox
-      Left = 513
+      Left = 509
       Top = 8
       Width = 170
       Height = 23
@@ -1085,5 +1087,11 @@ object frmMain: TfrmMain
     Height = 20
     Left = 448
     Top = 368
+  end
+  object LoadTimer: TTimer
+    Enabled = False
+    OnTimer = LoadTimerTimer
+    Left = 272
+    Top = 352
   end
 end

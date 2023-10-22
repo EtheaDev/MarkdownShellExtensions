@@ -2,9 +2,11 @@ object frmMain: TfrmMain
   Left = 250
   Top = 217
   Caption = 'MarkDown Text Editor'
-  ClientHeight = 587
-  ClientWidth = 932
+  ClientHeight = 585
+  ClientWidth = 1003
   Color = clWindow
+  Constraints.MinHeight = 600
+  Constraints.MinWidth = 800
   Ctl3D = False
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -24,21 +26,21 @@ object frmMain: TfrmMain
   OnMouseWheelUp = FormMouseWheelUp
   OnResize = FormResize
   DesignSize = (
-    932
-    587)
+    1003
+    585)
   TextHeight = 15
   object ClientPanel: TPanel
     Left = 44
     Top = 36
-    Width = 888
-    Height = 532
+    Width = 959
+    Height = 530
     Align = alClient
     TabOrder = 4
     object PageControl: TPageControl
       Left = 1
-      Top = 1
-      Width = 886
-      Height = 530
+      Top = 35
+      Width = 957
+      Height = 494
       Align = alClient
       Images = VirtualImageList
       TabOrder = 0
@@ -48,8 +50,8 @@ object frmMain: TfrmMain
       OnMouseMove = PageControlMouseMove
     end
     object PanelCloseButton: TPanel
-      Left = 122
-      Top = 16
+      Left = 20
+      Top = 32
       Width = 22
       Height = 22
       Cursor = crHandPoint
@@ -70,11 +72,123 @@ object frmMain: TfrmMain
         OnClick = SVGIconImageCloseButtonClick
       end
     end
+    object StyledToolbar: TStyledToolbar
+      AlignWithMargins = True
+      Left = 4
+      Top = 4
+      Width = 951
+      Height = 28
+      ButtonHeight = 28
+      ButtonWidth = 28
+      Caption = 'StyledToolbar'
+      Images = VirtualImageListToolbar
+      Indent = 3
+      TabOrder = 2
+      object btHeader1: TStyledToolButton
+        Left = 0
+        Top = 0
+        Action = acHeader1
+      end
+      object btHeader2: TStyledToolButton
+        Left = 28
+        Top = 0
+        Action = acHeader2
+      end
+      object btHeader3: TStyledToolButton
+        Left = 56
+        Top = 0
+        Action = acHeader3
+      end
+      object btSeparator1: TStyledToolButton
+        Left = 84
+        Top = 0
+        Width = 10
+        Enabled = False
+      end
+      object btLink: TStyledToolButton
+        Left = 94
+        Top = 0
+        Action = acLink
+      end
+      object btImage: TStyledToolButton
+        Left = 122
+        Top = 0
+        Action = acImage
+      end
+      object btSeparator2: TStyledToolButton
+        Left = 150
+        Top = 0
+        Width = 10
+        Enabled = False
+      end
+      object btBold: TStyledToolButton
+        Left = 160
+        Top = 0
+        Action = acBold
+      end
+      object btItalic: TStyledToolButton
+        Left = 188
+        Top = 0
+        Action = acItalic
+      end
+      object btCode: TStyledToolButton
+        Left = 216
+        Top = 0
+        Action = acCode
+      end
+      object btSuperscript: TStyledToolButton
+        Left = 244
+        Top = 0
+        Action = acSuperscript
+      end
+      object btSubscript: TStyledToolButton
+        Left = 272
+        Top = 0
+        Action = acSubscript
+      end
+      object btSeparator3: TStyledToolButton
+        Left = 300
+        Top = 0
+        Width = 10
+        Enabled = False
+      end
+      object btUnorderedList: TStyledToolButton
+        Left = 310
+        Top = 0
+        Action = acUnorderedList
+      end
+      object btOrderedList: TStyledToolButton
+        Left = 338
+        Top = 0
+        Action = acOrderedList
+      end
+      object btBlockquote: TStyledToolButton
+        Left = 366
+        Top = 0
+        Action = acBlockquote
+      end
+      object btHorizontalRule: TStyledToolButton
+        Left = 394
+        Top = 0
+        Action = acHorizontalRule
+      end
+      object btSeparator4: TStyledToolButton
+        Left = 422
+        Top = 0
+        Width = 10
+        Enabled = False
+      end
+      object btHelp: TStyledToolButton
+        Left = 432
+        Top = 0
+        Action = acHelp
+      end
+    end
   end
   object StatusBar: TStatusBar
     Left = 0
-    Top = 568
-    Width = 932
+    Top = 566
+    Width = 1003
     Height = 19
     Panels = <
       item
@@ -102,12 +216,13 @@ object frmMain: TfrmMain
   object SV: TSplitView
     Left = 0
     Top = 36
-    Width = 160
-    Height = 529
+    Width = 44
+    Height = 527
     CloseStyle = svcCompact
     Color = clHighlight
     CompactWidth = 44
     DisplayMode = svmOverlay
+    Opened = False
     OpenedWidth = 160
     ParentDoubleBuffered = True
     Placement = svpLeft
@@ -119,8 +234,8 @@ object frmMain: TfrmMain
     object catMenuItems: TCategoryButtons
       Left = 0
       Top = 0
-      Width = 160
-      Height = 529
+      Width = 44
+      Height = 527
       Align = alClient
       BackgroundGradientDirection = gdVertical
       BorderStyle = bsNone
@@ -225,40 +340,37 @@ object frmMain: TfrmMain
   object panlTop: TPanel
     Left = 0
     Top = 0
-    Width = 932
+    Width = 1003
     Height = 36
     Align = alTop
     BevelOuter = bvNone
     ParentBackground = False
     TabOrder = 1
     DesignSize = (
-      932
+      1003
       36)
     object lblTitle: TLabel
       AlignWithMargins = True
-      Left = 40
+      Left = 41
       Top = 3
       Width = 116
       Height = 30
       Align = alLeft
       Caption = 'MarkDown Text Editor'
       Layout = tlCenter
-      ExplicitLeft = 40
-      ExplicitHeight = 15
     end
     object ProcessorDialectLabel: TLabel
-      Left = 423
-      Top = 11
+      Left = 518
+      Top = 10
       Width = 83
       Height = 15
       Alignment = taRightJustify
       Anchors = [akTop, akRight]
       Caption = 'Transformation:'
-      ExplicitLeft = 455
     end
     object SettingsToolBar: TToolBar
       AlignWithMargins = True
-      Left = 729
+      Left = 800
       Top = 3
       Width = 200
       Height = 30
@@ -318,7 +430,7 @@ object frmMain: TfrmMain
       AlignWithMargins = True
       Left = 3
       Top = 3
-      Width = 31
+      Width = 32
       Height = 30
       Align = alLeft
       AutoSize = True
@@ -341,8 +453,8 @@ object frmMain: TfrmMain
       end
     end
     object ProcessorDialectComboBox: TComboBox
-      Left = 509
-      Top = 8
+      Left = 604
+      Top = 7
       Width = 170
       Height = 23
       Style = csDropDownList
@@ -351,7 +463,8 @@ object frmMain: TfrmMain
       OnSelect = ProcessorDialectComboBoxSelect
       Items.Strings = (
         'DaringFireball'
-        'CommonMark')
+        'CommonMark'
+        'TxtMark')
     end
   end
   object OpenDialog: TOpenDialog
@@ -618,6 +731,7 @@ object frmMain: TfrmMain
       ImageIndex = 26
       ImageName = 'plus'
       OnExecute = acZoomExecute
+      OnUpdate = acHTMLViewerUpdate
     end
     object acZoomOut: TAction
       Category = 'HTMLViewer'
@@ -625,6 +739,7 @@ object frmMain: TfrmMain
       ImageIndex = 25
       ImageName = 'Minus'
       OnExecute = acZoomExecute
+      OnUpdate = acHTMLViewerUpdate
     end
     object acSaveHTMLFile: TAction
       Category = 'HTMLViewer'
@@ -633,6 +748,7 @@ object frmMain: TfrmMain
       ImageIndex = 51
       ImageName = 'save_html'
       OnExecute = acSaveHTMLFileExecute
+      OnUpdate = acHTMLViewerUpdate
     end
     object acSavePDFFile: TAction
       Category = 'HTMLViewer'
@@ -641,6 +757,17 @@ object frmMain: TfrmMain
       ImageIndex = 52
       ImageName = 'save_pdf'
       OnExecute = acSavePDFFileExecute
+      OnUpdate = acHTMLViewerUpdate
+    end
+    object acRefresh: TAction
+      Category = 'HTMLViewer'
+      Caption = 'Refresh'
+      Hint = 'Refresh Viewer content'
+      ImageIndex = 58
+      ImageName = 'refresh'
+      ShortCut = 116
+      OnExecute = acRefreshExecute
+      OnUpdate = acHTMLViewerUpdate
     end
   end
   object SaveDialog: TSaveDialog
@@ -659,13 +786,13 @@ object frmMain: TfrmMain
     object SaveMenuItem: TMenuItem
       Action = acSave
     end
-    object CloseAll1: TMenuItem
+    object CloseAllMenuItem: TMenuItem
       Action = acCloseAll
     end
     object Sep1MenuItem: TMenuItem
       Caption = '-'
     end
-    object Reformattext1: TMenuItem
+    object ReformatTextMenuItem: TMenuItem
       Caption = 'Reformat text'
       Hint = 'Reformat text'
       ImageIndex = 19
@@ -1037,6 +1164,11 @@ object frmMain: TfrmMain
         CollectionIndex = 61
         CollectionName = 'markdown-white-gray'
         Name = 'markdown-white-gray'
+      end
+      item
+        CollectionIndex = 79
+        CollectionName = 'refresh'
+        Name = 'refresh'
       end>
     ImageCollection = dmResources.SVGIconImageCollection
     Width = 24
@@ -1053,25 +1185,28 @@ object frmMain: TfrmMain
     Images = VirtualImageList
     Left = 528
     Top = 152
-    object Zoom1: TMenuItem
+    object ZoomInMenuItem: TMenuItem
       Action = acZoomIn
     end
-    object Zoom2: TMenuItem
+    object ZoomOutMenuItem: TMenuItem
       Action = acZoomOut
     end
-    object SaveHTMLfile1: TMenuItem
+    object SaveHTMLfileMenuItem: TMenuItem
       Action = acSaveHTMLFile
     end
-    object SavePDFfile1: TMenuItem
+    object SavePDFfileMenuItem: TMenuItem
       Action = acSavePDFFile
+    end
+    object RefreshMenuItem: TMenuItem
+      Action = acRefresh
     end
     object PopHTMLSep: TMenuItem
       Caption = '-'
     end
-    object Chiudi1: TMenuItem
+    object Close_MenuItem: TMenuItem
       Action = acClose
     end
-    object Chiuditutto1: TMenuItem
+    object Close_AllMenuItem: TMenuItem
       Action = acCloseAll
     end
   end
@@ -1093,5 +1228,226 @@ object frmMain: TfrmMain
     OnTimer = LoadTimerTimer
     Left = 272
     Top = 352
+  end
+  object VirtualImageListToolbar: TVirtualImageList
+    Images = <
+      item
+        CollectionIndex = 65
+        CollectionName = 'header1'
+        Name = 'header1'
+      end
+      item
+        CollectionIndex = 66
+        CollectionName = 'header2'
+        Name = 'header2'
+      end
+      item
+        CollectionIndex = 67
+        CollectionName = 'header3'
+        Name = 'header3'
+      end
+      item
+        CollectionIndex = 73
+        CollectionName = 'link'
+        Name = 'link'
+      end
+      item
+        CollectionIndex = 70
+        CollectionName = 'image'
+        Name = 'image'
+      end
+      item
+        CollectionIndex = 63
+        CollectionName = 'bold'
+        Name = 'bold'
+      end
+      item
+        CollectionIndex = 72
+        CollectionName = 'italic'
+        Name = 'italic'
+      end
+      item
+        CollectionIndex = 64
+        CollectionName = 'code'
+        Name = 'code'
+      end
+      item
+        CollectionIndex = 75
+        CollectionName = 'unordered_list'
+        Name = 'unordered_list'
+      end
+      item
+        CollectionIndex = 74
+        CollectionName = 'ordered_list'
+        Name = 'ordered_list'
+      end
+      item
+        CollectionIndex = 71
+        CollectionName = 'blockquote'
+        Name = 'blockquote'
+      end
+      item
+        CollectionIndex = 69
+        CollectionName = 'horizontal_rule'
+        Name = 'horizontal_rule'
+      end
+      item
+        CollectionIndex = 68
+        CollectionName = 'help'
+        Name = 'help'
+      end
+      item
+        CollectionIndex = 77
+        CollectionName = 'subscript'
+        Name = 'subscript'
+      end
+      item
+        CollectionIndex = 78
+        CollectionName = 'superscript'
+        Name = 'superscript'
+      end>
+    ImageCollection = dmResources.SVGIconImageCollection
+    Width = 20
+    Height = 20
+    Left = 448
+    Top = 432
+  end
+  object ToolbarActionList: TActionList
+    Images = VirtualImageListToolbar
+    Left = 312
+    Top = 432
+    object acHeader1: TAction
+      Category = 'MarkdownText'
+      Caption = 'Header 1'
+      Hint = 'Header 1'
+      ImageIndex = 0
+      ImageName = 'header1'
+      OnExecute = acHeader1Execute
+      OnUpdate = acToolbarUpdate
+    end
+    object acHeader2: TAction
+      Category = 'MarkdownText'
+      Caption = 'Header 2'
+      Hint = 'Header 2'
+      ImageIndex = 1
+      ImageName = 'header2'
+      OnExecute = acHeader2Execute
+      OnUpdate = acToolbarUpdate
+    end
+    object acHeader3: TAction
+      Category = 'MarkdownText'
+      Caption = 'Header 3'
+      Hint = 'Header 3'
+      ImageIndex = 2
+      ImageName = 'header3'
+      OnExecute = acHeader3Execute
+      OnUpdate = acToolbarUpdate
+    end
+    object acLink: TAction
+      Category = 'MarkdownText'
+      Caption = 'Link'
+      Hint = 'Link'
+      ImageIndex = 3
+      ImageName = 'link'
+      OnExecute = acLinkExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acImage: TAction
+      Category = 'MarkdownText'
+      Caption = 'Image'
+      Hint = 'Image'
+      ImageIndex = 4
+      ImageName = 'image'
+      OnExecute = acImageExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acBold: TAction
+      Category = 'MarkdownText'
+      Caption = 'Bold'
+      Hint = 'Bold'
+      ImageIndex = 5
+      ImageName = 'bold'
+      OnExecute = acBoldExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acItalic: TAction
+      Category = 'MarkdownText'
+      Caption = 'Italic'
+      Hint = 'Italic'
+      ImageIndex = 6
+      ImageName = 'italic'
+      OnExecute = acItalicExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acCode: TAction
+      Category = 'MarkdownText'
+      Caption = 'Code'
+      Hint = 'Code'
+      ImageIndex = 7
+      ImageName = 'code'
+      OnExecute = acCodeExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acSuperscript: TAction
+      Category = 'MarkdownText'
+      Hint = 'Superscript'
+      ImageIndex = 14
+      ImageName = 'superscript'
+      OnExecute = acSuperscriptExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acSubscript: TAction
+      Category = 'MarkdownText'
+      Hint = 'Subscript'
+      ImageIndex = 13
+      ImageName = 'subscript'
+      OnExecute = acSubscriptExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acUnorderedList: TAction
+      Category = 'MarkdownText'
+      Caption = 'Unordered List'
+      Hint = 'Unordered List'
+      ImageIndex = 8
+      ImageName = 'unordered_list'
+      OnExecute = acUnorderedListExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acOrderedList: TAction
+      Category = 'MarkdownText'
+      Caption = 'Ordered List'
+      Hint = 'Ordered List'
+      ImageIndex = 9
+      ImageName = 'ordered_list'
+      OnExecute = acOrderedListExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acBlockquote: TAction
+      Category = 'MarkdownText'
+      Caption = 'Block quote'
+      Hint = 'Block quote'
+      ImageIndex = 10
+      ImageName = 'blockquote'
+      OnExecute = acBlockquoteExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acHorizontalRule: TAction
+      Category = 'MarkdownText'
+      Caption = 'Horizontal Rule'
+      Hint = 'Horizontal Rule'
+      ImageIndex = 11
+      ImageName = 'horizontal_rule'
+      OnExecute = acHorizontalRuleExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acHelp: TAction
+      Category = 'MarkdownText'
+      Caption = 'Help'
+      Hint = 'Help'
+      ImageIndex = 12
+      ImageName = 'help'
+      OnExecute = acHelpExecute
+      OnUpdate = acHelpUpdate
+    end
   end
 end

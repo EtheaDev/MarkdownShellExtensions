@@ -41,6 +41,7 @@ interface
 
 resourcestring
   MARKDOWN_FILES = 'MarkDown text files';
+
 const
   AMarkDownFileExt: Array of string = [
   '.md',
@@ -97,6 +98,7 @@ uses
   Vcl.GraphUtil,
   uRegistry,
   uLogExcept;
+
 procedure Initialize_GDI; stdcall;
 begin
   //Initialize GDI+

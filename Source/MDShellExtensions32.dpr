@@ -51,12 +51,7 @@ uses
   MDShellEx.Resources in 'MDShellEx.Resources.pas' {dmResources: TDataModule},
   dlgSearchText in 'dlgSearchText.pas' {TextSearchDialog},
   MDShellEx.About in 'MDShellEx.About.pas' {FrmAbout},
-  BegaHtmlPrintPreviewForm in '..\Ext\HTMLViewer\Source\BegaHtmlPrintPreviewForm.pas',
-  MarkdownCommonMark in '..\Ext\delphi-markdown\source\MarkdownCommonMark.pas',
-  MarkdownDaringFireball in '..\Ext\delphi-markdown\source\MarkdownDaringFireball.pas',
-  MarkdownHTMLEntities in '..\Ext\delphi-markdown\source\MarkdownHTMLEntities.pas',
-  MarkdownProcessor in '..\Ext\delphi-markdown\source\MarkdownProcessor.pas',
-  MarkdownUnicodeUtils in '..\Ext\delphi-markdown\source\MarkdownUnicodeUtils.pas';
+  BegaHtmlPrintPreviewForm in '..\Ext\HTMLViewer\Source\BegaHtmlPrintPreviewForm.pas';
 
 exports
   DllGetClassObject,

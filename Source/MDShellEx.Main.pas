@@ -23,6 +23,7 @@
 {  limitations under the License.                                              }
 {                                                                              }
 {  The Original Code is Main.pas.                                              }
+{  Delphi Preview Handler  https://github.com/RRUZ/delphi-preview-handler      }
 {                                                                              }
 {  The Initial Developer of the Original Code is Rodrigo Ruz V.                }
 {  Portions created by Rodrigo Ruz V. are Copyright 2011-2021 Rodrigo Ruz V.   }

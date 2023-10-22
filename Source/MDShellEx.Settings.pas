@@ -40,7 +40,8 @@ uses
   , SynEditOptionsDialog
   , System.UITypes
   , MarkdownProcessor
-  , IniFiles;
+  , IniFiles
+  , MarkdownUtils;
 
 const
   MaxfontSize = 30;

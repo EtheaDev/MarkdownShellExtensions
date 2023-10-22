@@ -5,6 +5,7 @@
 {                                                                              }
 {       Copyright (c) 2021-2023 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
+{       Contributors: Ariel Montes                                             }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
 {                                                                              }
@@ -39,6 +40,7 @@ uses
   MDShellEx.Settings
   , System.Generics.Collections
   , Vcl.PlatformVclStylesActnCtrls
+  {$IFNDEF NO_VCL_STYLES}
   , Vcl.Styles.Fixes
   , Vcl.Styles.FormStyleHooks
   , Vcl.Styles.NC
@@ -48,17 +50,19 @@ uses
   , Vcl.Styles.Utils
   , Vcl.Styles.Utils.SysControls
   , Vcl.Styles.UxTheme
-//  {$IFDEF WIN32}
   , Vcl.Styles.Hooks
   , Vcl.Styles.Utils.Forms
   , Vcl.Styles.Utils.ComCtrls
   , Vcl.Styles.Utils.StdCtrls
-//  {$ENDIF}
   , Vcl.Styles.Ext
+  {$ENDIF}
   , HTMLUn2
   , HtmlGlobals
   , HtmlView
   , uDragDropUtils
+  , Vcl.StyledButton
+  , Vcl.StyledToolbar
+  , dlgInputUrl
   ;
 
 const
@@ -67,7 +71,7 @@ const
 resourcestring
   PAGE_HEADER_FIRST_LINE_LEFT = '$TITLE$';
   PAGE_HEADER_FIRST_LINE_RIGHT = 'Page count: $PAGECOUNT$';
-  PAGE_FOOTER_FIRST_LINE_LEFT = 'Print date: $DATE$. Ora: $TIME$';
+  PAGE_FOOTER_FIRST_LINE_LEFT = 'Print Date: $DATE$. Time: $TIME$';
   PAGE_FOOTER_FIRST_LINE_RIGHT = 'Page $PAGENUM$ of $PAGECOUNT$';
   FILE_NOT_FOUND = 'File "%s" not found!';
   SMODIFIED = 'Changed';
@@ -76,6 +80,8 @@ resourcestring
   STATE_INSERT = 'Insert';
   STATE_OVERWRITE = 'Overwrite';
   CLOSING_PROBLEMS = 'Problem closing!';
+  STR_ERROR = 'ERROR!';
+  STR_UNEXPECTED_ERROR = 'UNEXPECTED ERROR!';
   CONFIRM_CHANGES = 'ATTENTION: the content of file "%s" is changed: do you want to save the file?';
 
 type
@@ -96,6 +102,7 @@ type
     function GetImageName: string;
     procedure SetHTMLViewer(const Value: THTMLViewer);
     procedure UpdateRootPath;
+    function GetServerRoot: string;
   public
     SynEditor: TSynEdit;
     TabSheet: TTabSheet;
@@ -110,6 +117,7 @@ type
     property Name: string read GetName; //only name of file
     property ImageName: string read GetImageName;
     property Extension: string read FExtension;
+    property ServerRoot: string read GetServerRoot;
   end;
 
   TfrmMain = class(TForm, IDragDrop)
@@ -175,22 +183,22 @@ type
     CloseMenuItem: TMenuItem;
     Sep1MenuItem: TMenuItem;
     SelectAllMenuItem: TMenuItem;
-    Reformattext1: TMenuItem;
+    ReformatTextMenuItem: TMenuItem;
     N1: TMenuItem;
-    CloseAll1: TMenuItem;
+    CloseAllMenuItem: TMenuItem;
     ClientPanel: TPanel;
     PageControl: TPageControl;
     PopHTMLViewer: TPopupMenu;
     acZoomIn: TAction;
     acZoomOut: TAction;
-    Zoom1: TMenuItem;
-    Zoom2: TMenuItem;
+    ZoomInMenuItem: TMenuItem;
+    ZoomOutMenuItem: TMenuItem;
     acSaveHTMLFile: TAction;
-    SaveHTMLfile1: TMenuItem;
+    SaveHTMLfileMenuItem: TMenuItem;
     acSavePDFFile: TAction;
-    SavePDFfile1: TMenuItem;
-    Chiudi1: TMenuItem;
-    Chiuditutto1: TMenuItem;
+    SavePDFfileMenuItem: TMenuItem;
+    Close_MenuItem: TMenuItem;
+    Close_AllMenuItem: TMenuItem;
     PopHTMLSep: TMenuItem;
     ProcessorDialectLabel: TLabel;
     ProcessorDialectComboBox: TComboBox;
@@ -198,6 +206,45 @@ type
     PanelCloseButton: TPanel;
     SVGIconImageCloseButton: TSVGIconImage;
     LoadTimer: TTimer;
+    VirtualImageListToolbar: TVirtualImageList;
+    ToolbarActionList: TActionList;
+    acHeader1: TAction;
+    acHeader2: TAction;
+    acHeader3: TAction;
+    acLink: TAction;
+    acImage: TAction;
+    acBold: TAction;
+    acItalic: TAction;
+    acCode: TAction;
+    acSuperscript: TAction;
+    acSubscript: TAction;
+    acUnorderedList: TAction;
+    acOrderedList: TAction;
+    acBlockquote: TAction;
+    acHorizontalRule: TAction;
+    acHelp: TAction;
+    StyledToolbar: TStyledToolbar;
+    btHeader1: TStyledToolButton;
+    btHeader3: TStyledToolButton;
+    btHeader2: TStyledToolButton;
+    btSeparator1: TStyledToolButton;
+    btLink: TStyledToolButton;
+    btImage: TStyledToolButton;
+    btSeparator2: TStyledToolButton;
+    btBold: TStyledToolButton;
+    btItalic: TStyledToolButton;
+    btCode: TStyledToolButton;
+    btSuperscript: TStyledToolButton;
+    btSubscript: TStyledToolButton;
+    btSeparator3: TStyledToolButton;
+    btUnorderedList: TStyledToolButton;
+    btOrderedList: TStyledToolButton;
+    btBlockquote: TStyledToolButton;
+    btHorizontalRule: TStyledToolButton;
+    btSeparator4: TStyledToolButton;
+    btHelp: TStyledToolButton;
+    acRefresh: TAction;
+    RefreshMenuItem: TMenuItem;
     procedure WMGetMinMaxInfo(var Message: TWMGetMinMaxInfo); message WM_GETMINMAXINFO;
     procedure acOpenFileExecute(Sender: TObject);
     procedure acSaveExecute(Sender: TObject);
@@ -277,6 +324,25 @@ type
     procedure SVGIconImageCloseButtonClick(Sender: TObject);
     procedure FormKeyPress(Sender: TObject; var Key: Char);
     procedure LoadTimerTimer(Sender: TObject);
+    procedure acToolbarUpdate(Sender: TObject);
+    procedure acHeader1Execute(Sender: TObject);
+    procedure acHeader2Execute(Sender: TObject);
+    procedure acHeader3Execute(Sender: TObject);
+    procedure acLinkExecute(Sender: TObject);
+    procedure acImageExecute(Sender: TObject);
+    procedure acBoldExecute(Sender: TObject);
+    procedure acItalicExecute(Sender: TObject);
+    procedure acCodeExecute(Sender: TObject);
+    procedure acSuperscriptExecute(Sender: TObject);
+    procedure acSubscriptExecute(Sender: TObject);
+    procedure acUnorderedListExecute(Sender: TObject);
+    procedure acOrderedListExecute(Sender: TObject);
+    procedure acBlockquoteExecute(Sender: TObject);
+    procedure acHorizontalRuleExecute(Sender: TObject);
+    procedure acHelpExecute(Sender: TObject);
+    procedure acHelpUpdate(Sender: TObject);
+    procedure acHTMLViewerUpdate(Sender: TObject);
+    procedure acRefreshExecute(Sender: TObject);
   private
     FEditingInProgress: Boolean;
     FirstAction: Boolean;
@@ -304,6 +370,7 @@ type
     // implement IDragDrop
     function DropAllowed(const FileNames: array of string): Boolean;
     procedure Drop(const FileNames: array of string);
+    function GetMarkdownHelpFileName: TFileName;
     procedure CloseSplitViewMenu;
     procedure UpdateHighlighters;
     procedure UpdateFromSettings(AEditor: TSynEdit);
@@ -340,11 +407,16 @@ type
     procedure HtmlViewerHotSpotClick(Sender: TObject; const ASource: ThtString;
       var Handled: Boolean);
     procedure ShowTabCloseButtonOnHotTab;
+    procedure InsertMDCommand(const ACommand: string);
+    procedure InsertMDCommandContains(const ACommandOpen, ACommandClose: string);
+    procedure InputUrl(const APrefix: string; AType: TInputType);
     property MDFontSize: Integer read FMDFontSize write SetMDFontSize;
     property HTMLFontSize: Integer read FHTMLFontSize write SetHTMLFontSize;
   protected
     procedure CreateWindowHandle(const Params: TCreateParams); override;
     procedure DestroyWindowHandle; override;
+  public
+    procedure ManageExceptions(Sender: TObject; E: Exception);
   end;
 
 var
@@ -374,7 +446,9 @@ uses
   , SynPDF
   , vmHtmlToPdf
   , MarkdownProcessor
+  , MarkdownUtils
   , uLogExcept
+  , Vcl.StyledTaskDialog
   ;
 
 {$R *.dfm}
@@ -450,8 +524,10 @@ begin
   FUseDarkStyle := AUseDarkStyle;
   FShowXMLText := False;
 
+  {$IFNDEF NO_VCL_STYLED}
   if not IsStyleHookRegistered(TCustomSynEdit, TScrollingStyleHook) then
     TStyleManager.Engine.RegisterStyleHook(TCustomSynEdit, TScrollingStyleHook);
+  {$ENDIF}
 
   FileName := EditFileName;
   Fextension := ExtractFileExt(FileName);
@@ -477,6 +553,14 @@ end;
 function TEditingFile.GetName: string;
 begin
   Result := ExtractFileName(FFileName);
+end;
+
+function TEditingFile.GetServerRoot: string;
+begin
+  if HTMLViewer <> nil then
+    Result := HTMLViewer.ServerRoot
+  else
+    Result := '';
 end;
 
 procedure TEditingFile.SetFileName(const Value: string);
@@ -644,26 +728,53 @@ end;
 procedure TfrmMain.FormMouseWheelDown(Sender: TObject; Shift: TShiftState;
   MousePos: TPoint; var Handled: Boolean);
 begin
-  if Shift = [ssCtrl] then
+  if (Shift = [ssCtrl]) and (CurrentEditFile <> nil) then
   begin
-    actnReduceFont.Execute;
-    Handled := True;
+    if CurrentEditFile.SynEditor.Focused then
+    begin
+      actnReduceFont.Execute;
+      Handled := True;
+    end
+    else if CurrentEditFile.HTMLViewer.Focused then
+    begin
+      acZoomOut.Execute;
+      Handled := True;
+    end;
   end;
 end;
 
 procedure TfrmMain.FormMouseWheelUp(Sender: TObject; Shift: TShiftState;
   MousePos: TPoint; var Handled: Boolean);
 begin
-  if Shift = [ssCtrl] then
+  if (Shift = [ssCtrl]) and (CurrentEditFile <> nil) then
   begin
-    actnEnlargeFont.Execute;
-    Handled := True;
+    if CurrentEditFile.SynEditor.Focused then
+    begin
+      actnEnlargeFont.Execute;
+      Handled := True;
+    end
+    else if CurrentEditFile.HTMLViewer.Focused then
+    begin
+      acZoomIn.Execute;
+      Handled := True;
+    end;
   end;
 end;
 
 procedure TfrmMain.FormResize(Sender: TObject);
 begin
   AdjustCompactWidth;
+end;
+
+function TfrmMain.GetMarkdownHelpFileName: TFileName;
+begin
+  //After deploy/install the Help folder is located into exe folder
+  Result := ExtractFilePath(Application.ExeName)+
+    '.\Help\MarkDown Support Test.md';
+  //In development environment the Help folder is located into ..\Help\ folter
+  if not FileExists(Result) then
+    Result := ExtractFilePath(Application.ExeName)+
+      '..\Help\MarkDown Support Test.md';
 end;
 
 procedure TfrmMain.ShowSRDialog(aReplace: boolean);
@@ -842,6 +953,11 @@ begin
   ShowSRDialog(false);
 end;
 
+procedure TfrmMain.acRefreshExecute(Sender: TObject);
+begin
+  UpdateMDViewer(True);
+end;
+
 procedure TfrmMain.acReplaceExecute(Sender: TObject);
 begin
   ShowSRDialog(true);
@@ -914,6 +1030,10 @@ var
   FileVersionStr: string;
   LMarkDownMasks: string;
 begin
+  //Initialize AnimatedTaskDialog font size
+  Screen.MessageFont.Size := Round(Screen.MessageFont.Size*1.2);
+  InitializeStyledTaskDialogs(True, Screen.MessageFont);
+
   LMarkDownMasks := GetFileMasks(AMarkDownFileExt);
   OpenDialog.Filter :=
     Format('%s (%s)|%s', [MARKDOWN_FILES, LMarkDownMasks, LMarkDownMasks]);
@@ -923,8 +1043,11 @@ begin
   FEditorOptions := TSynEditorOptionsContainer.create(self);
   FEditorSettings := TEditorSettings.CreateSettings(nil, FEditorOptions);
   dmResources.Settings := FEditorSettings;
+
+  {$IFNDEF NO_VCL_STYLES}
   if not IsStyleHookRegistered(TCustomSynEdit, TScrollingStyleHook) then
     TStyleManager.Engine.RegisterStyleHook(TCustomSynEdit, TScrollingStyleHook);
+  {$ENDIF}
 
   if (Trim(FEditorSettings.StyleName) <> '') and not SameText('Windows', FEditorSettings.StyleName) then
     TStyleManager.TrySetStyle(FEditorSettings.StyleName, False);
@@ -979,6 +1102,16 @@ begin
   acSearch.Enabled := (CurrentEditor <> nil) and (CurrentEditor.Text <> '');
 end;
 
+procedure TfrmMain.acToolbarUpdate(Sender: TObject);
+var
+  LAction: TAction;
+begin
+  LAction := Sender as TAction;
+  LAction.Enabled := (CurrentEditFile <> nil) and
+    (CurrentEditFile.SynEditor.Focused) and
+    not (CurrentEditFile.SynEditor.SelectionMode = TSynSelectionMode.smColumn);
+end;
+
 procedure TfrmMain.acReplaceUpdate(Sender: TObject);
 begin
   acReplace.Enabled := (CurrentEditor <> nil) and (CurrentEditor.Text <> '')
@@ -1026,6 +1159,165 @@ end;
 procedure TfrmMain.acEditUndoUpdate(Sender: TObject);
 begin
   acEditUndo.Enabled := (CurrentEditor <> nil) and CurrentEditor.Modified;
+end;
+
+procedure TfrmMain.InsertMDCommand(const ACommand: string);
+var
+  LSynEdit: TSynEdit;
+  LSelectedText: string;
+begin
+  LSynEdit := CurrentEditFile.SynEditor;
+  LSelectedText := LSynEdit.SelText;
+  //If there is no selected text
+  if LSelectedText = '' then
+  begin
+    LSynEdit.SelText := ACommand;
+  end
+  else
+  begin
+    //If there is selected text, add the command to all lines
+    LSelectedText := ACommand+
+      StringReplace(StringReplace(LSelectedText, sLineBreak,
+        sLineBreak+ACommand, [rfReplaceAll]), ACommand+sLineBreak+ACommand,
+        sLineBreak+ACommand, [rfReplaceAll]);
+    LSynEdit.SelText := LSelectedText;
+  end;
+end;
+
+procedure TfrmMain.InsertMDCommandContains(const ACommandOpen, ACommandClose: string);
+var
+  LSynEdit: TSynEdit;
+  LSelectedText: string;
+  LSize: Integer;
+  LCoord: TBufferCoord;
+begin
+  LSize := Length(ACommandClose);
+  LSynEdit := CurrentEditFile.SynEditor;
+  LSelectedText := LSynEdit.SelText;
+  //If there is no selected text, add the opening and closing commands and
+  //place the caret in the middle
+  if LSelectedText = '' then
+  begin
+    LSynEdit.SelText := ACommandOpen+ACommandClose;
+    LCoord := LSynEdit.CaretXY;
+    LCoord.Char := LCoord.Char-LSize;
+    LSynEdit.SetCaretAndSelection(LCoord, LCoord, LCoord);
+  end
+  else
+  begin
+    //If there is selected text, add the opening and closing commands to all lines
+    LSelectedText := ACommandOpen+
+      StringReplace(StringReplace(LSelectedText, sLineBreak,
+        ACommandOpen+sLineBreak+ACommandClose, [rfReplaceAll]),
+        sLineBreak+ACommandOpen+ACommandClose, sLineBreak, [rfReplaceAll])+ACommandClose;
+    LSynEdit.SelText := LSelectedText;
+  end;
+end;
+
+procedure TfrmMain.InputUrl(const APrefix: string; AType: TInputType);
+var
+  LSynEdit: TSynEdit;
+  LSelectedText: string;
+begin
+  LSynEdit := CurrentEditFile.SynEditor;
+  LSelectedText := LSynEdit.SelText;
+
+  if InputUrlDialog(Self, CurrentEditFile.ServerRoot,
+    APrefix, AType, LSelectedText) = mrOk then
+    LSynEdit.SelText := LSelectedText;
+end;
+
+procedure TfrmMain.acHeader1Execute(Sender: TObject);
+begin
+  InsertMDCommand('# ');
+end;
+
+procedure TfrmMain.acHeader2Execute(Sender: TObject);
+begin
+  InsertMDCommand('## ');
+end;
+
+procedure TfrmMain.acHeader3Execute(Sender: TObject);
+begin
+  InsertMDCommand('### ');
+end;
+
+procedure TfrmMain.acLinkExecute(Sender: TObject);
+begin
+  InputUrl('[', itLink);
+end;
+
+procedure TfrmMain.acImageExecute(Sender: TObject);
+begin
+  InputUrl('![', itImage);
+end;
+
+procedure TfrmMain.acBoldExecute(Sender: TObject);
+begin
+  InsertMDCommandContains('**', '**');
+end;
+
+procedure TfrmMain.acItalicExecute(Sender: TObject);
+begin
+  InsertMDCommandContains('_', '_');
+end;
+
+procedure TfrmMain.acCodeExecute(Sender: TObject);
+begin
+  InsertMDCommandContains('`', '`');
+end;
+
+procedure TfrmMain.acSubscriptExecute(Sender: TObject);
+begin
+  InsertMDCommandContains('<sub>', '</sub>');
+end;
+
+procedure TfrmMain.acSuperscriptExecute(Sender: TObject);
+begin
+  InsertMDCommandContains('<sup>', '</sup>');
+end;
+
+procedure TfrmMain.acUnorderedListExecute(Sender: TObject);
+begin
+  InsertMDCommand('* ');
+end;
+
+procedure TfrmMain.acOrderedListExecute(Sender: TObject);
+begin
+  InsertMDCommand('1. ');
+end;
+
+procedure TfrmMain.acBlockquoteExecute(Sender: TObject);
+begin
+  InsertMDCommand('> ');
+end;
+
+procedure TfrmMain.acHorizontalRuleExecute(Sender: TObject);
+begin
+  InsertMDCommand('---'+sLineBreak);
+end;
+
+procedure TfrmMain.acHTMLViewerUpdate(Sender: TObject);
+begin
+  (Sender as TAction).Enabled :=
+    (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil);
+end;
+
+procedure TfrmMain.acHelpExecute(Sender: TObject);
+var
+  LHelpFileName: TFileName;
+begin
+  LHelpFileName := GetMarkdownHelpFileName;
+  if OpenFile(LHelpFileName) then
+    UpdateMDViewer(True);
+end;
+
+procedure TfrmMain.acHelpUpdate(Sender: TObject);
+var
+  LHelpFileName: TFileName;
+begin
+  LHelpFileName := GetMarkdownHelpFileName;
+  acHelp.Visible := FileExists(LHelpFileName);
 end;
 
 procedure TfrmMain.SynEditChange(Sender: TObject);
@@ -1157,8 +1449,9 @@ begin
   //Setting the Editor caption as the actual file opened
   if CurrentEditFile <> nil then
   begin
-    Caption := Application.Title+' - '+CurrentEditFile.FileName;
     FMDFile := CurrentEditFile;
+    if (FMDFile <> nil) and (FMDFile.SynEditor.CanFocus) then
+      FMDFile.SynEditor.SetFocus;
   end;
   UpdateMDViewer(False);
 end;
@@ -1252,7 +1545,8 @@ begin
   //Confirm save changes
   if EditingFile.SynEditor.Modified then
   begin
-    LConfirm := MessageDlg(Format(CONFIRM_CHANGES,[EditingFile.FileName]),
+    LConfirm := StyledMessageDlg(
+      Format(CONFIRM_CHANGES,[EditingFile.FileName]),
       mtWarning, [mbYes, mbNo], 0);
     if LConfirm = mrYes then
       EditingFile.SaveToFile
@@ -1284,7 +1578,7 @@ begin
 
   PanelCloseButton.Visible := False;
 
-  //Rimuovo il riferimento
+  //Remove the reference
   if FMDFile = EditingFile then
     FMDFile := nil;
 
@@ -1447,7 +1741,7 @@ end;
 
 procedure TfrmMain.FileSavedAskToOpen(const AFileName: string);
 begin
-  if MessageDlg(Format(FILE_SAVED,[AFileName]),
+  if StyledMessageDlg(Format(FILE_SAVED,[AFileName]),
     TMsgDlgType.mtInformation, [mbYes, MbNo], 0) = mrYes then
   begin
     ShellExecute(handle, 'open', PChar(AFilename), nil, nil, SW_SHOWNORMAL);
@@ -1757,6 +2051,11 @@ var
   InitialDir : string;
   LFileName: string;
 begin
+  if CurrentEditFile <> nil then
+    Caption := Application.Title+' - '+CurrentEditFile.FileName
+  else
+    Caption := Application.Title;
+
   UpdateStatusBarPanels;
   if not FirstAction then
   begin
@@ -2016,7 +2315,8 @@ begin
     rectOver := PageControl.TabRect(iot);
 
     PanelCloseButton.Left := rectOver.Right - PanelCloseButton.Width;
-    PanelCloseButton.Top := rectOver.Top + ((rectOver.Height div 2) - (PanelCloseButton.Height div 2)) + 1;
+    PanelCloseButton.Top := rectOver.Top + ((rectOver.Height div 2) - (PanelCloseButton.Height div 2))
+      + StyledToolbar.Height + StyledToolbar.Margins.Top + StyledToolbar.Margins.Bottom + 1;
 
     PanelCloseButton.Tag := iot;
     PanelCloseButton.Show;
@@ -2042,10 +2342,30 @@ begin
   end;
 end;
 
+procedure TfrmMain.ManageExceptions(Sender: TObject; E: Exception);
+begin
+  //This is an event-handler for exceptions that replace Delphi standard handler
+  if E is EAccessViolation then
+  begin
+    if StyledMessageDlg(STR_UNEXPECTED_ERROR,
+      Format('Unexpected Error: %s%s',[sLineBreak,E.Message]),
+      TMsgDlgType.mtError,
+      [TMsgDlgBtn.mbOK, TMsgDlgBtn.mbAbort], 0) = mrAbort then
+    Application.Terminate;
+  end
+  else
+  begin
+
+    StyledMessageDlg(STR_ERROR,
+      Format('Error: %s%s',[sLineBreak,E.Message]),
+      TMsgDlgType.mtError,
+      [TMsgDlgBtn.mbOK, TMsgDlgBtn.mbHelp], 0);
+  end;
+end;
+
 initialization
   {$IFDEF DEBUG}
   ReportMemoryLeaksOnShutdown := True;
   {$ENDIF}
 
 end.
-

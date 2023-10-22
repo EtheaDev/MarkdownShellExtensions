@@ -227,9 +227,17 @@ type
 
   TFontObjBaseList = class(TObjectList)
   private
+    {$if compilerversion > 35}
+    function GetBase(Index: NativeInt): TFontObjBase; {$ifdef UseInline} inline; {$endif}
+    {$else}
     function GetBase(Index: Integer): TFontObjBase; {$ifdef UseInline} inline; {$endif}
+    {$ifend}
   public
+    {$if compilerversion > 35}
+    property Items[Index: NativeInt]: TFontObjBase read GetBase; default;
+    {$else}
     property Items[Index: Integer]: TFontObjBase read GetBase; default;
+    {$ifend}
   end;
 
 //------------------------------------------------------------------------------
@@ -3594,7 +3602,11 @@ end;
 { TFontObjBaseList }
 
 //-- BG ---------------------------------------------------------- 06.10.2016 --
+{$if compilerversion > 35}
+function TFontObjBaseList.GetBase(Index: NativeInt): TFontObjBase;
+{$else}
 function TFontObjBaseList.GetBase(Index: Integer): TFontObjBase;
+{$ifend}
 begin
   Result := inherited Get(Index);
 end;

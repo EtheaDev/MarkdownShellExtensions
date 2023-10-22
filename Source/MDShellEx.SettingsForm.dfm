@@ -3,8 +3,8 @@ object SVGSettingsForm: TSVGSettingsForm
   Top = 148
   BorderIcons = [biSystemMenu]
   BorderStyle = bsSingle
-  ClientHeight = 511
-  ClientWidth = 815
+  ClientHeight = 510
+  ClientWidth = 811
   Color = clBtnFace
   Constraints.MinHeight = 480
   Constraints.MinWidth = 600
@@ -18,7 +18,6 @@ object SVGSettingsForm: TSVGSettingsForm
   ShowHint = True
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  PixelsPerInch = 96
   TextHeight = 15
   object TLabel
     Left = 4
@@ -35,6 +34,8 @@ object SVGSettingsForm: TSVGSettingsForm
     Align = alClient
     Images = SettingsImageList
     TabOrder = 0
+    ExplicitWidth = 666
+    ExplicitHeight = 451
     object stGeneral: TTabSheet
       Caption = 'Anteprima'
       ImageIndex = 4
@@ -311,12 +312,13 @@ object SVGSettingsForm: TSVGSettingsForm
         end
         object ElementColorGroupBox: TGroupBox
           Left = 0
-          Top = 244
+          Top = 243
           Width = 193
           Height = 116
           Align = alBottom
           Caption = 'Element colors'
           TabOrder = 1
+          ExplicitTop = 244
           DesignSize = (
             193
             116)
@@ -361,11 +363,12 @@ object SVGSettingsForm: TSVGSettingsForm
         end
         object ResetPanel: TPanel
           Left = 0
-          Top = 360
+          Top = 359
           Width = 193
           Height = 42
           Align = alBottom
           TabOrder = 2
+          ExplicitTop = 360
           DesignSize = (
             193
             42)
@@ -384,11 +387,13 @@ object SVGSettingsForm: TSVGSettingsForm
       object paAttributesContainer: TPanel
         Left = 197
         Top = 0
-        Width = 457
-        Height = 402
+        Width = 453
+        Height = 401
         Align = alClient
         BevelOuter = bvNone
         TabOrder = 1
+        ExplicitWidth = 457
+        ExplicitHeight = 402
         object paAttributes: TPanel
           Left = 0
           Top = 0
@@ -553,6 +558,7 @@ object SVGSettingsForm: TSVGSettingsForm
         AutoSize = False
         ImageList = OrientationImageList
         ImageIndex = 0
+        ImageName = 'portrait'
       end
       object OrientationRadioGroup: TRadioGroup
         Left = 16

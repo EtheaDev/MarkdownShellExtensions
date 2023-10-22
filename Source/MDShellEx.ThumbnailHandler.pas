@@ -37,7 +37,6 @@ uses
   Winapi.PropSys,
   System.Generics.Collections,
   SVGInterfaces,
-  SVGCommon,
   ActiveX;
 
 type

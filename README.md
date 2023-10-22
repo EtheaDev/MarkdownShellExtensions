@@ -1,6 +1,6 @@
 ﻿# Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 1.5.2 - 29 Jun 2023**
+**Latest Version 2.0.0 - 22 Oct 2023**
 
 **A collection of tools for markdown files, to edit and view content:**
 
@@ -59,6 +59,19 @@ To manually install the SVGShellExtensions.dll follow these steps:
 
 ## Release Notes ##
 
+22 Oct 2023: ver. 2.0.0
+- Added use of Skia4Delphi
+- Added support for new image format (webp and wbmp)
+- Uses AnimatedStyledDialogs for messages
+- Added toolbar for markdown commands
+- Added dialog for input of hyperlink for Images and Files
+- Updated Markdown library with best support for CommonMark transformation
+
+1. Subscript <sub>text</sub> and Superscript <sup>text</sup>
+1. Formulas (using [Google Chart API])
+1. ==Markers==
+1. [Reference-style Links][1]
+
 29 Jun 2023: ver. 1.5.2
 - Fixed loading images with "spaces" in the filename
 - Fixed immediate-loading of new images when editing the file
@@ -108,53 +121,95 @@ Many thanks to **Rodrigo Ruz V.** (author of [theroadtodelphi.com][7] Blog) for 
 
 ## License
 
-Licensed under the [Apache License, Version 2.0][9] (the "License");
+Licensed under the [Apache License, Version 2.0][2] (the "License");
+
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+### Other libraries from Ethea:
+
+**SVGIconImageList** - https://github.com/EtheaDev/SVGIconImageList/
+
+**StyledComponents** - https://github.com/EtheaDev/StyledComponents
+
+**Delphi MarkdownProcessor** - https://github.com/EtheaDev/MarkdownProcessor
+
+### Third parties libraries:
+
+**OpenSLL Library**: Cryptography and SSL/TLS Toolkit
+
+Copyright © 1998-2018 The OpenSSL Project.  All rights reserved.
+
+**Delphi Markdown** - https://github.com/grahamegrieve/delphi-markdown
+
+Copyright (c) 2011+, Health Intersections Pty Ltd All rights reserved
+
+**Delphi Preview Handler** - https://github.com/RRUZ/delphi-preview-handler
+
+The Initial Developer of the Original Code is Rodrigo Ruz V.
+Portions created by Rodrigo Ruz V. are Copyright © 2011-2023 Rodrigo Ruz V.
+
+**SynEdit** - http://synedit.svn.sourceforge.net/viewvc/synedit/
+
+all rights reserved.
+
+**Synopse/SynPDF** - https://github.com/synopse/SynPDF
+
+Copyright © Synopse: all right reserved.
+
+**HtmlToPdf** - https://github.com/MuzioValerio/HtmlToPdf
+
+Copyright © Muzio Valerio.
+
+**Image32 Library** - http://www.angusj.com/delphi/image32/Docs/_Body.htm
+
+Copyright ©2019-2023 Angus Johnson.
+
+**dzlib** - https://sourceforge.net/projects/dzlib/
+
+Copyright (c) Thomas Mueller
+
+**HTMLViewer** - https://github.com/BerndGabriel/HtmlViewer
+
+Copyright (c) 1995 - 2008 by L. David Baldwin
+
+Copyright (c) 1995 - 2023 by Anders Melander (DitherUnit.pas)
+
+Copyright (c) 1995 - 2023 by Ron Collins (HtmlGif1.pas)
+
+Copyright (c) 2008 - 2009 by Sebastian Zierer (Delphi 2009 Port)
+
+Copyright (c) 2008 - 2010 by Arvid Winkelsdorf (Fixes)
+
+Copyright (c) 2009 - 2023 by HtmlViewer Team
 
 # External projects
 
-***This project uses some External Projects, located into Ext Path***
+***To simpilfy compilation of projects they are added into ext folder***
 
-- [SVGIconImageList]
+[SVGIconImageList](https://github.com/EtheaDev/SVGIconImageList)
 
-- [Synedit]
+[HtmlViewer](https://github.com/BerndGabriel/HtmlViewer)
 
-- [VCL-Style-Utils]
+[vcl-styles-utils](https://github.com/RRUZ/vcl-styles-utils)
 
-- [delphi-markdown]
+[markdownProcessor](https://github.com/EtheaDev/MarkdownProcessor)
 
-  ***To simpilfy compilation of projects they are added into ext folder***
+[StyledComponents](https://github.com/EtheaDev/StyledComponents)
 
-1: https://github.com/EtheaDev/SVGIconImageList
+[dzlib](https://sourceforge.net/projects/dzlib/)
 
-2: https://github.com/SynEdit/SynEdit
+![Delphi Support](/Setup/SupportingDelphi.jpg)
 
-3: https://github.com/RRUZ/vcl-styles-utils
+Related links: [embarcadero.com][3] - [learndelphi.org][4]
 
-4: https://github.com/grahamegrieve/delphi-markdown
+[1]: https://github.com/EtheaDev/MarkdownHelpViewer/releases/latest/download/MarkDownHelpViewerSetup.exe
 
-![Delphi 11 Alexandria Support](/Setup/SupportingDelphi.jpg)
+[2]: https://opensource.org/licenses/Apache-2.0
 
-Related links: [embarcadero.com][10] - [learndelphi.org][11]
+[3]: https://www.embarcadero.com/
 
-[1]: https://docs.microsoft.com/en-us/windows/win32/shell/preview-handlers
+[4]: https://learndelphi.org/
 
-[2]: https://github.com/EtheaDev/MarkdownShellExtensions/
+[Google Chart API]: https://developers.google.com/chart/infographics/docs/formulas
 
-[3]: https://github.com/EtheaDev/MarkdownShellExtensions/releases/latest/download/MDShellExtensionsSetup.exe
-
-[4]: https://github.com/EtheaDev/SVGIconImageList
-
-[5]: https://github.com/SynEdit/SynEdit
-
-[6]: https://github.com/RRUZ/vcl-styles-utils
-
-[7]: https://theroadtodelphi.com/
-
-[8]: https://github.com/RRUZ/delphi-preview-handler
-
-[9]: https://opensource.org/licenses/Apache-2.0
-
-[10]: https://www.embarcadero.com/
-
-[11]: https://learndelphi.org/
+[Reference-style-Links]: https://www.markdownguide.org/basic-syntax/#reference-style-links

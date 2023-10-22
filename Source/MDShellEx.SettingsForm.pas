@@ -178,6 +178,7 @@ uses
   Vcl.Themes,
 {$ENDIF}
   MarkdownProcessor,
+  MarkdownUtils,
   uRegistry;
 
 {$R *.dfm}

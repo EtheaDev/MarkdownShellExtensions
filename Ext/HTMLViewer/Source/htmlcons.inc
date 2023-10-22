@@ -55,6 +55,9 @@ are covered by separate copyright notices located in those modules.
 { Identify Delphi Compiler Version:
 
   #   Compiler          Version Compiler Defined Symbol
+  D29 Delphi 12.0         36    VER360
+  D28 Delphi 11.3         35    VER350
+  D27 Delphi 10.4         34    VER340
   D26 Delphi 10.3 Rio     33    VER330
   D25 Delphi 10.2 Tokyo   32    VER320
   D24 Delphi 10.1 Berlin  31    VER310

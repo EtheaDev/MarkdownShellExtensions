@@ -3,7 +3,7 @@ unit Img32.FMX;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  4.4                                                             *
-* Date      :  30 January 2023                                               *
+* Date      :  3 September 2023                                                *
 * Website   :  http://www.angusj.com                                           *
 * Copyright :  Angus Johnson 2019-2023                                         *
 * Purpose   :  Image file format support for TImage32 and FMX                  *
@@ -29,8 +29,10 @@ type
     class function IsValidImageStream(stream: TStream): Boolean; override;
     function LoadFromStream(stream: TStream;
       img32: TImage32; imgIndex: integer = 0): Boolean; override;
-    function SaveToFile(const filename: string; img32: TImage32): Boolean; override;
-    procedure SaveToStream(stream: TStream; img32: TImage32); override;
+    function SaveToFile(const filename: string;
+      img32: TImage32; quality: integer = 0): Boolean; override;
+    procedure SaveToStream(stream: TStream;
+      img32: TImage32; quality: integer = 0); override;
     class function CopyToClipboard(img32: TImage32): Boolean; override;
     class function CanPasteFromClipboard: Boolean; override;
     class function PasteFromClipboard(img32: TImage32): Boolean; override;
@@ -104,14 +106,16 @@ end;
 // Saving (writing) Jpeg images to file ...
 //------------------------------------------------------------------------------
 
-function TImageFormat_FMX.SaveToFile(const filename: string; img32: TImage32): Boolean;
+function TImageFormat_FMX.SaveToFile(const filename: string;
+  img32: TImage32; quality: integer): Boolean;
 begin
   Ext := ExtractFileExt(filename);
   result := inherited;
 end;
 //------------------------------------------------------------------------------
 
-procedure TImageFormat_FMX.SaveToStream(stream: TStream; img32: TImage32);
+procedure TImageFormat_FMX.SaveToStream(stream: TStream;
+  img32: TImage32; quality: integer);
 var
   cm: TBitmapCodecManager;
   surf: TBitmapSurface;
@@ -196,8 +200,11 @@ var
   src, dst: TBitmapData; //TBitmapData is a record.
 begin
   if not Assigned(img) or not Assigned(bmp) then Exit;
-  //src := TBitmapData.Create(img.Width, img.Height, TPixelFormat.BGRA);
+{$IF DEFINED(ANDROID)} //todo: check this on android devices
   src := TBitmapData.Create(img.Width, img.Height, TPixelFormat.RGBA);
+{$ELSE}
+  src := TBitmapData.Create(img.Width, img.Height, TPixelFormat.BGRA);
+{$IFEND}
   src.Data := img.PixelBase;
   src.Pitch := img.Width * 4;
   bmp.SetSize(img.Width, img.Height);

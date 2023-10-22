@@ -172,7 +172,11 @@ type
   // BG, 10.02.2013: owns its objects.
   TFontList = class(TFontObjBaseList) {a list of TFontObj's}
   private
+    {$if compilerversion > 35}
+    function GetFont(Index: NativeInt): TFontObj; {$ifdef UseInline} inline; {$endif}
+    {$else}
     function GetFont(Index: Integer): TFontObj; {$ifdef UseInline} inline; {$endif}
+    {$ifend}
   public
     constructor CreateCopy(ASection: TSection; T: TFontList);
     function GetFontAt(Posn: Integer; out OHang: Integer): ThtFont;
@@ -180,7 +184,11 @@ type
     function GetFontObjAt(Posn: Integer): TFontObj; overload;
     function GetFontObjAt(Posn, Leng: Integer; out Obj: TFontObj): Integer; overload;
     procedure Decrement(N: Integer; Document: ThtDocument);
+    {$if compilerversion > 35}
+    property Items[Index: NativeInt]: TFontObj read GetFont; default;
+    {$else}
     property Items[Index: Integer]: TFontObj read GetFont; default;
+    {$ifend}
   end;
 
   // BG, 10.02.2013: does not own its font objects.
@@ -2605,7 +2613,11 @@ begin
 end;
 
 //-- BG ---------------------------------------------------------- 10.02.2013 --
+{$if compilerversion > 35}
+function TFontList.GetFont(Index: NativeInt): TFontObj;
+{$else}
 function TFontList.GetFont(Index: Integer): TFontObj;
+{$ifend}
 begin
   Result := inherited Get(Index);
 end;

@@ -32,12 +32,13 @@
 program MDTextEditor;
 
 uses
+  System.SysUtils,
   Vcl.Forms,
   Vcl.Themes,
   Vcl.Styles,
-  System.SysUtils,
   dlgSearchText in 'dlgSearchText.pas' {TextSearchDialog},
   dlgReplaceText in 'dlgReplaceText.pas' {TextReplaceDialog},
+  dlgInputUrl in 'dlgInputUrl.pas' {InputUrlDialog},
   MDTextEditor.ViewerMainForm in 'MDTextEditor.ViewerMainForm.pas' {frmMain},
   MDShellEx.Resources in 'MDShellEx.Resources.pas' {dmResources: TDataModule},
   DPageSetup in 'DPageSetup.pas' {PageSetupDlg},
@@ -50,11 +51,8 @@ uses
   MDShellEx.SettingsForm in 'MDShellEx.SettingsForm.pas' {SVGSettingsForm},
   MDShellEx.Registry in 'MDShellEx.Registry.pas',
   vmHtmlToPdf in 'vmHtmlToPdf.pas',
-  MarkdownCommonMark in '..\Ext\delphi-markdown\source\MarkdownCommonMark.pas',
-  MarkdownDaringFireball in '..\Ext\delphi-markdown\source\MarkdownDaringFireball.pas',
-  MarkdownHTMLEntities in '..\Ext\delphi-markdown\source\MarkdownHTMLEntities.pas',
-  MarkdownProcessor in '..\Ext\delphi-markdown\source\MarkdownProcessor.pas',
-  MarkdownUnicodeUtils in '..\Ext\delphi-markdown\source\MarkdownUnicodeUtils.pas';
+  Vcl.StyledTaskDialogFormUnit in '..\Ext\StyledComponents\source\Vcl.StyledTaskDialogFormUnit.pas' {StyledTaskDialogForm},
+  Skia.Vcl.StyledTaskDialogAnimatedUnit in '..\Ext\StyledComponents\source\Skia.Vcl.StyledTaskDialogAnimatedUnit.pas' {StyledTaskDialogAnimated};
 
 {$R *.res}
 
@@ -68,10 +66,11 @@ begin
     Show;
     Update;
     Application.HelpFile := '';
-  Application.CreateForm(TdmResources, dmResources);
-  Application.CreateForm(TfrmMain, frmMain);
-  Application.CreateForm(TPageSetupDlg, PageSetupDlg);
-  Hide;
+    Application.CreateForm(TdmResources, dmResources);
+    Application.CreateForm(TfrmMain, frmMain);
+    Application.CreateForm(TPageSetupDlg, PageSetupDlg);
+    Application.OnException := frmMain.ManageExceptions;
+    Hide;
   Finally
     Free;
   End;

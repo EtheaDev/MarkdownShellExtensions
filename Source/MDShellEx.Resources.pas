@@ -53,8 +53,10 @@ uses
   , HtmlView
   , MDShellEx.Settings
   , Vcl.Dialogs
-  , MarkdownProcessor, Vcl.VirtualImageList, Vcl.ImageCollection
-  ;
+  , MarkdownProcessor
+  , Vcl.VirtualImageList
+  , Vcl.ImageCollection
+  , MarkdownUtils;
 
 resourcestring
   FILE_SAVED = 'File "%s" succesfully saved. Do you want to open it now?';
@@ -85,19 +87,21 @@ type
     SynXMLSyn: TSynXMLSyn;
     SynXMLSynDark: TSynXMLSyn;
     SVGIconImageCollection: TSVGIconImageCollection;
-    ImageCollection1: TImageCollection;
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
   private
+    FLoadingImages: Boolean;
     FStream: TMemoryStream;
     FStopImageRequest: Boolean;
-    procedure ConvertImage(AFileName: string;
-      const AMaxWidth: Integer; const ABackgroundColor: TColor);
+    function ConvertImage(AFileName: string;
+      const AMaxWidth: Integer; const ABackgroundColor: TColor): Boolean;
     function getStreamData(const AFileName : String;
       const AMaxWidth: Integer; const ABackgroundColor: TColor): TStream;
     function OpenURL(const AUrl: string): Boolean;
   public
     Settings: TSettings;
+    procedure TryExpandSpaces(const ARootFolder: string;
+      var AFileName: TFileName);
     procedure StopLoadingImages(const AStop: Boolean);
     procedure HtmlViewerImageRequest(Sender: TObject; const ASource: UnicodeString;
       var AStream: TStream);
@@ -105,6 +109,10 @@ type
       var Handled: Boolean);
     function GetSynHighlighter(const ADarkStyle: boolean;
       const ABackgroundColor: TColor) : TSynCustomHighlighter;
+    function LoadFileContent(const AFileName: TFileName;
+      const ARootFolder: string; const AMaxWidth: Integer;
+      const ABackGroundColor: TColor; out AStream: TStream): Boolean;
+    function IsLoadingImages: Boolean;
   end;
 
 var
@@ -133,6 +141,7 @@ uses
   , GIFImg
   , SVGInterfaces
   , SVGIconUtils
+  , Vcl.Skia
   ;
 
 procedure TdmResources.DataModuleCreate(Sender: TObject);
@@ -192,59 +201,97 @@ begin
   Handled := OpenUrl(ASource);
 end;
 
+procedure TdmResources.TryExpandSpaces(const ARootFolder: string; var AFileName: TFileName);
+var
+  LOriginalFileName: TFileName;
+begin
+  LOriginalFileName := AFileName;
+  // if "AFileName" is not a local file (eg. is file from internet)
+  // replace %20 spaces to normal spaces
+  AFileName := StringReplace(AFileName,'%20',' ',[rfReplaceAll]);
+  If not FileExists(AFileName) then
+  begin
+    //If not exists, try to include ARootFolder into FileName
+    AFileName := IncludeTrailingPathDelimiter(ARootFolder)+AFileName;
+    //Restore original file name because is not a local file
+    If not FileExists(AFileName) then
+      AFileName := LOriginalFileName;
+  end;
+end;
+
 procedure TdmResources.HtmlViewerImageRequest(Sender: TObject;
   const ASource: UnicodeString; var AStream: TStream);
 var
-  LFullName: String;
   LHtmlViewer: THtmlViewer;
-  LDownLoadFromWeb: boolean;
+  LFullName: TFileName;
   LMaxWidth: Integer;
-Begin
+begin
   if FStopImageRequest then
     Exit;
+  FLoadingImages := True;
+  Try
+    Application.ProcessMessages;
+    LHtmlViewer := sender as THtmlViewer;
+    LMaxWidth := LHtmlViewer.ClientWidth - LHtmlViewer.VScrollBar.Width - (LHtmlViewer.MarginWidth * 2);
 
-  LHtmlViewer := sender as THtmlViewer;
+    // HTMLViewer needs to be nil'ed
+    AStream := nil;
 
-  // HTMLViewer needs to be nil'ed
-  AStream := nil;
-
-  // is "fullName" a local file, if not aquire file from internet
-  // replace %20 spaces to normal spaces
-  LFullName := StringReplace(ASource,'%20',' ',[rfReplaceAll]);
-  If not FileExists(LFullName) then
-  begin
-    LFullName := IncludeTrailingPathDelimiter(LHtmlViewer.ServerRoot)+LFullName;
-    If not FileExists(LFullName) then
-      LFullName := ASource;
-  end;
-
-  LFullName := LHtmlViewer.HTMLExpandFilename(LFullName);
-
-  LMaxWidth := LHtmlViewer.ClientWidth - LHtmlViewer.VScrollBar.Width - (LHtmlViewer.MarginWidth * 2);
-  if FileExists(LFullName) then  // if local file, load it..
-  Begin
-    FStream.LoadFromFile(LFullName);
-    //Convert image to stretch size of HTMLViewer
-    ConvertImage(LFullName, LMaxWidth, LHtmlViewer.DefBackground);
-    AStream := FStream;
-  end
-  else if SameText('http', Copy(ASource,1,4)) then
-  Begin
-    LDownLoadFromWeb := (Settings is TEditorSettings) and
-      TEditorSettings(Settings).DownloadFromWEB;
-    if LDownLoadFromWeb then
-    begin
-      //Load from remote
-      getStreamData(LFullName, LMaxWidth, LHtmlViewer.DefBackground);
-      AStream := FStream;
-    end;
+    LFullName := ASource;
+    TryExpandSpaces(LHtmlViewer.ServerRoot, LFullName);
+    LFullName := LHtmlViewer.HTMLExpandFilename(LFullName);
+  
+    LoadFileContent(LFullName, LHtmlViewer.ServerRoot, LMaxWidth,
+      LHtmlViewer.DefBackground, AStream);
+  Finally
+    FLoadingImages := False;
   End;
+end;
+
+function TdmResources.LoadFileContent(const AFileName: TFileName;
+  const ARootFolder: string; const AMaxWidth: Integer;
+  const ABackGroundColor: TColor;
+  out AStream: TStream): Boolean;
+var
+  LDownLoadFromWeb: boolean;
+Begin
+  Result := True;
+  try
+    if FileExists(AFileName) then  // if local file, load it..
+    Begin
+      FStream.LoadFromFile(AFileName);
+      //Convert image to stretch size of HTMLViewer
+      Result := ConvertImage(AFileName, AMaxWidth, ABackGroundColor);
+      if not Result then
+        Exit;
+      AStream := FStream;
+    end
+    else if SameText('http', Copy(AFileName,1,4)) then
+    Begin
+      LDownLoadFromWeb := (Settings is TEditorSettings) and
+        TEditorSettings(Settings).DownloadFromWEB;
+      if LDownLoadFromWeb then
+      begin
+        //Load from remote
+        getStreamData(AFileName, AMaxWidth, ABackGroundColor);
+        AStream := FStream;
+      end;
+    End;
+  except
+    //No exception for EInvalidGraphic
+    Result := False;
+  end;
 End;
 
 function TdmResources.OpenURL(const AUrl: string): Boolean;
 begin
   ShellExecute(0, 'open', PChar(AURL), nil, nil, SW_SHOWNORMAL);
   Result := True;
+end;
+
+function TdmResources.IsLoadingImages: Boolean;
+begin
+  Result := FLoadingImages;
 end;
 
 procedure TdmResources.StopLoadingImages(const AStop: Boolean);
@@ -330,8 +377,8 @@ Begin
   end;
 end;
 
-procedure TdmResources.ConvertImage(AFileName: string;
-  const AMaxWidth: Integer; const ABackgroundColor: TColor);
+function TdmResources.ConvertImage(AFileName: string;
+  const AMaxWidth: Integer; const ABackgroundColor: TColor): Boolean;
 var
   LPngImage: TPngImage;
   LBitmap: TBitmap;
@@ -361,6 +408,7 @@ var
   end;
 
 begin
+  Result := True;
   LFileExt := ExtractFileExt(AFileName);
   try
     FStream.Position := 0;
@@ -385,7 +433,6 @@ begin
         LSVG.PaintTo(LBitmap.Canvas.Handle,
           TRect.Create(0, 0, LBitmap.Width, LBitmap.Height), True);
         FStream.Clear;
-        //LBitmap.SaveToStream(FStream);
         LPngImage := PNG4TransparentBitMap(LBitmap);
         try
           LPngImage.SaveToStream(FStream);
@@ -394,6 +441,50 @@ begin
         end;
       finally
         LBitmap.free;
+      end;
+    end
+    else if SameText(LFileExt,'.webp') or SameText(LFileExt,'.wbmp') then
+    begin
+      LImage := TWICImage.Create;
+      try
+        LImage.Transparent := True;
+        LImage.LoadFromStream(FStream);
+        LScaleFactor := CalcScaleFactor(LImage.Width);
+        if (Settings.RescalingImage) and (LScaleFactor <> 1) then
+        begin
+          //Rescaling bitmap and save to stream
+          LScaledImage := LImage.CreateScaledCopy(
+            Round(LImage.Width*LScaleFactor),
+            Round(LImage.Height*LScaleFactor),
+            wipmHighQualityCubic);
+          LBitmap := TBitmap.Create(LScaledImage.Width,LScaledImage.Height);
+          MakeTransparent(LBitmap.Canvas.Handle);
+          LBitmap.Canvas.Draw(0,0,LScaledImage);
+        end
+        else
+        begin
+          LBitmap := TBitmap.Create(LImage.Width,LImage.Height);
+          MakeTransparent(LBitmap.Canvas.Handle);
+          LBitmap.Canvas.Draw(0,0,LImage);
+        end;
+        try
+          FStream.Clear;
+          //if LBitmap.TransparentMode = tmAuto then
+          //  LBitmap.SaveToStream(FStream)
+          //else
+          begin
+            LPngImage := PNG4TransparentBitMap(LBitmap);
+            try
+              LPngImage.SaveToStream(FStream);
+            finally
+              LPngImage.Free;
+            end;
+          end;
+        finally
+          LBitmap.Free;
+        end;
+      finally
+        LImage.Free;
       end;
     end
     else
@@ -441,6 +532,7 @@ begin
       end;
     end;
   except
+    Result := False;
     //don't raise any error
   end;
 end;
@@ -470,19 +562,14 @@ begin
   Result :=
     '<style type="text/css">'#10+
     'code{'#10+
-    '  color: #A00;'#10+
+    '  font-family: "Consolas", monospace;'#10+
     '}'#10+
     'pre{'#10+
-//    '  background: #f4f4f4;'#10+
     '  border: 1px solid #ddd;'#10+
     '  border-left: 3px solid #f36d33;'#10+
-    '  color: #555;'#10+
     '  overflow: auto;'#10+
     '  padding: 1em 1.5em;'#10+
     '  display: block;'#10+
-    '}'#10+
-    'pre code{'#10+
-    '  color: inherit;'#10+
     '}'#10+
     'Blockquote{'#10+
     '  border-left: 3px solid #d0d0d0;'#10+
@@ -498,7 +585,6 @@ begin
     '}'#10+
     'th{'+
     '  padding:5px;'#10+
-//    '  background: #e0e0e0;'#10+
     '  border:1px solid;'#10+
     '}'#10+
     'td{'#10+
@@ -517,6 +603,14 @@ begin
     LMDProcessor.AllowUnsafe := False;
     //Convert MD To HTML
     FHTML := GetDefaultCSS+LMDProcessor.process(FMarkDownContent);
+    {$IFDEF DEBUG}
+    with TStringStream.Create(FHTML, TEncoding.UTF8) do
+    begin
+      var LFileName := ChangeFileExt(TPath.GetTempFileName,'.html');
+      SaveToFile(LFileName); //to read HTML file produced
+      Free;
+    end;
+    {$ENDIF}
     FParsed := True;
   finally
     LMDProcessor.Free;
@@ -532,6 +626,5 @@ begin
   end;
 end;
 
-initialization
 
 end.

@@ -1,21 +1,25 @@
-# External projects
+﻿# External projects
 
 ***This project uses some External Projects, located into Ext Path***
 
-- [SVGIconImageList][1]
+- [Ethea SVGIconImageList][1]
 
-- [Synedit][2]
+- [Ethea MarkdownProcessor][2]
 
-- [VCL-Style-Utils][3]
+- [Synedit][3]
 
-- [delphi-markdown][4]
+- [VCL-Style-Utils][4]
 
-  ***Per comodità di ricompilazione sono stati aggiunti in questa cartella***
+- [dzlib][5]
+
+***For simplify compilation they are added to this folder***
 
 [1]: https://github.com/EtheaDev/SVGIconImageList
 
-[2]: https://github.com/SynEdit/SynEdit
+[2]: https://github.com/EtheaDev/MarkdownProcessor
 
-[3]: https://github.com/RRUZ/vcl-styles-utils
+[3]: https://github.com/SynEdit/SynEdit
 
-[4]: https://github.com/grahamegrieve/delphi-markdown
+[4]: https://github.com/RRUZ/vcl-styles-utils
+
+[5]: https://sourceforge.net/projects/dzlib/

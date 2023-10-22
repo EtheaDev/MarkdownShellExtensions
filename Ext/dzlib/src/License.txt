@@ -1,0 +1,9 @@
+Copyright (c) Thomas Mueller
+
+Unless stated otherwise in the source code, all source code in dzlib
+is subject to the terms of the Mozilla Public License, v. 1.1 or higher.
+
+If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+At the time of this writing the exceptions are:
+* u_dzTimSort (Apache License 2.0 - because it is based on code that was licensed thus)

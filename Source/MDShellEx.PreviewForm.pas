@@ -141,6 +141,7 @@ uses
   , MDShellEx.About
   , MDShellEx.SettingsForm
   , MarkdownProcessor
+  , MarkdownUtils
   ;
 
 {$R *.dfm}

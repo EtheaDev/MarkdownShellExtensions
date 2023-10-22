@@ -41,7 +41,6 @@ uses
 resourcestring
   Title_MDViewer = 'Markdown file editor';
   Title_SVGPreview = 'Markdown file preview';
-  FReeware_Caption = ' - Freeware';
 
 const
   HELP_URL = 'https://github.com/EtheaDev/MarkdownShellExtensions';
@@ -64,10 +63,10 @@ type
     procedure btnCheckUpdatesClick(Sender: TObject);
     procedure LinkLabel1LinkClick(Sender: TObject; const Link: string;
       LinkType: TSysLinkType);
+    procedure FormShow(Sender: TObject);
   private
     FTitle: string;
     procedure SetTitle(const Value: string);
-    { Private declarations }
   public
     procedure DisableButtons;
     property Title: string read FTitle write SetTitle;
@@ -178,6 +177,12 @@ begin
   {$ENDIF}
 end;
 
+procedure TFrmAbout.FormShow(Sender: TObject);
+begin
+  if btnOK.CanFocus then
+    btnOK.SetFocus;
+end;
+
 procedure TFrmAbout.LinkLabel1LinkClick(Sender: TObject; const Link: string;
   LinkType: TSysLinkType);
 begin
@@ -188,7 +193,7 @@ procedure TFrmAbout.SetTitle(const Value: string);
 begin
   FTitle := Value;
   Caption := FTitle;
-  TitleLabel.Caption := Value + FReeware_Caption;
+  TitleLabel.Caption := Value;
 end;
 
 end.

@@ -1,5 +1,6 @@
 # Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
-**Latest Version 2.0.0 - 22 Oct 2023**
+
+**Latest Version 2.0.1 - 25 Oct 2023**
 
 **A collection of tools for markdown files, to edit and view content:**
 
@@ -30,12 +31,6 @@ Click to download the [MDShellExtensionsSetup.exe][1] located also in the Releas
 
 ***For a clean Setup close all the windows explorer instances which have the preview handler active or the preview handler was used (remember the dll remains in memory until the windows explorer was closed).***
 
-### Preview Panel in action ###
-
-In Windows 10 with Dark theme:
-
-![Preview Panel Dark](./Images/PreviewPanelDark.png)
-
 ### Markdown Text Editor
 
 A useful Text editor with instant preview of Markdown formatted content:
@@ -46,9 +41,37 @@ A useful Text editor with instant preview of Markdown formatted content:
 
 Learn more about the manual within our [wiki](https://github.com/EtheaDev/MarkdownShellExtensions/wiki/Manual-Build-and-Installation). Dive deeper into everything related to this tool, its features, and how to make the most of it.
 
+### Preview Panel in action ###
+
+In Windows 10 with Dark theme:
+
+![Preview Panel Dark](./Images/PreviewPanelDark.png)
+
+### Manual Build and Installation (only for Delphi developers) ###
+
+If you have Delphi 10.4.2 or 11.3 or 12, you can manually build the projects using:
+
+\Source\MDShellExtensionsGroup.groupproj
+
+or the command: Build.bat (defining location of your Delphi environment)
+
+***Warning: To simplyfy build of the projects, some third parties libraries are located into ext folder***
+
+To manually install the SVGShellExtensions.dll follow these steps:
+
+1. Close all the windows explorer instances which have the preview handler active or the preview handler was used (remember the dll remains in memory until the windows explorer was closed).
+  
+2. If you have already used the installer uninstall the components from system.
+     
+3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
+
 ## Release Notes ##
 
-22 Oct 2023: ver. 2.0.0
+25 Oct 2023: ver. 2.0.1
+- Fixed some "hints"
+- Uses System Border and Shadows for Forms
+
+24 Oct 2023: ver. 2.0.0
 - Added use of Skia4Delphi
 - Added support for new image format (webp and wbmp)
 - Uses AnimatedStyledDialogs for messages

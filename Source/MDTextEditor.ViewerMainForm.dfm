@@ -720,7 +720,7 @@ object frmMain: TfrmMain
     object OpenRecentAction: TAction
       Category = 'File'
       Caption = 'Open recent...'
-      Hint = 'Open recent markDown File...'
+      Hint = 'Open recent MarkDown File...'
       ImageIndex = 5
       ImageName = 'Close-all-folder'
       OnExecute = OpenRecentActionExecute
@@ -744,7 +744,7 @@ object frmMain: TfrmMain
     object acSaveHTMLFile: TAction
       Category = 'HTMLViewer'
       Caption = 'Save in HTML...'
-      Hint = 'Save documente in HTML format...'
+      Hint = 'Save document in HTML format...'
       ImageIndex = 51
       ImageName = 'save_html'
       OnExecute = acSaveHTMLFileExecute

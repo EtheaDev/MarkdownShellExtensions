@@ -58,6 +58,7 @@ type
 
   TStyledToolbar = class;
   TStyledToolButton = class;
+  TStyledToolButtonClass = class of TStyledToolButton;
 
   TButtonProc = reference to procedure (Button: TStyledToolButton);
   TControlProc = reference to procedure (Control: TControl);
@@ -257,6 +258,7 @@ type
     function GetButtonCount: Integer;
     procedure AlignControls(AControl: TControl; var Rect: TRect); override;
     procedure AdjustSize; override;
+    function GetStyledToolButtonClass: TStyledToolButtonClass; virtual;
   public
     procedure BeginUpdate; virtual;
     procedure EndUpdate; virtual;
@@ -1946,6 +1948,11 @@ begin
   end;
 end;
 
+function TStyledToolbar.GetStyledToolButtonClass: TStyledToolButtonClass;
+begin
+  Result := TStyledToolButton;
+end;
+
 function TStyledToolbar.NewButton(out ANewToolButton: TStyledToolButton;
   const AStyle: TToolButtonStyle = tbsButton): Boolean;
 var
@@ -1962,7 +1969,7 @@ begin
     end;
     if not Result then
     begin
-      ANewToolButton := TStyledToolButton.Create(Self.Owner);
+      ANewToolButton := GetStyledToolButtonClass.Create(Self.Owner);
       ANewToolButton.Style := AStyle;
       ANewToolButton.Parent := Self;
       ANewToolButton.FToolbar := Self;

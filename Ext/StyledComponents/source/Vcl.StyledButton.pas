@@ -67,6 +67,7 @@ type
   TStyledButtonStyle = (bsPushButton, bsSplitButton);
 
   TStyledButtonRender = class;
+  TStyledButtonRenderClass = class of TStyledButtonRender;
 
   TGraphicButtonActionLink = class(TControlActionLink)
   strict private
@@ -260,6 +261,8 @@ type
       const AImageWidth, AImageHeight: Integer): TRect;
     procedure InternalCopyImage(Image: TBitmap; ImageList: TCustomImageList; Index: Integer);
   public
+    function GetImageSize(out AWidth, AHeight: Integer;
+      out AImageList: TCustomImageList; out AImageIndex: Integer): Boolean; virtual;
     function GetRescalingButton: Boolean;
     procedure SetRescalingButton(const AValue: Boolean);
     function GetSplitButtonWidth: Integer;
@@ -542,7 +545,9 @@ type
     function GetNumGlyphs: TNumGlyphs;
     procedure SetNumGlyphs(const AValue: TNumGlyphs);
     function GetMouseInControl: Boolean;
+    function GetCursor: TCursor;
   protected
+    procedure SetCursor(const AValue: TCursor); virtual;
     function GetCaption: TCaption; virtual;
     procedure SetCaption(const AValue: TCaption); virtual;
     function GetButtonState: TStyledButtonState; virtual;
@@ -567,6 +572,7 @@ type
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState;
       X, Y: Integer); override;
     procedure UpdateStyleElements; override;
+    function GetRenderClass: TStyledButtonRenderClass; virtual;
   public
     function GetRescalingButton: Boolean;
     procedure SetRescalingButton(const AValue: Boolean);
@@ -642,7 +648,7 @@ type
     property Touch;
     property Visible;
     property Caption: TCaption read GetText write SetText stored IsCaptionStored;
-    property Cursor default crHandPoint;
+    property Cursor: TCursor read GetCursor write SetCursor default crHandPoint;
     property ImageAlignment: TImageAlignment read GetImageAlignment write SetImageAlignment default iaLeft;
     property DisabledImageIndex: TImageIndex read GetDisabledImageIndex write SetDisabledImageIndex default -1;
     property DisabledImages: TCustomImageList read GetDisabledImages write SetDisabledImages;
@@ -813,7 +819,9 @@ type
     function GetNumGlyphs: TNumGlyphs;
     procedure SetNumGlyphs(const AValue: TNumGlyphs);
     function GetMouseInControl: Boolean;
+    function GetCursor: TCursor;
   protected
+    procedure SetCursor(const AValue: TCursor); virtual;
     function CalcImageRect(var ATextRect: TRect;
       const AImageWidth, AImageHeight: Integer): TRect; virtual;
     function GetCaption: TCaption; virtual;
@@ -842,6 +850,7 @@ type
     procedure UpdateStyleElements; override;
     //for StyledButton
     procedure CreateWnd; override;
+    function GetRenderClass: TStyledButtonRenderClass; virtual;
   public
     function GetRescalingButton: Boolean;
     procedure SetRescalingButton(const AValue: Boolean);
@@ -921,7 +930,7 @@ type
     property Touch;
     property Visible;
     property Caption: TCaption read GetText write SetText stored IsCaptionStored;
-    property Cursor default crHandPoint;
+    property Cursor: TCursor read GetCursor write SetCursor default crHandPoint;
     property Default: Boolean read GetDefault write SetDefault default False;
     property Cancel: Boolean read GetCancel write SetCancel default False;
     property ImageAlignment: TImageAlignment read GetImageAlignment write SetImageAlignment default iaLeft;
@@ -1185,14 +1194,6 @@ end;
 
 procedure TStyledButtonRender.UpdateControlStyle;
 begin
-(*
-  //try to remove flicker on "non style" Windows
-  if not StyleServices.Enabled or
-    (StyleServices.IsSystemStyle and Assigned(Parent) and (Parent.DoubleBuffered)) then
-    FOwnerControl.ControlStyle := FOwnerControl.ControlStyle + [csOpaque]
-  else
-    FOwnerControl.ControlStyle := FOwnerControl.ControlStyle - [csOpaque];
-*)
   UpdateStyleElements;
 end;
 
@@ -1291,8 +1292,8 @@ begin
   FButtonStyleHot.Name := 'Hot';
   FButtonStyleDisabled := TStyledButtonAttributes.Create(AOwner);
   FButtonStyleDisabled.Name := 'Disabled';
-  FOwnerControl.ControlStyle := [//csParentBackground,
-    csCaptureMouse, csClickEvents, csSetCaption, csDoubleClicks];
+  FOwnerControl.ControlStyle := [csCaptureMouse, csClickEvents,
+    csSetCaption, csDoubleClicks];
   FImageChangeLink := TChangeLink.Create;
   FImageChangeLink.OnChange := ImageListChange;
   FImageMargins := TImageMargins.Create;
@@ -1806,13 +1807,40 @@ begin
   else
     Exit;
 
-  //For Rectangular Button Background painting is not necessary
-  if (FStyleDrawType <> btRect) then
+  if (LOwnerControl.Parent <> nil) and LOwnerControl.Parent.DoubleBuffered then
+    PerformEraseBackground(LOwnerControl.Parent, ACanvas.Handle)
+  else
+    StyleServices.DrawParentBackground(LOwnerControl.Handle, ACanvas.Handle, nil, False);
+end;
+
+function TStyledButtonRender.GetImageSize(out AWidth, AHeight: Integer;
+  out AImageList: TCustomImageList; out AImageIndex: Integer): boolean;
+begin
+  AWidth := 0;
+  AHeight := 0;
+  //Return True if using ImageList
+  Result := GetImage(AImageList, AImageIndex);
+  if Result then
   begin
-    if (LOwnerControl.Parent <> nil) and LOwnerControl.Parent.DoubleBuffered then
-      PerformEraseBackground(LOwnerControl.Parent, ACanvas.Handle)
+    AWidth := AImageList.Width;
+    AHeight := AImageList.Height;
+  end
+  else if ((FKind = bkCustom) and Assigned(FGlyph)) or (FKind <> bkCustom) then
+  begin
+    if Assigned(FGlyph) then
+    begin
+      AWidth := FGlyph.Width div FNumGlyphs;
+      AHeight := FGlyph.Height;
+    end
     else
-      StyleServices.DrawParentBackground(LOwnerControl.Handle, ACanvas.Handle, nil, False);
+    begin
+      {$IFDEF D10_4+}
+      AWidth := FOwnerControl.ScaleValue(DefaultBitBtnGlyphSize);
+      {$ELSE}
+      AWidth := DefaultBitBtnGlyphSize;
+      {$ENDIF}
+      AHeight := AWidth;
+    end;
   end;
 end;
 
@@ -1824,31 +1852,21 @@ var
   LImageIndex: Integer;
   LImageWidth, LImageHeight: Integer;
 begin
-  if GetImage(LImageList, LImageIndex) then
+  if GetImageSize(LImageWidth, LImageHeight, LImageList, LImageIndex) then
   begin
-    LImageRect := CalcImageRect(ATextRect, LImageList.Width, LImageList.Height);
-    LImageList.Draw(ACanvas, LImageRect.Left, LImageRect.Top, LImageIndex, Enabled);
+    LImageRect := CalcImageRect(ATextRect, LImageWidth, LImageHeight);
+    if Assigned(LImageList) then
+      LImageList.Draw(ACanvas, LImageRect.Left, LImageRect.Top, LImageIndex, Enabled);
   end
   else
   begin
     if ((FKind = bkCustom) and Assigned(FGlyph)) or (FKind <> bkCustom) then
     begin
-      if Assigned(FGlyph) then
+      if (LImageWidth > 0) and (LImageHeight > 0) then
       begin
-        LImageWidth := FGlyph.Width div FNumGlyphs;
-        LImageHeight := FGlyph.Height;
-      end
-      else
-      begin
-        {$IFDEF D10_4+}
-        LImageWidth := FOwnerControl.ScaleValue(DefaultBitBtnGlyphSize);
-        {$ELSE}
-        LImageWidth := DefaultBitBtnGlyphSize;
-        {$ENDIF}
-        LImageHeight := LImageWidth;
+        LImageRect := CalcImageRect(ATextRect, LImageWidth, LImageHeight);
+        DrawBitBtnGlyph(ACanvas, LImageRect, FKind, FState, Enabled, FGlyph, FNumGlyphs, FTransparentColor);
       end;
-      LImageRect := CalcImageRect(ATextRect, LImageWidth, LImageHeight);
-      DrawBitBtnGlyph(ACanvas, LImageRect, FKind, FState, Enabled, FGlyph, FNumGlyphs, FTransparentColor);
     end;
   end;
 end;
@@ -2870,7 +2888,7 @@ begin
   {$IFDEF D10_4+}
   FImageName := '';
   {$ENDIF}
-  FRender := TStyledButtonRender.CreateStyled(Self,
+  FRender := GetRenderClass.CreateStyled(Self,
     ControlClick, ControlFont, GetCaption, SetCaption,
       GetParentFont, SetParentFont,
       AFamily, AClass, AAppearance);
@@ -3033,6 +3051,11 @@ end;
 procedure TStyledGraphicButton.Paint;
 begin
   FRender.DrawButton(Canvas);
+end;
+
+function TStyledGraphicButton.GetRenderClass: TStyledButtonRenderClass;
+begin
+  Result := TStyledButtonRender;
 end;
 
 function TStyledGraphicButton.GetRescalingButton: Boolean;
@@ -3502,9 +3525,22 @@ begin
   Result := inherited Caption;
 end;
 
+function TStyledGraphicButton.GetCursor: TCursor;
+begin
+  Result := inherited Cursor;
+end;
+
 procedure TStyledGraphicButton.SetCaption(const AValue: TCaption);
 begin
   inherited Caption := AValue;
+end;
+
+procedure TStyledGraphicButton.SetCursor(const AValue: TCursor);
+begin
+  if AValue <> Cursor then
+  begin
+    inherited Cursor := AValue;
+  end;
 end;
 
 procedure TStyledGraphicButton.Notification(AComponent: TComponent; AOperation: TOperation);
@@ -3764,7 +3800,7 @@ begin
   {$IFDEF D10_4+}
   FImageName := '';
   {$ENDIF}
-  FRender := TStyledButtonRender.CreateStyled(Self,
+    FRender := GetRenderClass.CreateStyled(Self,
     ControlClick, ControlFont, GetCaption, SetCaption,
       GetParentFont, SetParentFont, AFamily, AClass, AAppearance);
   TabStop := True;
@@ -3928,6 +3964,11 @@ begin
     Result := bsmHot
   else
     Result := bsmNormal;
+end;
+
+function TStyledButton.GetRenderClass: TStyledButtonRenderClass;
+begin
+  Result := TStyledButtonRender;
 end;
 
 function TStyledButton.GetRescalingButton: Boolean;
@@ -4447,9 +4488,22 @@ begin
   Result := inherited Caption;
 end;
 
+function TStyledButton.GetCursor: TCursor;
+begin
+  Result := inherited Cursor;
+end;
+
 procedure TStyledButton.SetCaption(const AValue: TCaption);
 begin
   inherited Caption := AValue;
+end;
+
+procedure TStyledButton.SetCursor(const AValue: TCursor);
+begin
+  if AValue <> Cursor then
+  begin
+    inherited Cursor := AValue;
+  end;
 end;
 
 procedure TStyledButton.Notification(AComponent: TComponent; AOperation: TOperation);
@@ -4521,9 +4575,21 @@ end;
 *)
 
 procedure TStyledButton.WMEraseBkGnd(var Message: TWmEraseBkgnd);
+
+  function IsComponentStyleActive: Boolean;
+  begin
+    {$IFDEF D10_4+}
+    Result := IsCustomStyleActive;
+    {$ELSE}
+    Result := False;
+    {$ENDIF}
+  end;
+
 begin
-  if IsCustomStyleActive and (seClient in StyleElements) then
+  if IsComponentStyleActive and (seClient in StyleElements) then
+  begin
     Message.Result := 1
+  end
   else
   begin
     { Erase background if we're not doublebuffering or painting to memory. }

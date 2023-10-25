@@ -610,8 +610,10 @@ begin
 end;
 
 procedure TCustomStyleExt.CopyToStream(Stream: TStream);
+{$IF CompilerVersion < 36}
 var
   I: Integer;
+{$IFEND}
 begin
   Stream.Size := 0;
   Stream.Position := 0;

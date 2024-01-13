@@ -2,7 +2,7 @@
 {                                                                              }
 {       StyledButton: a Button Component based on TGraphicControl              }
 {                                                                              }
-{       Copyright (c) 2022-2023 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2022-2024 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {       Contributors:                                                          }
 {                                                                              }
@@ -155,7 +155,7 @@ procedure DrawBitBtnGlyph(ACanvas: TCanvas; ARect: TRect; Kind: Vcl.Buttons.TBit
 
 //drawing Button
 procedure CanvasDrawShape(const ACanvas: TCanvas; ARect: TRect;
-  const ADrawType: TStyledButtonDrawType; const ACornerRadius: Integer);
+  const ADrawType: TStyledButtonDrawType; const ACornerRadius: Single);
 //drawing bar and triangle for SplitButton
 procedure CanvasDrawBarAndTriangle(const ACanvas: TCanvas; const ARect: TRect;
   const AScaleFactor: Single; ABarColor, ATriangleColor: TColor);
@@ -958,7 +958,7 @@ end;
 
 {$ifdef GDIPlusSupport}
 procedure CanvasDrawShape(const ACanvas: TCanvas; ARect: TRect;
-  const ADrawType: TStyledButtonDrawType; const ACornerRadius: Integer);
+  const ADrawType: TStyledButtonDrawType; const ACornerRadius: Single);
 var
   LGraphics: TGPGraphics;
   LPen: TGPPen;

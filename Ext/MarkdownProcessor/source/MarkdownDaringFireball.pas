@@ -3,7 +3,7 @@
 {       MarkDown Processor                                                     }
 {       Delphi version of FPC-markdown by Miguel A. Risco-Castillo             }
 {                                                                              }
-{       Copyright (c) 2022-2023 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2022-2024 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownProcessor                          }
@@ -101,7 +101,9 @@ begin
   while (line <> nil) do
   begin
     t := line.getLineType(Config);
-    if ((t = ltOLIST) or (t = ltULIST) or (not line.isEmpty and (line.prevEmpty and (line.leading = 0) and not((t = ltOLIST) or (t = ltULIST))))) then
+    if ((t in [ltOLIST,ltULIST,ltBLIST]) or
+      (not line.isEmpty and (line.prevEmpty and (line.leading = 0) and not(t in [ltOLIST,ltULIST,ltBLIST])))
+      ) then
       root.split(line.previous).type_ := btLIST_ITEM;
     line := line.next;
   end;
@@ -360,7 +362,7 @@ begin
           while (line <> nil) and (not line.isEmpty) do
           begin
             t := line.getLineType(Config);
-            if (listMode or FuseExtensions) and (t in [ltOLIST, ltULIST]) then
+            if (listMode or FuseExtensions) and (t in [ltOLIST,ltULIST,ltBLIST]) then
               break;
             if (FuseExtensions and (t in [ltCODE, ltFENCED_CODE])) then
               break;
@@ -483,7 +485,7 @@ begin
           root.removeLeadingEmptyLines();
           line := root.lines;
         end;
-      ltOLIST, ltULIST:
+      ltOLIST, ltULIST, ltBLIST:
         begin
           while (line <> nil) do
           begin
@@ -496,7 +498,7 @@ begin
             list := root.split(line.previous)
           else
             list := root.split(root.lineTail);
-          if type_ = ltOLIST then
+          if type_ in [ltOLIST, ltBLIST] then
             list.type_ := btORDERED_LIST
           else
             list.type_ := btUNORDERED_LIST;

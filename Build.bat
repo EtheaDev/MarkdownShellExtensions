@@ -1,4 +1,4 @@
-call "C:\BDS\Studio\22.0\bin\rsvars.bat"
+call "C:\BDS\Studio\23.0\bin\rsvars.bat"
 msbuild.exe "Source\MDShellExtensions.dproj" /target:Clean;Build /p:Platform=Win64 /p:config=release
 msbuild.exe "Source\MDShellExtensions32.dproj" /target:Clean;Build /p:Platform=Win32 /p:config=release
 msbuild.exe "Source\MDTextEditor.dproj" /target:Clean;Build /p:Platform=Win64 /p:config=release

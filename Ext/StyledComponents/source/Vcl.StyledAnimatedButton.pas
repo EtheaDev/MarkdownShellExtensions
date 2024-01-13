@@ -2,7 +2,7 @@
 {                                                                              }
 {       TStyledAnimatedButton: a StyledButton with support for Skia Animations }
 {                                                                              }
-{       Copyright (c) 2022-2023 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2022-2024 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {       Contributors:                                                          }
 {                                                                              }
@@ -50,7 +50,7 @@ const
   DEFAULT_ANIM_MARGIN = 10;
 
 type
-  TAutoAnimationType = (asOnClick, asOnMouseOver, asOnFocused);
+  TAutoAnimationType = (AnimateOnMouseOver, AnimateOnClick, AnimateAlways, AnimateOnFocused);
   TAutoAnimationTypes = set of TAutoAnimationType;
 
   TStyledAnimatedButtonRender = class(TStyledButtonRender)
@@ -78,10 +78,15 @@ type
     procedure SetAutoSizeAnimationMargin(const AValue: Integer);
     procedure SetAutoAnimationTypes(const AValue: TAutoAnimationTypes);
     procedure WMSetFocus(var Message: TMessage); message WM_SETFOCUS;
+    procedure WMKillFocus(var Message: TMessage); message WM_KILLFOCUS;
     procedure CMMouseEnter(var Message: TNotifyEvent); message CM_MOUSEENTER;
     procedure CMMouseLeave(var Message: TNotifyEvent); message CM_MOUSELEAVE;
     procedure ReadData(AStream: TStream);
     procedure WriteData(AStream: TStream);
+    procedure SetAnimationInverse(const AValue: Boolean);
+    procedure SetAnimationLoop(const AValue: Boolean);
+    function GetAnimationInverse: Boolean;
+    function GetAnimationLoop: Boolean;
   strict protected
     procedure DefineProperties(AFiler: TFiler); override;
   protected
@@ -110,12 +115,14 @@ type
     procedure CreateAnimation;
     property AnimatedImage: TSkAnimatedImage read GetAnimatedImage;
   published
-    property AutoAnimationTypes: TAutoAnimationTypes read FAutoAnimationTypes write SetAutoAnimationTypes;
+    property AutoAnimationTypes: TAutoAnimationTypes read FAutoAnimationTypes write SetAutoAnimationTypes default [AnimateOnMouseOver];
     property AutoSizeAnimation: Boolean read FAutoSizeAnimation write SetAutoSizeAnimation default True;
     property AutoSizeAnimationMargin: Integer read FAutoSizeAnimationMargin write SetAutoSizeAnimationMargin default DEFAULT_ANIM_MARGIN;
     property AnimationSource: TSkAnimatedImage.TSource read GetSource write SetSource;
     property AnimationWidth: Integer read FAnimationWidth write SetAnimationWidth default DEFAULT_ANIM_SIZE;
     property AnimationHeight: Integer read FAnimationHeight write SetAnimationHeight  default DEFAULT_ANIM_SIZE;
+    property AnimationLoop: Boolean read GetAnimationLoop write SetAnimationLoop;
+    property AnimationInverse: Boolean read GetAnimationInverse write SetAnimationInverse;
   end;
 
 implementation
@@ -133,7 +140,8 @@ begin
   FSkAnimatedImage := TSkAnimatedImage.Create(Self);
   //By default the animation is stopped on Progress 1 (last frame)
   FSkAnimatedImage.SetProgress(1);
-  FSkAnimatedImage.Animation.Stop;
+  if not (AnimateAlways in AutoAnimationTypes) then
+    FSkAnimatedImage.Animation.Stop;
   FSkAnimatedImage.SetLoop(False);
   FSkAnimatedImage.Parent := Self;
   FSkAnimatedImage.OnClick := AnimatedImageClick;
@@ -153,6 +161,7 @@ begin
   FAnimationWidth := DEFAULT_ANIM_SIZE;
   FAutoSizeAnimationMargin := DEFAULT_ANIM_MARGIN;
   FAutoSizeAnimation := True;
+  FAutoAnimationTypes := [AnimateOnMouseOver];
 end;
 
 procedure TStyledAnimatedButton.ReadData(AStream: TStream);
@@ -198,6 +207,16 @@ begin
   Result := FSkAnimatedImage;
 end;
 
+function TStyledAnimatedButton.GetAnimationInverse: Boolean;
+begin
+  Result := AnimatedImage.GetInverse;
+end;
+
+function TStyledAnimatedButton.GetAnimationLoop: Boolean;
+begin
+  Result := AnimatedImage.GetLoop;
+end;
+
 function TStyledAnimatedButton.GetRenderClass: TStyledButtonRenderClass;
 begin
   Result := TStyledAnimatedButtonRender;
@@ -237,28 +256,34 @@ end;
 
 procedure TStyledAnimatedButton.Click;
 begin
-  if asOnClick in FAutoAnimationTypes then
+  if AnimateOnClick in FAutoAnimationTypes then
     AnimatedImage.StartAnimation;
   inherited;
 end;
 
+procedure TStyledAnimatedButton.WMKillFocus(var Message: TMessage);
+begin
+  if AnimateOnFocused in FAutoAnimationTypes then
+      AnimatedImage.StopAnimation;
+end;
+
 procedure TStyledAnimatedButton.WMSetFocus(var Message: TMessage);
 begin
-  if asOnFocused in FAutoAnimationTypes then
+  if AnimateOnFocused in FAutoAnimationTypes then
       AnimatedImage.StartAnimation;
   inherited;
 end;
 
 procedure TStyledAnimatedButton.CMMouseEnter(var Message: TNotifyEvent);
 begin
-  if asOnMouseOver in FAutoAnimationTypes then
+  if AnimateOnMouseOver in FAutoAnimationTypes then
     AnimatedImage.StartAnimation;
   inherited;
 end;
 
 procedure TStyledAnimatedButton.CMMouseLeave(var Message: TNotifyEvent);
 begin
-  if asOnMouseOver in FAutoAnimationTypes then
+  if AnimateOnMouseOver in FAutoAnimationTypes then
     AnimatedImage.StopAnimation;
   inherited;
 end;
@@ -348,6 +373,16 @@ begin
   end;
 end;
 
+procedure TStyledAnimatedButton.SetAnimationInverse(const AValue: Boolean);
+begin
+  AnimatedImage.SetInverse(AValue);
+end;
+
+procedure TStyledAnimatedButton.SetAnimationLoop(const AValue: Boolean);
+begin
+  AnimatedImage.setloop(AValue);
+end;
+
 procedure TStyledAnimatedButton.SetAnimationWidth(const AValue: Integer);
 begin
   if FAnimationWidth <> AValue then
@@ -363,7 +398,13 @@ procedure TStyledAnimatedButton.SetAutoAnimationTypes(
 begin
   if FAutoAnimationTypes <> AValue then
   begin
+    AnimatedImage.StopAnimation;
     FAutoAnimationTypes := AValue;
+    if AnimateAlways in AutoAnimationTypes then
+    begin
+      AnimationLoop := True;
+      AnimatedImage.StartAnimation(True);
+    end;
   end;
 end;
 

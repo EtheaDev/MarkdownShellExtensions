@@ -1,6 +1,6 @@
-# Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
+﻿# Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 2.0.1 - 25 Oct 2023**
+**Latest Version 2.1.0 - 13 Jan 2023**
 
 **A collection of tools for markdown files, to edit and view content:**
 
@@ -66,6 +66,17 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+
+13 Jan 2024: ver. 2.1.0
+- Built with Delphi 12
+- Updated Copyright
+- Aligned to MarkDown HelpViewer project
+- Added create table wizard
+
+3 Nov 2023: ver. 2.0.2
+- Added "mark" command in markdown toolbar
+- Recognized 1) same as 1. (ordered list)
+- Added .text and .txt extensions to editor/shell extensions
 
 25 Oct 2023: ver. 2.0.1
 - Fixed some "hints"

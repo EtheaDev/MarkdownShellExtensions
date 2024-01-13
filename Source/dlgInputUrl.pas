@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2023 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2024 (Ethea S.r.l.)                                 }
 {       Author: Ariel Montes                                                   }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -41,8 +41,8 @@ type
     OpenDialog: TOpenDialog;
     OpenPictureDialog: TOpenPictureDialog;
     paButton: TPanel;
-    btConferma: TStyledButton;
-    btAnnulla: TStyledButton;
+    btConfirm: TStyledButton;
+    btCancel: TStyledButton;
     paEdit: TPanel;
     ActionList: TActionList;
     VirtualImageList: TVirtualImageList;
@@ -68,8 +68,6 @@ type
     procedure acConfirmExecute(Sender: TObject);
     procedure acCancelExecute(Sender: TObject);
     procedure edUrlChange(Sender: TObject);
-    procedure FormDeactivate(Sender: TObject);
-    procedure FormActivate(Sender: TObject);
   private
     FInputType: TInputType;
     FSelectedText, FSelectedUrl: string;
@@ -209,19 +207,6 @@ begin
   //Load the selected text into the edit components in the MainForm
   edText.Text := FSelectedText;
   edUrl.Text := FSelectedUrl;
-end;
-
-procedure TInputUrlDialog.FormActivate(Sender: TObject);
-begin
-  //Disables the opacity effect when the form regains focus
-  AlphaBlend := False;
-end;
-
-procedure TInputUrlDialog.FormDeactivate(Sender: TObject);
-begin
-  //Enable the opacity effect when the form loses focus
-  AlphaBlend := True;
-  AlphaBlendValue := 200; //Set the desired opacity level (0-255)
 end;
 
 function TInputUrlDialog.GetEditedText: string;

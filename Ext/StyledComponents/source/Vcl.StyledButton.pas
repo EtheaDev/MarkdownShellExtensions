@@ -3,7 +3,7 @@
 {       TStyledGraphicButton: a Button Component based on TGraphicControl      }
 {       TStyledButton: a Button Component based on TCustomControl              }
 {                                                                              }
-{       Copyright (c) 2022-2023 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2022-2024 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {       Contributors:                                                          }
 {                                                                              }
@@ -192,7 +192,8 @@ type
     procedure ImageMarginsChange(Sender: TObject);
     procedure SetImageAlignment(const AValue: TImageAlignment);
     procedure DrawBackgroundAndBorder(const ACanvas: TCanvas;
-      const AStyleAttribute: TStyledButtonAttributes);
+      const AStyleAttribute: TStyledButtonAttributes;
+      const AEraseBackground: Boolean);
     procedure DrawText(const ACanvas: TCanvas;
       const AText: string; var ARect: TRect; AFlags: Cardinal);
     function GetDrawingStyle(const ACanvas: TCanvas): TStyledButtonAttributes;
@@ -278,7 +279,8 @@ type
     procedure ActionChange(Sender: TObject; CheckDefaults: Boolean);
     procedure UpdateStyleElements;
     procedure EraseBackground(const ACanvas: TCanvas);
-    procedure DrawButton(const ACanvas: TCanvas);
+    procedure DrawButton(const ACanvas: TCanvas;
+      const AEraseBackground: Boolean);
     procedure DrawImage(const ACanvas: TCanvas;
       var ATextRect: TRect);
     function GetText: TCaption;
@@ -1162,10 +1164,8 @@ begin
   else
     FState := bsUp;
   if FMouseInControl then
-  begin
     FMouseInControl := False;
-    Invalidate;
-  end;
+  Invalidate;
 end;
 
 procedure TStyledButtonRender.CMEnter(var Message: TCMEnter);
@@ -1666,27 +1666,34 @@ end;
 
 procedure TStyledButtonRender.DrawBackgroundAndBorder(
   const ACanvas: TCanvas;
-  const AStyleAttribute: TStyledButtonAttributes);
+  const AStyleAttribute: TStyledButtonAttributes;
+  const AEraseBackground: Boolean);
 var
   DrawRect, SplitButtonRect: TRect;
 begin
   //Erase Background
-  EraseBackground(ACanvas);
+  if AEraseBackground then
+    EraseBackground(ACanvas);
 
   //Don't draw button face for Flat Buttons
-  if FFlat and (FState in [bsUp, bsDisabled]) and not (FMouseInControl) then
-    Exit;
+  if not (FFlat and (FState in [bsUp, bsDisabled]) and not (FMouseInControl)) or
+    Focused then
+  begin
+    DrawRect := FOwnerControl.ClientRect;
 
-  DrawRect := FOwnerControl.ClientRect;
+    //Draw Button Shape
+    CanvasDrawshape(ACanvas, DrawRect, FStyleDrawType,
+      FStyleRadius{$IFDEF D10_3+}*FOwnerControl.ScaleFactor{$ENDIF});
+  end;
 
-  //Draw Button Shape
-  CanvasDrawshape(ACanvas, DrawRect, FStyleDrawType, FStyleRadius);
-
+  //Draw Bar and Triangle
   if FDropDownRect.Width > 0 then
   begin
     SplitButtonRect.Left := DrawRect.Width - FDropDownRect.Width;
-    //Draw Bar and Triangle
-    CanvasDrawBarAndTriangle(ACanvas, FDropDownRect,{$IFDEF D10_3+}FOwnerControl.ScaleFactor{$ELSE}1{$ENDIF},
+    if FFlat then
+      ACanvas.Pen.Style := psClear;
+    CanvasDrawBarAndTriangle(ACanvas, FDropDownRect,
+      {$IFDEF D10_3+}FOwnerControl.ScaleFactor{$ELSE}1{$ENDIF},
       ACanvas.Pen.Color, AStyleAttribute.FontColor);
   end;
 end;
@@ -1871,7 +1878,8 @@ begin
   end;
 end;
 
-procedure TStyledButtonRender.DrawButton(const ACanvas: TCanvas);
+procedure TStyledButtonRender.DrawButton(const ACanvas: TCanvas;
+  const AEraseBackground: Boolean);
 var
   LTextFlags: Cardinal;
   LTextRect: TRect;
@@ -1896,7 +1904,7 @@ begin
     if FWordWrap then
       LTextFlags := LTextFlags or DT_WORDBREAK or DT_CENTER;
 
-    DrawBackgroundAndBorder(ACanvas, LStyleAttribute);
+    DrawBackgroundAndBorder(ACanvas, LStyleAttribute, AEraseBackground);
 
     LTextRect := FOwnerControl.ClientRect;
     Dec(LTextRect.Right, FDropDownRect.Width);
@@ -3050,7 +3058,7 @@ end;
 
 procedure TStyledGraphicButton.Paint;
 begin
-  FRender.DrawButton(Canvas);
+  FRender.DrawButton(Canvas, False);
 end;
 
 function TStyledGraphicButton.GetRenderClass: TStyledButtonRenderClass;
@@ -4676,7 +4684,7 @@ begin
         FPaintBuffer := TBitmap.Create;
         try
           FPaintBuffer.SetSize(LControl.Width, LControl.Height);
-          FRender.DrawButton(FPaintBuffer.Canvas);
+          FRender.DrawButton(FPaintBuffer.Canvas, True);
           LCanvas.Draw(0, 0, FPaintBuffer);
         finally
           FPaintBuffer.Free;
@@ -4684,7 +4692,7 @@ begin
       end
      else
        begin
-         FRender.DrawButton(LCanvas);
+         FRender.DrawButton(LCanvas, True);
        end;
     if DC = 0 then
       EndPaint(LControl.Handle, PS);

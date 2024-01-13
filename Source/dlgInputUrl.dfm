@@ -14,9 +14,7 @@ object InputUrlDialog: TInputUrlDialog
   Font.Style = []
   FormStyle = fsStayOnTop
   Position = poMainFormCenter
-  OnActivate = FormActivate
   OnCreate = FormCreate
-  OnDeactivate = FormDeactivate
   TextHeight = 15
   object paButton: TPanel
     Left = 0
@@ -26,7 +24,7 @@ object InputUrlDialog: TInputUrlDialog
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 2
-    object btConferma: TStyledButton
+    object btConfirm: TStyledButton
       AlignWithMargins = True
       Left = 446
       Top = 10
@@ -41,7 +39,7 @@ object InputUrlDialog: TInputUrlDialog
       ModalResult = 1
       TabOrder = 0
     end
-    object btAnnulla: TStyledButton
+    object btCancel: TStyledButton
       AlignWithMargins = True
       Left = 527
       Top = 10

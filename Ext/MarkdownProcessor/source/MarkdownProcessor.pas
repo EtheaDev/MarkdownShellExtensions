@@ -3,7 +3,7 @@
 {       MarkDown Processor                                                     }
 {       Delphi version of FPC-markdown by Miguel A. Risco-Castillo             }
 {                                                                              }
-{       Copyright (c) 2022-2023 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2022-2024 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownProcessor                          }

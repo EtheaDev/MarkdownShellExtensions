@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2023 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2024 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {       Contributors: Ariel Montes                                             }
 {                                                                              }
@@ -213,9 +213,13 @@ type
     acHeader3: TAction;
     acLink: TAction;
     acImage: TAction;
+    acTable: TAction;
     acBold: TAction;
     acItalic: TAction;
+    acStrike: TAction;
+    acUnderline: TAction;
     acCode: TAction;
+    acMarker: TAction;
     acSuperscript: TAction;
     acSubscript: TAction;
     acUnorderedList: TAction;
@@ -230,10 +234,14 @@ type
     btSeparator1: TStyledToolButton;
     btLink: TStyledToolButton;
     btImage: TStyledToolButton;
+    btTable: TStyledToolButton;
     btSeparator2: TStyledToolButton;
     btBold: TStyledToolButton;
     btItalic: TStyledToolButton;
+    btStrike: TStyledToolButton;
+    btUnderline: TStyledToolButton;
     btCode: TStyledToolButton;
+    btMarker: TStyledToolButton;
     btSuperscript: TStyledToolButton;
     btSubscript: TStyledToolButton;
     btSeparator3: TStyledToolButton;
@@ -330,9 +338,13 @@ type
     procedure acHeader3Execute(Sender: TObject);
     procedure acLinkExecute(Sender: TObject);
     procedure acImageExecute(Sender: TObject);
+    procedure acTableExecute(Sender: TObject);
     procedure acBoldExecute(Sender: TObject);
     procedure acItalicExecute(Sender: TObject);
+    procedure acStrikeExecute(Sender: TObject);
+    procedure acUnderlineExecute(Sender: TObject);
     procedure acCodeExecute(Sender: TObject);
+    procedure acMarkerExecute(Sender: TObject);
     procedure acSuperscriptExecute(Sender: TObject);
     procedure acSubscriptExecute(Sender: TObject);
     procedure acUnorderedListExecute(Sender: TObject);
@@ -449,6 +461,8 @@ uses
   , MarkdownUtils
   , uLogExcept
   , Vcl.StyledTaskDialog
+  , RegularExpressions
+  , MDShellEx.dlgCreateTable
   ;
 
 {$R *.dfm}
@@ -1030,6 +1044,19 @@ var
   FileVersionStr: string;
   LMarkDownMasks: string;
 begin
+  //Add Toolbar Shortcuts
+  //Ctrl+Shift+Up/Down arrows
+  acSuperscript.ShortCut := ShortCut(VK_UP, [ssCtrl, ssShift]);
+  acSubscript.ShortCut := ShortCut(VK_DOWN, [ssCtrl, ssShift]);
+  //Ctrl+Key number on the numeric keypad
+  acHeader1.ShortCut := ShortCut(VK_NUMPAD1, [ssCtrl]);
+  acHeader2.ShortCut := ShortCut(VK_NUMPAD2, [ssCtrl]);
+  acHeader3.ShortCut := ShortCut(VK_NUMPAD3, [ssCtrl]);
+  //Ctrl+Key number above the keyboard letters
+  acHeader1.SecondaryShortCuts.Add('Ctrl+1');
+  acHeader2.SecondaryShortCuts.Add('Ctrl+2');
+  acHeader3.SecondaryShortCuts.Add('Ctrl+3');
+
   //Initialize AnimatedTaskDialog font size
   Screen.MessageFont.Size := Round(Screen.MessageFont.Size*1.2);
   InitializeStyledTaskDialogs(True, Screen.MessageFont);
@@ -1173,13 +1200,35 @@ begin
   begin
     LSynEdit.SelText := ACommand;
   end
+  //If there is selected text
   else
   begin
-    //If there is selected text, add the command to all lines
-    LSelectedText := ACommand+
-      StringReplace(StringReplace(LSelectedText, sLineBreak,
-        sLineBreak+ACommand, [rfReplaceAll]), ACommand+sLineBreak+ACommand,
-        sLineBreak+ACommand, [rfReplaceAll]);
+    //Replace list commands keeping indentation
+    if (ACommand = '1. ') or (ACommand = '* ') then
+    begin
+      LSelectedText := TRegEx.Replace(LSelectedText,
+        '(^[\t ]*)(### |## |# |\* |- |\d+\. |> )*((?![\t ]*[*]{3,}|[\t ]*[-]{3,}).+)',
+        '$1'+ACommand+'$3', [roMultiLine]);
+    end
+    //Remove other commands if is not the "---" command
+    else if not ACommand.StartsWith('---') then
+    begin
+      //Remove ordered list commands from the selected text
+      LSelectedText := TRegEx.Replace(LSelectedText, '\d+\. ', '', [roMultiLine]);
+      //Remove any other "not contains" commands
+      LSelectedText := TRegEx.Replace(LSelectedText,
+        '(^[\t ]*)(### |## |# |\* |- |> )?', '', [roMultiLine]);
+      //Add the command to all lines with content except lines with the
+      //commands "---" and "***" at the begining
+      LSelectedText := TRegEx.Replace(LSelectedText,
+        '^(?![\t ]*[*]{3,}|[\t ]*[-]{3,}).+$', ACommand+'$0', [roMultiLine]);
+    end
+    else
+      //Add the command to all lines with content except lines with the
+      //commands "---" and "***" at the end
+      LSelectedText := TRegEx.Replace(LSelectedText,
+        '^(?![\t ]*[-]{3,}|[\t ]*[*]{3,}).+$', '$0'+sLineBreak+ACommand, [roMultiLine]);
+    //Write elaborated text back to the document
     LSynEdit.SelText := LSelectedText;
   end;
 end;
@@ -1199,19 +1248,22 @@ begin
   if LSelectedText = '' then
   begin
     LSynEdit.SelText := ACommandOpen+ACommandClose;
+    //Move the editor caret inside the open and close comands
     LCoord := LSynEdit.CaretXY;
     LCoord.Char := LCoord.Char-LSize;
     LSynEdit.SetCaretAndSelection(LCoord, LCoord, LCoord);
   end
   else
-  begin
-    //If there is selected text, add the opening and closing commands to all lines
-    LSelectedText := ACommandOpen+
-      StringReplace(StringReplace(LSelectedText, sLineBreak,
-        ACommandOpen+sLineBreak+ACommandClose, [rfReplaceAll]),
-        sLineBreak+ACommandOpen+ACommandClose, sLineBreak, [rfReplaceAll])+ACommandClose;
-    LSynEdit.SelText := LSelectedText;
-  end;
+    //Insert three backticks (```) when the selected text has multiple rows in
+    //order to preserve the indentation
+    if (ACommandOpen = '`') and (Pos(sLineBreak,LSelectedText)>0) then
+      LSynEdit.SelText := '```'+sLineBreak+LSelectedText+sLineBreak+'```'
+    else
+      //Insert the open and close command in each row, except in the empty rows
+      //or the rows with line commands '---' or '***'
+      LSynEdit.SelText := TRegEx.Replace(LSelectedText,
+      '(^)((?![\t ]*[-]{3,}|[\t ]*[*]{3,}).+$)',
+      '$1'+ACommandOpen+'$2'+ACommandClose, [roMultiLine]);
 end;
 
 procedure TfrmMain.InputUrl(const APrefix: string; AType: TInputType);
@@ -1252,6 +1304,22 @@ begin
   InputUrl('![', itImage);
 end;
 
+procedure TfrmMain.acTableExecute(Sender: TObject);
+var
+  LdlgTable: TdlgCreateTable;
+  LSynEdit: TSynEdit;
+begin
+  LdlgTable := TdlgCreateTable.Create(self);
+  LSynEdit := CurrentEditFile.SynEditor;
+  try
+    LdlgTable.ShowModal();
+    if LdlgTable.ModalResult = mrOk then
+      LSynEdit.SelText := LdlgTable.ATableText;
+  finally
+    LdlgTable.Free();
+  end;
+end;
+
 procedure TfrmMain.acBoldExecute(Sender: TObject);
 begin
   InsertMDCommandContains('**', '**');
@@ -1262,9 +1330,24 @@ begin
   InsertMDCommandContains('_', '_');
 end;
 
+procedure TfrmMain.acStrikeExecute(Sender: TObject);
+begin
+  InsertMDCommandContains('~~', '~~');
+end;
+
+procedure TfrmMain.acUnderlineExecute(Sender: TObject);
+begin
+  InsertMDCommandContains('++', '++');
+end;
+
 procedure TfrmMain.acCodeExecute(Sender: TObject);
 begin
   InsertMDCommandContains('`', '`');
+end;
+
+procedure TfrmMain.acMarkerExecute(Sender: TObject);
+begin
+  InsertMDCommandContains('==', '==');
 end;
 
 procedure TfrmMain.acSubscriptExecute(Sender: TObject);

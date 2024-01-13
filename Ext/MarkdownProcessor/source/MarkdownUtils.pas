@@ -3,7 +3,7 @@
 {       MarkDown Processor                                                     }
 {       Delphi version of FPC-markdown by Miguel A. Risco-Castillo             }
 {                                                                              }
-{       Copyright (c) 2022-2023 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2022-2024 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownProcessor                          }
@@ -294,7 +294,9 @@ Type
     // A code block line. */
     ltCODE,
     // A list. */
-    ltULIST, ltOLIST,
+    ltULIST, //Unordered
+    ltOLIST, //Ordered with dot
+    ltBLIST, //Ordered with brackets
     // A block quote. */
     ltBQUOTE,
     // A horizontal ruler. */
@@ -378,7 +380,7 @@ Type
     btHEADLINE,
     // A list item.
     btLIST_ITEM,
-    // An ordered list.
+    // An ordered list
     btORDERED_LIST,
     // A paragraph.
     btPARAGRAPH,
@@ -2532,6 +2534,8 @@ begin
       inc(i);
     if (i + 1 < Length(value)) and (value[1 + i] = '.') and (value[1 + i + 1] = ' ') then
       exit(ltOLIST);
+    if (i + 1 < Length(value)) and (value[1 + i] = ')') and (value[1 + i + 1] = ' ') then
+      exit(ltBLIST);
   end;
 
   if (value[1 + leading] = '<') then
@@ -2973,11 +2977,11 @@ begin
     begin
       case (line.getLineType(config)) of
         ltULIST:
-//          line.value := line.value.substring(line.leading + 2); PSTfix
           line.value := Copy(line.value, line.leading +3);
         ltOLIST:
-//          line.value := line.value.substring(line.value.indexOf('.') + 2); pstfix
-        line.value := Copy(line.value, pos('.', line.value) + 2);
+          line.value := Copy(line.value, pos('.', line.value) + 2);
+        ltBLIST:
+          line.value := Copy(line.value, pos(')', line.value) + 2);
       else
 //        line.value := line.value.substring(Math.min(line.leading, 4)); pstfix
         line.value := Copy(line.value, Math.Min(line.leading + 1, 5));

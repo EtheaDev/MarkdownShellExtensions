@@ -115,6 +115,11 @@ object frmMain: TfrmMain
         Top = 0
         Action = acImage
       end
+      object btTable: TStyledToolButton
+        Left = 168
+        Top = 0
+        Action = acTable
+      end
       object btSeparator2: TStyledToolButton
         Left = 150
         Top = 0
@@ -131,10 +136,25 @@ object frmMain: TfrmMain
         Top = 0
         Action = acItalic
       end
+      object btStrike: TStyledToolButton
+        Left = 280
+        Top = 0
+        Action = acStrike
+      end
+      object btUnderline: TStyledToolButton
+        Left = 308
+        Top = 0
+        Action = acUnderline
+      end
       object btCode: TStyledToolButton
         Left = 216
         Top = 0
         Action = acCode
+      end
+      object btMarker: TStyledToolButton
+        Left = 280
+        Top = 0
+        Action = acMarker
       end
       object btSuperscript: TStyledToolButton
         Left = 244
@@ -1305,6 +1325,26 @@ object frmMain: TfrmMain
         CollectionIndex = 78
         CollectionName = 'superscript'
         Name = 'superscript'
+      end
+      item
+        CollectionIndex = 80
+        CollectionName = 'marker'
+        Name = 'marker'
+      end
+      item
+        CollectionIndex = 81
+        CollectionName = 'table'
+        Name = 'table'
+      end
+      item
+        CollectionIndex = 82
+        CollectionName = 'strike'
+        Name = 'strike'
+      end
+      item
+        CollectionIndex = 83
+        CollectionName = 'underline'
+        Name = 'underline'
       end>
     ImageCollection = dmResources.SVGIconImageCollection
     Width = 20
@@ -1349,6 +1389,7 @@ object frmMain: TfrmMain
       Hint = 'Link'
       ImageIndex = 3
       ImageName = 'link'
+      ShortCut = 16460
       OnExecute = acLinkExecute
       OnUpdate = acToolbarUpdate
     end
@@ -1358,7 +1399,18 @@ object frmMain: TfrmMain
       Hint = 'Image'
       ImageIndex = 4
       ImageName = 'image'
+      ShortCut = 16464
       OnExecute = acImageExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acTable: TAction
+      Category = 'MarkdownText'
+      Caption = 'Table'
+      Hint = 'Table'
+      ImageIndex = 16
+      ImageName = 'table'
+      ShortCut = 49236
+      OnExecute = acTableExecute
       OnUpdate = acToolbarUpdate
     end
     object acBold: TAction
@@ -1367,6 +1419,7 @@ object frmMain: TfrmMain
       Hint = 'Bold'
       ImageIndex = 5
       ImageName = 'bold'
+      ShortCut = 16450
       OnExecute = acBoldExecute
       OnUpdate = acToolbarUpdate
     end
@@ -1376,6 +1429,7 @@ object frmMain: TfrmMain
       Hint = 'Italic'
       ImageIndex = 6
       ImageName = 'italic'
+      ShortCut = 16457
       OnExecute = acItalicExecute
       OnUpdate = acToolbarUpdate
     end
@@ -1385,6 +1439,7 @@ object frmMain: TfrmMain
       Hint = 'Code'
       ImageIndex = 7
       ImageName = 'code'
+      ShortCut = 49219
       OnExecute = acCodeExecute
       OnUpdate = acToolbarUpdate
     end
@@ -1410,6 +1465,7 @@ object frmMain: TfrmMain
       Hint = 'Unordered List'
       ImageIndex = 8
       ImageName = 'unordered_list'
+      ShortCut = 16469
       OnExecute = acUnorderedListExecute
       OnUpdate = acToolbarUpdate
     end
@@ -1419,6 +1475,7 @@ object frmMain: TfrmMain
       Hint = 'Ordered List'
       ImageIndex = 9
       ImageName = 'ordered_list'
+      ShortCut = 16463
       OnExecute = acOrderedListExecute
       OnUpdate = acToolbarUpdate
     end
@@ -1428,6 +1485,7 @@ object frmMain: TfrmMain
       Hint = 'Block quote'
       ImageIndex = 10
       ImageName = 'blockquote'
+      ShortCut = 16459
       OnExecute = acBlockquoteExecute
       OnUpdate = acToolbarUpdate
     end
@@ -1437,6 +1495,7 @@ object frmMain: TfrmMain
       Hint = 'Horizontal Rule'
       ImageIndex = 11
       ImageName = 'horizontal_rule'
+      ShortCut = 49234
       OnExecute = acHorizontalRuleExecute
       OnUpdate = acToolbarUpdate
     end
@@ -1446,8 +1505,39 @@ object frmMain: TfrmMain
       Hint = 'Help'
       ImageIndex = 12
       ImageName = 'help'
+      ShortCut = 112
       OnExecute = acHelpExecute
       OnUpdate = acHelpUpdate
+    end
+    object acMarker: TAction
+      Category = 'MarkdownText'
+      Caption = 'Marker'
+      Hint = 'Marker'
+      ImageIndex = 15
+      ImageName = 'marker'
+      ShortCut = 49229
+      OnExecute = acMarkerExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acStrike: TAction
+      Category = 'MarkdownText'
+      Caption = 'Strike'
+      Hint = 'Strike'
+      ImageIndex = 17
+      ImageName = 'strike'
+      ShortCut = 49235
+      OnExecute = acStrikeExecute
+      OnUpdate = acToolbarUpdate
+    end
+    object acUnderline: TAction
+      Category = 'MarkdownText'
+      Caption = 'Underline'
+      Hint = 'Underline'
+      ImageIndex = 18
+      ImageName = 'underline'
+      ShortCut = 49237
+      OnExecute = acUnderlineExecute
+      OnUpdate = acToolbarUpdate
     end
   end
 end

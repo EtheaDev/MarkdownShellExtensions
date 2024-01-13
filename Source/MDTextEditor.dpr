@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2023 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2024 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MDShellExtensions                          }
@@ -60,7 +60,7 @@ begin
   Application.Initialize;
   Application.MainFormOnTaskBar := True;
   Application.ActionUpdateDelay := 50;
-  Application.Title := Title_MDViewer+'- © 2021-2023 Ethea S.r.l.';
+  Application.Title := Title_MDViewer+'- © 2021-2024 Ethea S.r.l.';
   //Uses System Style for border / shadow of Forms
   TStyleManager.FormBorderStyle := TStyleManager.TFormBorderStyle.fbsSystemStyle;
   with TSplashForm.Create(nil) do

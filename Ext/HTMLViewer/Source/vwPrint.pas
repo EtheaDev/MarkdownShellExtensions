@@ -418,7 +418,9 @@ procedure TvwPrinter.SetState(Value: TvwPrinterState);
     TmpDeviceMode: HGLOBAL;
     Driver, Device, Port: array[0..200] of {$ifdef UNICODE} WideChar {$else} char {$endif};
   begin
+    {$warn SYMBOL_DEPRECATED off}
     Printers.Printer.GetPrinter(Device, Driver, Port, TmpDeviceMode);
+    {$warn SYMBOL_DEPRECATED on}
     if DeviceMode <> 0 then
     begin
       GlobalUnlock(DeviceMode);

@@ -3,7 +3,7 @@
 {       StyledToolbar: a Toolbar with TStyledToolButtons inside                }
 {       Based on TFlowPanel and TStyledGraphicButton                           }
 {                                                                              }
-{       Copyright (c) 2022-2023 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2022-2024 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {       Contributors:                                                          }
 {                                                                              }
@@ -556,7 +556,7 @@ begin
   if AValue <> AutoSize then
   begin
     FAutoSize := AValue;
-    if not (csLoading in ComponentState) and Assigned(FToolBar) then
+    if Assigned(FToolBar) then
       FToolBar.ResizeButtons;
   end;
 end;
@@ -1749,6 +1749,9 @@ end;
 
 procedure TStyledToolbar.ResizeButtons;
 begin
+  if (csLoading in ComponentState) then
+    Exit;
+
   FDisableAlign := True;
   try
     if (FButtonHeight <> 0) and (FButtonWidth <> 0) and
@@ -1891,7 +1894,8 @@ begin
   ProcessControls(
     procedure (AControl: TControl)
     begin
-      LSize := LSize + AControl.Height;
+      if AControl.Height > LSize then
+        LSize := LSize + AControl.Height;
     end);
   Result := LSize;
 end;
@@ -1907,7 +1911,8 @@ begin
   ProcessControls(
     procedure (AControl: TControl)
     begin
-      LSize := LSize + AControl.Width;
+      if AControl.Width > LSize then
+        LSize := AControl.Width;
     end);
   Result := LSize;
 end;

@@ -37,7 +37,8 @@ uses
   ActnList, SynEditHighlighter, SynUnicode, System.ImageList, Vcl.ImgList,
   SVGIconImageListBase, SVGIconImageList, MDShellEx.Settings, Vcl.ButtonGroup,
   Vcl.ToolWin, MDShellEx.Resources, Vcl.VirtualImageList, MDShellEx.About, Vcl.WinXCtrls,
-  SVGIconImage, Vcl.NumberBox;
+  SVGIconImage, Vcl.NumberBox, Vcl.ButtonStylesAttributes,
+  Vcl.StyledButtonGroup, Vcl.StyledButton;
 
 type
   TSVGSettingsForm = class(TForm)
@@ -70,14 +71,14 @@ type
     ForegroundColorLabel: TLabel;
     BackgroundColorLabel: TLabel;
     BackgroundColorBox: TColorBox;
-    MenuButtonGroup: TButtonGroup;
+    MenuButtonGroup: TStyledButtonGroup;
     TitlePanel: TPanel;
     ThemeLeftPanel: TPanel;
     ThemesRadioGroup: TRadioGroup;
     SelectThemeRadioGroup: TRadioGroup;
     ThemeClientPanel: TPanel;
     ResetPanel: TPanel;
-    ResetButton: TButton;
+    ResetButton: TStyledButton;
     MDGroupBox: TGroupBox;
     FontLabel: TLabel;
     MDFontComboBox: TComboBox;
@@ -110,6 +111,10 @@ type
     MarkdownGroupBox: TGroupBox;
     ProcessorDialectComboBox: TComboBox;
     ProcessorDialectLabel: TLabel;
+    RoundedButtonsGroupBox: TGroupBox;
+    ToolbarRoundedCheckBox: TCheckBox;
+    ButtonsRoundedCheckBox: TCheckBox;
+    MenuRoundedCheckBox: TCheckBox;
     procedure BoxElementsClick(Sender: TObject);
     procedure cbForegroundClick(Sender: TObject);
     procedure cbBackgroundClick(Sender: TObject);
@@ -567,6 +572,19 @@ begin
   HTMLUpDown.Position := ASettings.HTMLFontSize;
 
   ProcessorDialectComboBox.ItemIndex := ord(ASettings.ProcessorDialect);
+  RoundedButtonsGroupBox.Visible := ASettings is TEditorSettings;
+  if ASettings is TEditorSettings then
+  begin
+    ToolbarRoundedCheckBox.Checked := TEditorSettings(ASettings).ToolbarDrawRounded;
+    ButtonsRoundedCheckBox.Checked := TEditorSettings(ASettings).ButtonDrawRounded;
+    MenuRoundedCheckBox.Checked := TEditorSettings(ASettings).MenuDrawRounded;
+  end
+  else
+  begin
+    ToolbarRoundedCheckBox.Checked := False;
+    ButtonsRoundedCheckBox.Checked := False;
+    MenuRoundedCheckBox.Checked := False;
+  end;
 
   RescalingImageCheckBox.Checked := ASettings.RescalingImage;
   DownloadFromWebCheckBox.Visible := ASettings is TEditorSettings;
@@ -622,7 +640,12 @@ begin
   ASettings.StyleName := SelectedStyleName;
   ASettings.RescalingImage := RescalingImageCheckBox.Checked;
   if ASettings is TEditorSettings then
+  begin
     TEditorSettings(ASettings).DownloadFromWEB := DownloadFromWEBCheckBox.Checked;
+    TEditorSettings(ASettings).ToolbarDrawRounded := ToolbarRoundedCheckBox.Checked;
+    TEditorSettings(ASettings).ButtonDrawRounded := ButtonsRoundedCheckBox.Checked;
+    TEditorSettings(ASettings).MenuDrawRounded := MenuRoundedCheckBox.Checked;
+  end;
 
   ASettings.PDFPageSettings.PrintOrientation := TPrinterOrientation(OrientationRadioGroup.ItemIndex);
   ASettings.PDFPageSettings.PaperSize := PaperSizeRadioGroup.ItemIndex;

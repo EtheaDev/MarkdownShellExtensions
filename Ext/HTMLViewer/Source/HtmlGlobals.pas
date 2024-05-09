@@ -1,6 +1,6 @@
 {
-Version   11.9
-Copyright (c) 2008-2018 by HtmlViewer Team
+Version   11.10
+Copyright (c) 2008-2023 by HtmlViewer Team
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -42,7 +42,7 @@ uses
   Classes, SysUtils, Graphics, Controls,
 {$ifdef LCL}
   LclIntf, LclType, LCLVersion, Types, Messages,
-  StdCtrls, Buttons, Forms, Base64, Dialogs, Process,
+  StdCtrls, Buttons, Base64, Dialogs, Process,
   HtmlMisc,
   {$ifdef DebugIt}
     {$message 'HtmlViewer uses LCL standard controls.'}
@@ -76,6 +76,7 @@ uses
     {$endif}
   {$endif UseTNT}
 {$endif}
+  Forms,
   Clipbrd,
   Math;
 
@@ -246,6 +247,20 @@ type
   ThtScrollStyle = TScrollStyle;
 {$endif}
 
+  ThtStyleElement = (
+    htseFont,
+    htseClient,
+    htseBorder
+  );
+
+  ThtThemedColor = function (AColor: TColor; AStyleElement: ThtStyleElement): TColor  of object;
+
+  //BG, 05.02.2023: don't add virtual methods or fields. It is only used to access protected stuff of TCustomForm.
+  ThtCustomForm = class(TCustomForm)
+  public
+    property PixelsPerInch;
+  end;
+
   //BG, 10.12.2010: don't add virtual methods or fields. It is only used to access protected stuff of TCanvas.
   ThtCanvas = class(TCanvas)
   public
@@ -271,12 +286,12 @@ type
     procedure SetTransparentMask(AValue: Boolean);
   protected
     FMask: TBitmap;
-    FTransparent: boolean;
+    FTransparent: Boolean;
   public
     constructor Create(WithTransparentMask: Boolean = False); reintroduce; overload;
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
-    procedure Draw(ACanvas: TCanvas; const Rect: TRect); override;
+    procedure Draw(ACanvas: TCanvas; const DestRect: TRect); override;
     procedure StretchDraw(ACanvas: TCanvas; const DestRect, SrcRect: TRect);
     property BitmapMask: TBitmap read GetMask write SetMask;
     property WithTransparentMask: Boolean read FTransparent write SetTransparentMask;
@@ -289,6 +304,7 @@ const
   FfChar      = ThtChar(#12);
   CrChar      = ThtChar(#13);
   SpcChar     = ThtChar(' ');
+  NbSpcChar   = ThtChar(#160);  // Unbreakable Space, Unicode value for Html entity &nbsp;
   DotChar     = ThtChar('.');
   LessChar    = ThtChar('<');
   MinusChar   = ThtChar('-');
@@ -500,6 +516,8 @@ function htStringArrayToStr(const StrArray: ThtStringArray; Separator: ThtChar):
 function htSameStringArray(const A1, A2: ThtStringArray): Boolean;
 procedure htSortStringArray(A: ThtStringArray);
 
+function htFileExists(const FName: ThtString): Boolean;
+
 //{$ifdef UnitConstsMissing}
 //const
 //  SOutOfResources	= 'Out of system resources';
@@ -525,9 +543,9 @@ function CanPrintAlpha(ADC : HDC) : Boolean; {$ifdef UseInline} inline; {$endif}
 
 procedure GetTSize(DC: HDC; P : PWideChar; N : Integer; out VSize : TSize);  {$ifdef UseInline} inline; {$endif}
 
-function ThemedColor(const AColor : TColor
-  {$ifdef has_StyleElements};const AUseThemes : Boolean{$endif}
-  ): TColor; {$ifdef UseInline} inline; {$endif} //overload;
+//function ThemedColor_(const AColor : TColor
+//  {$ifdef has_StyleElements};const AUseThemes : Boolean{$endif}
+//  ): TColor; {$ifdef UseInline} inline; {$endif}
 
 function TextEndsWith(const SubStr, S : ThtString) : Boolean; {$ifdef UseInline} inline; {$endif}
 function TextStartsWith(const SubStr, S : ThtString) : Boolean; {$ifdef UseInline} inline; {$endif}
@@ -642,33 +660,32 @@ begin
   end;
 end;
 
-{$ifdef has_StyleElements}
-function ThemedColor(const AColor : TColor; const AUseThemes : Boolean): TColor; {$ifdef UseInline} inline; {$endif} overload;
-begin
-  if AUseThemes and TStyleManager.IsCustomStyleActive then begin
-    Result := StyleServices.GetSystemColor(AColor);
-  end else begin
-    Result := AColor;
-  end;
-  Result := ColorToRGB(Result);
-end;
-{$else}
-
-function ThemedColor(const AColor : TColor): TColor;
- {$ifdef UseInline} inline; {$endif}
-begin
-{$ifdef UseVCLStyles}
-  if TStyleManager.IsCustomStyleActive then begin
-    Result := StyleServices.GetSystemColor(AColor);
-  end else begin
-    Result := AColor;
-  end;
-  Result := ColorToRGB(Result);
-{$else}
-  Result := ColorToRGB(AColor);
-{$endif}
-end;
-{$endif}
+//{$ifdef has_StyleElements}
+//function ThemedColor(const AColor : TColor; const AUseThemes : Boolean): TColor; {$ifdef UseInline} inline; {$endif} overload;
+//begin
+//  if AUseThemes and TStyleManager.IsCustomStyleActive then begin
+//    Result := StyleServices.GetSystemColor(AColor);
+//  end else begin
+//    Result := AColor;
+//  end;
+//  Result := ColorToRGB(Result);
+//end;
+//{$else}
+//function ThemedColor(const AColor : TColor): TColor;
+// {$ifdef UseInline} inline; {$endif}
+//begin
+//{$ifdef UseVCLStyles}
+//  if TStyleManager.IsCustomStyleActive then begin
+//    Result := StyleServices.GetSystemColor(AColor);
+//  end else begin
+//    Result := AColor;
+//  end;
+//  Result := ColorToRGB(Result);
+//{$else}
+//  Result := ColorToRGB(AColor);
+//{$endif}
+//end;
+//{$endif}
 
 procedure GetTSize(DC: HDC; P : PWideChar; N : Integer; out VSize : TSize);
  {$ifdef UseInline} inline; {$endif}
@@ -693,7 +710,7 @@ function Darker(Color : TColor): TColor; {$ifdef UseInline} inline; {$endif}
 var
   Red, Green, Blue: Byte;
 begin
-  Result := ColorToRGB(Color); //ThemedColor(Color{$ifdef has_StyleElements},AUseThemes{$endif});
+  Result := ColorToRGB(Color);
   Red   := DarkerColors[Byte(Result       )];
   Green := DarkerColors[Byte(Result shr  8)];
   Blue  := DarkerColors[Byte(Result shr 16)];
@@ -705,7 +722,7 @@ function Lighter(Color : TColor) : TColor; {$ifdef UseInline} inline; {$endif}
 var
   Red, Green, Blue: Byte;
 begin
-  Result := ColorToRGB(Color); // ThemedColor(Color{$ifdef has_StyleElements},AUseThemes{$endif});
+  Result := ColorToRGB(Color);
   Red   := LighterColors[Byte(Result       )];
   Green := LighterColors[Byte(Result shr  8)];
   Blue  := LighterColors[Byte(Result shr 16)];
@@ -719,7 +736,7 @@ var
 begin
   Result := 0;
   for I := 0 to ACount - 2 do {-2 so as not to count end spaces}
-    if ((PStart + I)^ = ' ') or ((PStart + I)^ = #160) then
+    if ((PStart + I)^ = SpcChar) or ((PStart + I)^ = NbSpcChar) then
       Inc(Result);
 end;
 
@@ -1152,6 +1169,22 @@ begin
   {$endif}
 end;
 
+//-- BG ---------------------------------------------------------- 26.02.2023 --
+function htFileExists(const FName: ThtString): Boolean;
+var
+  Name: string;
+begin
+  Name := htStringToString(FName);
+  Result := FileExists(Name);
+  {$if defined(FPC) and (fpc_fullversion < 3020000)}
+    // Fix to disable LoadFromFile with folder path #290 (Alexey-T)
+    // DirectoryExists needed in Laz, because FPC 3.0.4 gets FileExists(s)=True
+    // for folder. It's changed in FPC 3.2.
+    if Result then
+      Result := not DirectoryExists(Name);
+  {$ifend}
+end;
+
 //-- BG ---------------------------------------------------------- 21.08.2011 --
 function IsAlpha(Ch: ThtChar): Boolean; {$ifdef UseInline} inline; {$endif}
 begin
@@ -1540,7 +1573,7 @@ begin
   end;
 end;
 
-procedure ThtBitmap.Draw(ACanvas: TCanvas; const Rect: TRect);
+procedure ThtBitmap.Draw(ACanvas: TCanvas; const DestRect: TRect);
 {$ifdef LCL}
 var
   UseMaskHandle: HBitmap;
@@ -1562,7 +1595,7 @@ begin
   ACanvas.Changing;
   DestDC := ACanvas.GetUpdatedHandle([csHandleValid]);
   StretchMaskBlt(
-    DestDC, Rect.Left, Rect.Top, Rect.Right - Rect.Left, Rect.Bottom - Rect.Top,
+    DestDC, DestRect.Left, DestRect.Top, DestRect.Right - DestRect.Left, DestRect.Bottom - DestRect.Top,
      SrcDC,         0,        0,                  Width,                 Height,
      UseMaskHandle, 0,        0, ACanvas.CopyMode);
   ACanvas.Changed;
@@ -1575,7 +1608,7 @@ var
   Pt: TPoint;
   BPP: Integer;
 begin
-  with Rect do
+  with DestRect do
   begin
     PaletteNeeded;
     OldPalette := 0;
@@ -1600,14 +1633,25 @@ begin
       SetStretchBltMode(ACanvas.Handle, STRETCH_DELETESCANS);
     try
       if FTransparent then
-        TransparentStretchBlt(
-          ACanvas.Handle, Left, Top, Right - Left, Bottom - Top,
-          Canvas.Handle, 0, 0, Width, Height,
-          FMask.Canvas.Handle, 0, 0) {LDB}
+      begin
+{$ifdef Compiler23_Plus}
+        if TransparentMode = tmFixed then
+          DrawTransparent( ACanvas, Rect(Left, Top, Right, Bottom), 255 )
+        else
+{$endif}
+          TransparentStretchBlt(
+            ACanvas.Handle, Left, Top, Right - Left, Bottom - Top,
+            Canvas.Handle, 0, 0, Self.Width, Self.Height,
+            FMask.Canvas.Handle, 0, 0) {LDB}
+      end
+      else if AlphaFormat = afDefined then
+      begin
+        inherited;
+      end
       else
         StretchBlt(
           ACanvas.Handle, Left, Top, Right - Left, Bottom - Top,
-          Canvas.Handle, 0, 0, Width, Height,
+          Canvas.Handle, 0, 0, Self.Width, Self.Height,
           ACanvas.CopyMode);
     finally
       if RestorePalette then
@@ -1682,6 +1726,10 @@ begin
           ACanvas.Handle, Left, Top, Right - Left, Bottom - Top,
           Canvas.Handle, SrcRect.Left, SrcRect.Top, SrcRect.Right - SrcRect.Left, SrcRect.Bottom - SrcRect.Top,
           FMask.Canvas.Handle, SrcRect.Left, SrcRect.Top) {LDB}
+      else if AlphaFormat = afDefined then
+      begin
+        inherited;
+      end
       else
         StretchBlt(
           ACanvas.Handle, Left, Top, Right - Left, Bottom - Top,

@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
-{  StyledAnimatedTaskDialog: a Task Dialog Component with StyleButtons         }
-{  and animations using Skia4Delphi                                            }
+{  StyledComponentsHooks: an interposer Unit to use Styled Components          }
+{  using Standard Delphi Controls Class Names                                  }
 {                                                                              }
 {  Copyright (c) 2022-2024 (Ethea S.r.l.)                                      }
 {  Author: Carlo Barazzetta                                                    }
@@ -24,35 +24,51 @@
 {  limitations under the License.                                              }
 {                                                                              }
 {******************************************************************************}
-unit Vcl.StyledAnimatedTaskDialog;
-
-{$INCLUDE StyledComponents.inc}
+unit Vcl.StyledComponentsHooks;
 
 interface
 
+{$INCLUDE StyledComponents.inc}
+
 uses
-  System.SysUtils
-  , System.Classes
-  , WinApi.Windows
-  , Vcl.StyledTaskDialog
+  Vcl.StyledButton
+  , Vcl.StyledDbNavigator
+  , Vcl.StyledToolbar
+  , Vcl.StyledButtonGroup
+  , Vcl.StyledCategoryButtons
   ;
 
-//{$WARN SYMBOL_PLATFORM OFF}
 type
-  TStyledAnimatedTaskDialog = class(TStyledTaskDialog)
-  private
-  strict protected
-  public
-  end;
+  //Interposer Class for TButton -> TStyledButton
+  TButton = class(TStyledButton) end;
+
+  //Interposer Class for TBitBtn -> TStyledBitBtn
+  TBitBtn = class(TStyledBitBtn) end;
+
+  //Interposer Class for TBitBtn -> TStyledSpeedButton
+  TSpeedButton = class(TStyledSpeedButton) end;
+
+  //Interposer Class for TDbNavigator -> TStyledDbNavigator
+  TDbNavigator = class(TStyledDbNavigator) end;
+
+  //Interposer Class for TBindNavigator -> TStyledBindNavigator
+  TBindNavigator = class(TStyledBindNavigator) end;
+
+  //Interposer Class for TToolbar -> TStyledToolbar
+  TToolbar = class(TStyledToolbar) end;
+
+  //Interposer Class for TToolbutton -> TStyledToolButton
+  TToolbutton = class(TStyledToolbutton) end;
+
+  //Interposer Class for TButtonGroup -> TStyledButtonGroup
+  TButtonGroup = class(TStyledButtonGroup) end;
+
+  //Interposer Class for TCategoryButtons -> TStyledCategoryButtons
+  TCategoryButtons = class(TStyledCategoryButtons) end;
+
+  //Interposer Class for TButtonCategory -> TStyledButtonCategory
+  TButtonCategory = class(TStyledButtonCategory) end;
 
 implementation
-
-uses
-  Skia.Vcl.StyledTaskDialogAnimatedUnit //to register StyledTaskDialogAnimatedUnit
-  ;
-
-initialization
-
-finalization
 
 end.

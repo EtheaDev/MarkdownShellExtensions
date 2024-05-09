@@ -199,10 +199,8 @@ object FrmAbout: TFrmAbout
     Color = clWindow
     ParentBackground = False
     TabOrder = 0
-    ExplicitTop = 260
-    ExplicitWidth = 432
-    object btnOK: TButton
-      Left = 360
+    object btnOK: TStyledButton
+      Left = 351
       Top = 16
       Width = 75
       Height = 25
@@ -212,7 +210,7 @@ object FrmAbout: TFrmAbout
       TabOrder = 2
       OnClick = btnOKClick
     end
-    object btnIssues: TButton
+    object btnIssues: TStyledButton
       Left = 8
       Top = 16
       Width = 125
@@ -222,7 +220,7 @@ object FrmAbout: TFrmAbout
       TabOrder = 0
       OnClick = btnIssuesClick
     end
-    object btnCheckUpdates: TButton
+    object btnCheckUpdates: TStyledButton
       Left = 139
       Top = 16
       Width = 125
@@ -303,7 +301,6 @@ object FrmAbout: TFrmAbout
     ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 1
-    ExplicitHeight = 165
   end
   object LinkLabel1: TLinkLabel
     Left = 8

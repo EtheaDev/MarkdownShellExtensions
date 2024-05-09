@@ -1,7 +1,7 @@
 {
-Version   11.9
+Version   11.10
 Copyright (c) 1995-2008 by L. David Baldwin
-Copyright (c) 2008-2018 by HtmlViewer Team
+Copyright (c) 2008-2023 by HtmlViewer Team
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -66,16 +66,22 @@ unit HTMLSubs;
 interface
 
 uses
- {$ifdef UseInline}
- HtmlCaches,
- {$endif}
+{$ifdef UseInline}
+  HtmlCaches,
+{$endif}
 {$ifdef VCL}
   Windows,
+  {$ifdef Compiler20_Plus}
+    CommCtrl,
+  {$endif}
   {$ifndef Compiler28_Plus}
-  EncdDecd,
+    EncdDecd,
   {$endif}
 {$endif}
   Messages, Graphics, Controls, ExtCtrls, Classes, SysUtils, Variants, Forms, Math, Contnrs, ComCtrls,
+{$ifdef UseGenerics}
+  System.Generics.Collections,
+{$endif}
 {$ifdef LCL}
   LclIntf, LclType, Types, HtmlMisc,
 {$endif}
@@ -122,9 +128,7 @@ type
   // properties can be applied to :link, :hover, :visited, etc.
   //
   private
-{$IFNDEF NoTabLink}
-    FSection: TSection; // only used if NoTabLink is not defined.
-{$ENDIF}
+    FSection: TSection; 
     FVisited, FHover: Boolean;
     Title: ThtString;
     FYValue: Integer;
@@ -172,11 +176,7 @@ type
   // BG, 10.02.2013: owns its objects.
   TFontList = class(TFontObjBaseList) {a list of TFontObj's}
   private
-    {$if compilerversion > 35}
-    function GetFont(Index: NativeInt): TFontObj; {$ifdef UseInline} inline; {$endif}
-    {$else}
     function GetFont(Index: Integer): TFontObj; {$ifdef UseInline} inline; {$endif}
-    {$ifend}
   public
     constructor CreateCopy(ASection: TSection; T: TFontList);
     function GetFontAt(Posn: Integer; out OHang: Integer): ThtFont;
@@ -184,17 +184,47 @@ type
     function GetFontObjAt(Posn: Integer): TFontObj; overload;
     function GetFontObjAt(Posn, Leng: Integer; out Obj: TFontObj): Integer; overload;
     procedure Decrement(N: Integer; Document: ThtDocument);
-    {$if compilerversion > 35}
-    property Items[Index: NativeInt]: TFontObj read GetFont; default;
-    {$else}
     property Items[Index: Integer]: TFontObj read GetFont; default;
-    {$ifend}
   end;
 
   // BG, 10.02.2013: does not own its font objects.
   TLinkList = class(TFontList)
   public
     constructor Create;
+  end;
+
+  // BG, 06.02.2022: moved from implementation section
+  ThtInlineRec = class
+  private
+    StartB, EndB, IDB, StartBDoc, EndBDoc: Integer;
+    MargArray: ThtMarginArray;
+  end;
+
+{$ifdef UseGenerics}
+  TInlineList = class(TObjectList<ThtInlineRec>)
+{$else}
+  TInlineList = class(TObjectList) {a list of ThtInlineRec's}
+{$endif}
+  private
+    NeedsConverting: Boolean;
+    Owner: ThtDocument;
+    procedure AdjustValues;
+{$ifdef UseGenerics}
+{$else}
+    function Get(Index: Integer): ThtInlineRec; {$ifdef UseInline} inline; {$endif}
+{$endif}
+    function GetStartB(I: Integer): Integer;
+    function GetEndB(I: Integer): Integer;
+  public
+    constructor Create(AnOwner: ThtDocument);
+{$ifdef UseGenerics}
+    procedure Clear; virtual;
+{$else}
+    procedure Clear; override;
+    property Items[Index: Integer]: ThtInlineRec read Get; default;
+{$endif}
+    property StartB[I: Integer]: Integer read GetStartB;
+    property EndB[I: Integer]: Integer read GetEndB;
   end;
 
 //------------------------------------------------------------------------------
@@ -316,14 +346,21 @@ type
     procedure MinMaxWidth(Canvas: TCanvas; out Min, Max: Integer; AvailableWidth, AvailableHeight: Integer); virtual;
   end;
 
+{$ifdef UseGenerics}
+  TSectionBaseList = class(TObjectList<TSectionBase>)
+{$else}
   TSectionBaseList = class(TObjectList)
   private
     function GetItem(Index: Integer): TSectionBase; {$ifdef UseInline} inline; {$endif}
+{$endif}
   public
     function PtInObject(X, Y: Integer; var Obj: TObject; var IX, IY: Integer): Boolean;
     function CursorToXY(Canvas: TCanvas; Cursor: Integer; var X, Y: Integer): Boolean; virtual;
     function FindDocPos(SourcePos: Integer; Prev: Boolean): Integer; virtual;
+{$ifdef UseGenerics}
+{$else}
     property Items[Index: Integer]: TSectionBase read GetItem; default;
+{$endif}
   end;
 
 //------------------------------------------------------------------------------
@@ -377,10 +414,14 @@ type
 
   TImageObj = class;
 
+{$ifdef UseGenerics}
+  TFloatingObjList = class(TObjectList<TFloatingObj>)   {a list of TFloatingObj's}
+{$else}
   TFloatingObjList = class(TObjectList)   {a list of TFloatingObj's}
   private
     function GetItem(Index: Integer): TFloatingObj; {$ifdef UseInline} inline; {$endif}
     procedure SetItem(Index: Integer; const Item: TFloatingObj); {$ifdef UseInline} inline; {$endif}
+{$endif}
   public
     constructor CreateCopy(Parent: TCellBasic; T: TFloatingObjList);
     procedure Decrement(N: Integer); {$ifdef UseInline} inline; {$endif}
@@ -389,7 +430,10 @@ type
     function GetObjectAt(Posn: Integer; out Obj): Integer;
     function PtInImage(X, Y: Integer; out IX, IY, Posn: Integer; out AMap, UMap: Boolean; out MapItem: TMapItem; out ImageObj: TImageObj): Boolean;
     function PtInObject(X, Y: Integer; out Obj: TObject; out IX, IY: Integer): Boolean;
+{$ifdef UseGenerics}
+{$else}
     property Items[Index: Integer]: TFloatingObj read GetItem write SetItem; default;
+{$endif}
   end;
 
 //------------------------------------------------------------------------------
@@ -547,11 +591,15 @@ type
     procedure DrawInline(Canvas: TCanvas; X, Y, YBaseline: Integer; FO: TFontObj); override;
   end;
 
+{$ifdef UseGenerics}
+  TPanelObjList = class(TObjectList<TPanelObj>)
+{$else}
   TPanelObjList = class(TObjectList)
   private
     function Get(Index: Integer): TPanelObj; {$ifdef UseInline} inline; {$endif}
   public
     property Items[Index: Integer]: TPanelObj read Get; default;
+{$endif}
   end;
 
   // inline frame node
@@ -639,7 +687,20 @@ type
     procedure ReplaceImage(NewImage: TStream);
   end;
 
+  TImageRec = class(TObject)
+  public
+    AObj: TImageObj;
+    ACanvas: TCanvas;
+    AX, AY: Integer;
+    AYBaseline: Integer;
+    AFO: TFontObj;
+  end;
+
+{$ifdef UseGenerics}
+  TDrawList = class(TObjectList<TImageRec>)
+{$else}
   TDrawList = class(TObjectList)
+{$endif}
     procedure AddImage(Obj: TImageObj; Canvas: TCanvas; X, Y, YBaseline: Integer; FO: TFontObj);
     procedure DrawImages;
   end;
@@ -659,16 +720,19 @@ type
     OpenStart, OpenEnd: Boolean;
     BRect: TRect;
     MargArray: ThtMarginArray;
-    procedure DrawTheBorder(Canvas: TCanvas; XOffset, YOffSet: Integer; Printing: Boolean
-      {$ifdef has_StyleElements}; const AStyleElements : TStyleElements{$endif}); //overload;
+    procedure DrawTheBorder(Canvas: TCanvas; XOffset, YOffSet: Integer; Printing: Boolean; ThemedColorToRGB: ThtThemedColor );
   end;
 
+{$ifdef UseGenerics}
+  ThtBorderRecList = class(TObjectList<ThtBorderRec>);
+{$else}
   ThtBorderRecList = class(TObjectList)
   private
     function Get(Index: Integer): ThtBorderRec; {$ifdef UseInline} inline; {$endif}
   public
     property Items[Index: Integer]: ThtBorderRec read Get; default;
   end;
+{$endif}
 
   ThtLineRec = class {holds info on a line of text}
   private
@@ -693,12 +757,16 @@ type
     destructor Destroy; override;
   end;
 
+{$ifdef UseGenerics}
+  TLineRecList = class(TObjectList<ThtLineRec>);
+{$else}
   TLineRecList = class(TObjectList)
   private
     function Get(Index: Integer): ThtLineRec; {$ifdef UseInline} inline; {$endif}
   public
     property Items[Index: Integer]: ThtLineRec read Get; default;
   end;
+{$endif}
 
   PXArray = array of Integer;
 
@@ -708,12 +776,16 @@ type
     Index: Integer;
   end;
 
+{$ifdef UseGenerics}
+  ThtIndexObjList = class(TObjectList<ThtIndexObj>);
+{$else}
   ThtIndexObjList = class(TObjectList)
   private
     function Get(Index: Integer): ThtIndexObj; {$ifdef UseInline} inline; {$endif}
   public
     property Items[Index: Integer]: ThtIndexObj read Get; default;
   end;
+{$endif}
 
   ThtTextWrap = (
     twNo,      // 'n'
@@ -931,12 +1003,16 @@ type
     procedure AKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
   end;
 
+{$ifdef UseGenerics}
+  THtmlFormList = class(TObjectList<THtmlForm>);
+{$else}
   THtmlFormList = class(TObjectList)
   private
     function Get(Index: Integer): THtmlForm; {$ifdef UseInline} inline; {$endif}
   public
     property Items[Index: Integer]: THtmlForm read Get; default;
   end;
+{$endif}
 
   TFormControlObj = class(TFloatingObj)
   private
@@ -1181,6 +1257,8 @@ type
     FHzSpace: Integer;
     FVrSpace: Integer;
     FSpecWd: TSpecWidth; {Width attribute (percentage or absolute)}
+    FSpecWdMin: TSpecWidth;
+    FSpecWdMax: TSpecWidth;
     FSpecHt: TSpecWidth; {Height as specified}
     // END: this area is copied by move() in AssignTo()
     function GetCell: TCellObjCell; virtual; abstract;
@@ -1199,6 +1277,8 @@ type
 //    property SpecHtType: TWidthType read FSpecHt.VType write FSpecHt.VType; {Height as specified}
 //    property SpecHtValue: Double read FSpecHt.Value write FSpecHt.Value; {Height as specified}
     property SpecWd: TSpecWidth read FSpecWd write FSpecWd; {Width as specified}
+    property SpecWdMin: TSpecWidth read FSpecWdMin write FSpecWdMin;
+    property SpecWdMax: TSpecWidth read FSpecWdMax write FSpecWdMax;
 // BG, 12.01.2012: not C++-Builder compatible
 //    property SpecWdType: TWidthType read FSpecWd.VType write FSpecWd.VType; {Height as specified}
 //    property SpecWdValue: Double read FSpecWd.Value write FSpecWd.Value; {Height as specified}
@@ -1299,10 +1379,14 @@ type
     property YIndent: Integer read FYIndent write FYIndent; {Vertical indent}
   end;
 
+{$ifdef UseGenerics}
+  TCellList = class(TObjectList<TCellObjBase>)
+{$else}
   TCellList = class(TObjectList)
   {holds one row of the html table, a list of TCellObj}
   private
     function GetCellObj(Index: Integer): TCellObjBase; {$ifdef UseInline} inline; {$endif}
+{$endif}
   public
     RowHeight: Integer;
     SpecRowHeight: TSpecWidth;
@@ -1323,16 +1407,23 @@ type
     function Draw(Canvas: TCanvas; Document: ThtDocument; const ARect: TRect; const Widths: TIntArray;
       X, Y, YOffset, CellSpacingHorz,CellSpacingVert: Integer; Border: Boolean; Light, Dark: TColor; MyRow: Integer): Integer;
     procedure Add(CellObjBase: TCellObjBase);
+{$ifdef UseGenerics}
+{$else}
     property Items[Index: Integer]: TCellObjBase read GetCellObj; default;
+{$endif}
   end;
 
   // BG, 26.12.2011:
+{$ifdef UseGenerics}
+  TRowList = class(TObjectList<TCellList>);
+{$else}
   TRowList = class(TObjectList)
   private
     function GetItem(Index: Integer): TCellList; {$ifdef UseInline} inline; {$endif}
   public
     property Items[Index: Integer]: TCellList read GetItem; default;
   end;
+{$endif}
 
   TColSpec = class
   private
@@ -1348,12 +1439,16 @@ type
   end;
 
   // BG, 26.12.2011:
+{$ifdef UseGenerics}
+  TColSpecList = class(TObjectList<TColSpec>);
+{$else}
   TColSpecList = class(TObjectList)
   private
     function GetItem(Index: Integer): TColSpec; {$ifdef UseInline} inline; {$endif}
   public
     property Items[Index: Integer]: TColSpec read GetItem; default;
   end;
+{$endif}
 
   THtmlTable = class;
 
@@ -1523,12 +1618,16 @@ type
     procedure PushNewProp(Sym: TElemSymb; Properties: TProperties; Attributes: TAttributeList; const APseudo: ThtString = '');
   end;
 
+{$ifdef UseGenerics}
+  TFormData = class(TObjectList<ThtStringList>);
+{$else}
   TFormData = class(TObjectList)
   private
     function Get(Index: Integer): ThtStringList; {$ifdef UseInline} inline; {$endif}
   public
     property Items[Index: Integer]: ThtStringList read Get; default;
   end;
+{$endif}
 
   ThtDocument = class(TCell) {a list of all the sections -- the html document}
   private
@@ -1536,6 +1635,7 @@ type
     FPropStack: THtmlPropStack;
     FPageArea: TRect;
     FPrinted: Boolean; {set if actually printed anything else but background}
+    FPixelsPerInch: Integer;
     procedure AdjustFormControls;
     procedure AddSectionsToPositionList(Sections: TSectionBase);
     function CopyToBuffer(Buffer: TSelTextCount): Integer;
@@ -1622,7 +1722,7 @@ type
     TabOrderList: TStringList;
     FirstPageItem: Boolean;
     StopTab: Boolean;
-    InlineList: TObjectList; {actually TInlineList, a list of ThtInlineRec's}
+    InlineList: TInlineList; {actually TInlineList, a list of ThtInlineRec's}
     TableNestLevel: Integer;
     InLogic2: Boolean;
     LinkDrawnEvent: TLinkDrawnEvent;
@@ -1649,7 +1749,7 @@ type
     function GetURL(Canvas: TCanvas; X, Y: Integer; out UrlTarg: TUrlTarget; out FormControl: TIDObject {TImageFormControlObj}; out ATitle: ThtString): ThtguResultType; override;
     procedure CancelActives;
     procedure CheckGIFList(Sender: TObject);
-    procedure Clear; override;
+    procedure Clear; virtual;
     procedure ClearLists;
     procedure GetBackgroundImage;
     procedure HideControls;
@@ -1664,6 +1764,9 @@ type
     procedure SetFonts(const Name, PreName: ThtString; ASize: Integer;
       AColor, AHotSpot, AVisitedColor, AActiveColor, ABackground: TColor; LnksActive, LinkUnderLine: Boolean;
       ACodePage: TBuffCodePage; ACharSet: TFontCharSet; MarginHeight, MarginWidth: Integer);
+    function ThemedColor(AColor: TColor; AStyleElement: ThtStyleElement): TColor;
+    function ThemedColorToRGB(AColor: TColor; AStyleElement: ThtStyleElement): TColor;
+
     property UseQuirksMode : Boolean read FUseQuirksMode write FUseQuirksMode;
     property PropStack : THtmlPropStack read FPropStack write FPropStack;
     property Printed: Boolean read FPrinted write SetPrinted;
@@ -1671,6 +1774,7 @@ type
     property NoBreak : Boolean read FNoBreak write FNoBreak;  {set when in <NoBr>}
     property ViewPort: TRect read GetViewPort;  {ViewPort is the APaintPanel's client rect, except while printing}
     property PageArea: TRect write SetPageArea; {is the ViewPort while printing, set by THtmlViewer.Print}
+    property PixelsPerInch: Integer read FPixelsPerInch write FPixelsPerInch;
 
     {$ifdef has_StyleElements}
     property StyleElements : TStyleElements read FStyleElements write SetStyleElements;
@@ -1742,7 +1846,7 @@ uses
   or defined(JPM_DEBUGGING_CREATE)
   or defined(JPM_DEBUGGING_LOGIC)
 }
- CodeSiteLogging,
+  CodeSiteLogging,
 {$ifend}
 {$IFNDEF NoGDIPlus}
   GDIPL2A,
@@ -1752,7 +1856,6 @@ uses
  System.NetEncoding,
 {$endif}
   Htmlsbs1;
-
 
 //-- BG ---------------------------------------------------------- 14.01.2012 --
 function Sum(const Arr: TIntArray; StartIndex, EndIndex: Integer): Integer; overload;
@@ -1962,10 +2065,10 @@ begin
     FEmSize := FProperties.EmSize;
     FExSize := FProperties.ExSize;
     CD := ConvData(100, 100, FEmSize, FExSize, 0);
-    ConvMargProp(piTop   , MargArrayO, CD, MargArray);
-    ConvMargProp(piLeft  , MargArrayO, CD, MargArray);
-    ConvMargProp(piRight , MargArrayO, CD, MargArray);
-    ConvMargProp(piBottom, MargArrayO, CD, MargArray);
+    ConvMargProp(piTop   , MargArrayO, CD, MargArray, Document.PixelsPerInch);
+    ConvMargProp(piLeft  , MargArrayO, CD, MargArray, Document.PixelsPerInch);
+    ConvMargProp(piRight , MargArrayO, CD, MargArray, Document.PixelsPerInch);
+    ConvMargProp(piBottom, MargArrayO, CD, MargArray, Document.PixelsPerInch);
     FPositions[reTop   ] := MargArray[piTop   ];
     FPositions[reLeft  ] := MargArray[piLeft  ];
     FPositions[reRight ] := MargArray[piRight ];
@@ -2296,35 +2399,10 @@ type
   TSectionClass = class of TSectionBase;
   EProcessError = class(Exception);
 
-type
-  ThtInlineRec = class
-  private
-    StartB, EndB, IDB, StartBDoc, EndBDoc: Integer;
-    MargArray: ThtMarginArray;
-  end;
-
-  TInlineList = class(TObjectList) {a list of ThtInlineRec's}
-  private
-    NeedsConverting: Boolean;
-    Owner: ThtDocument;
-    procedure AdjustValues;
-    function Get(Index: Integer): ThtInlineRec; {$ifdef UseInline} inline; {$endif}
-    function GetStartB(I: Integer): Integer;
-    function GetEndB(I: Integer): Integer;
-  public
-    constructor Create(AnOwner: ThtDocument);
-    procedure Clear; override;
-    property Items[Index: Integer]: ThtInlineRec read Get; default;
-    property StartB[I: Integer]: Integer read GetStartB;
-    property EndB[I: Integer]: Integer read GetEndB;
-  end;
-
 constructor TFontObj.Create(ASection: TSection; F: ThtFont; Position: Integer);
 begin
   inherited Create;
-{$ifndef NoTabLink}
   FSection := ASection;
-{$endif}
   TheFont := ThtFont.Create;
   TheFont.Assign(F);
   Pos := Position;
@@ -2413,6 +2491,7 @@ begin
     Viewer.LinkAttributes.Text := UrlTarget.Attr;
     Viewer.LinkText := Viewer.GetTextByIndices(UrlTarget.Start, UrlTarget.Last);
     Viewer.TriggerUrlAction; {call to UrlAction via message}
+    Key := 0; {Key has been consumed}
   end
   else {send other keys to THtmlViewer}
     Viewer.KeyDown(Key, Shift);
@@ -2468,7 +2547,7 @@ end;
 
 procedure TFontObj.ConvertFont(const FI: ThtFontInfo);
 begin
-  TheFont.Assign(FI);
+  TheFont.Assign(FI, FSection.Document.PixelsPerInch);
   FontChanged;
 end;
 
@@ -2490,11 +2569,14 @@ begin
 end;
 
 destructor TFontObj.Destroy;
+{$ifndef NoTabLink}
 var Index: Integer;
+{$endif}
 begin
   FIArray.Free;
   TheFont.Free;
   UrlTarget.Free;
+{$ifndef NoTabLink}
   if FSection <> nil then
     if FSection.Document <> nil then
       if FSection.Document.TabOrderList <> nil then
@@ -2504,6 +2586,7 @@ begin
           if Index >= 0 then
             Delete(Index);
         end;
+{$endif}
   TabControl.Free;
   inherited Destroy;
 end;
@@ -2607,19 +2690,15 @@ constructor TFontList.CreateCopy(ASection: TSection; T: TFontList);
 var
   I: Integer;
 begin
-  inherited create;
+  inherited Create;
   for I := 0 to T.Count - 1 do
     Add(TFontObj.CreateCopy(ASection, T.Items[I]));
 end;
 
 //-- BG ---------------------------------------------------------- 10.02.2013 --
-{$if compilerversion > 35}
-function TFontList.GetFont(Index: NativeInt): TFontObj;
-{$else}
 function TFontList.GetFont(Index: Integer): TFontObj;
-{$ifend}
 begin
-  Result := inherited Get(Index);
+  Result := TFontObj(inherited Items[Index]);
 end;
 
 function TFontList.GetFontAt(Posn: Integer; out OHang: Integer): ThtFont;
@@ -2823,9 +2902,14 @@ begin
 end;
 
 destructor TImageObj.Destroy;
+var
+  I: Integer;
 begin
   if not IsCopy then
   begin
+    I := Document.IDNameList.IndexOfObject(Self);
+    if I >= 0 then
+      Document.IDNameList.Delete(I);
     if (Source <> '') and Assigned(OrigImage) then
       Document.ImageCache.DecUsage(htUpperCase(htTrim(Source)));
     if (Image is ThtGifImage) and ThtGifImage(Image).Gif.IsCopy then
@@ -3152,8 +3236,7 @@ end;
 {----------------TImageObj.Draw}
 
 //-- BG ---------------------------------------------------------- 12.06.2010 --
-procedure GetRaisedColors(SectionList: ThtDocument; Canvas: TCanvas; out Light, Dark: TColor);  {$ifdef UseInline} inline; {$endif}
- {$ifdef UseInline} inline; {$endif}
+procedure GetRaisedColors(SectionList: ThtDocument; Canvas: TCanvas; out Light, Dark: TColor);
 var
   White, BlackBorder: Boolean;
 begin
@@ -3166,12 +3249,12 @@ begin
   end
   else
   begin
-    White := SectionList.Printing or (ThemedColor(SectionList.Background{$ifdef has_StyleElements},seFont in SectionList.StyleElements{$endif}) = clWhite);
-    Dark := ThemedColor(clBtnShadow{$ifdef has_StyleElements},seFont in SectionList.StyleElements{$endif} );
+    White := SectionList.Printing or (SectionList.ThemedColorToRGB( SectionList.Background, htseFont) = clWhite);
+    Dark := SectionList.ThemedColorToRGB(clBtnShadow, htseFont);
     if White then
       Light := clSilver
     else
-      Light := ThemedColor(clBtnHighLight{$ifdef has_StyleElements},seFont in SectionList.StyleElements{$endif});
+      Light := SectionList.ThemedColorToRGB(clBtnHighLight, htseFont);
   end;
 end;
 
@@ -3220,11 +3303,13 @@ end;
 procedure RaisedRectColor(Canvas: TCanvas;
   const ORect, IRect: TRect;
   const Colors: ThtColorArray;
-  Styles: ThtBorderStyleArray); overload;
-  {$ifdef UseInline} inline; {$endif}
+  Styles: ThtBorderStyleArray;
+  ThemedColorToRGB: ThtThemedColor
+); overload;
+{$ifdef UseInline} inline; {$endif}
 {Draws colored raised or lowered rectangles for table borders}
 begin
-  DrawBorder(Canvas, ORect, IRect, Colors, Styles, clNone, False{$ifdef has_StyleElements},[seClient,seFont,seBorder]{$endif});
+  DrawBorder(Canvas, ORect, IRect, Colors, Styles, clNone, False, ThemedColorToRGB);
 end;
 
 procedure RaisedRect(SectionList: ThtDocument; Canvas: TCanvas;
@@ -3238,7 +3323,9 @@ begin
     Rect(X1, Y1, X2, Y2),
     Rect(X1 + W, Y1 + W, X2 - W, Y2 - W),
     htRaisedColors(SectionList, Canvas, Raised),
-    htStyles(bssSolid, bssSolid, bssSolid, bssSolid));
+    htStyles(bssSolid, bssSolid, bssSolid, bssSolid),
+    SectionList.ThemedColorToRGB
+  );
 end;
 
 procedure TImageObj.DrawInline(Canvas: TCanvas; X, Y, YBaseline: Integer; FO: TFontObj);
@@ -3254,16 +3341,16 @@ var
 //  SaveStyle: TPenStyle;
   YY: Integer;
 //  ORect, IRect: TRect;
-{$ifdef has_StyleElements}
-  LStyle : TStyleElements;
-{$endif}
+//{$ifdef has_StyleElements}
+//  LStyle : TStyleElements;
+//{$endif}
 begin
   ViewImages := Document.ShowImages;
   Dec(Y, Document.YOff);
   Dec(YBaseLine, Document.YOff);
-{$ifdef has_StyleElements}
-  LStyle := Document.StyleElements;
-{$endif}
+//{$ifdef has_StyleElements}
+//  LStyle := Document.StyleElements;
+//{$endif}
 
   if ViewImages then
     TmpImage := Image
@@ -3343,7 +3430,7 @@ begin
   SetTextAlign(Canvas.Handle, TA_Top);
   if SubstImage and (BorderWidth = 0) then
   begin
-    Canvas.Font.Color := ThemedColor(FO.TheFont.Color{$ifdef has_StyleElements},seFont in LStyle  {$endif});
+    Canvas.Font.Color := Document.ThemedColorToRGB(FO.TheFont.Color, htseFont);
   {calc the offset from the image's base to the alt= text baseline}
     case VertAlign of
       ATop, ANone:
@@ -3373,7 +3460,7 @@ begin
 //      SaveColor := Pen.Color;
 //      SaveWidth := Pen.Width;
 //      SaveStyle := Pen.Style;
-      Font.Color := ThemedColor(FO.TheFont.Color{$ifdef has_StyleElements},seFont in Document.StyleElements {$endif});
+      Font.Color := Document.ThemedColorToRGB(FO.TheFont.Color, htseFont);
 //      Pen.Color := Font.Color;
 //      Pen.Width := BorderSize;
 //      Pen.Style := psInsideFrame;
@@ -3515,8 +3602,12 @@ begin
         begin
           if B then
           begin
-            ControlList[I].TheControl.SetFocus;
-            break;
+            with Ctrl as TRadioButtonFormControlObj do
+            begin
+              TheControl.SetFocus;
+              Checked := True;
+            end;
+            Break;
           end;
           if Ctrl.TheControl = Sender then
             B := True
@@ -3530,13 +3621,18 @@ begin
         begin
           if B then
           begin
-            ControlList[I].TheControl.SetFocus;
-            break;
+            with Ctrl as TRadioButtonFormControlObj do
+            begin
+              TheControl.SetFocus;
+              Checked := True;
+            end;
+            Break;
           end;
           if Ctrl.TheControl = Sender then
             B := True
         end;
       end;
+    Key := 0; {Key has been consumed}
   end
   else {send other keys to THtmlViewer}
     Document.TheOwner.KeyDown(Key, Shift);
@@ -3722,7 +3818,7 @@ begin
   EmSize := Prop.EmSize;
   ExSize := Prop.ExSize;
   PercentWidth := (VarIsStr(MargArrayO[piWidth])) and (System.Pos('%', MargArrayO[piWidth]) > 0);
-  ConvInlineMargArray(MargArrayO, 100, 200, EmSize, ExSize, 4, MargArray);
+  ConvInlineMargArray(MargArrayO, 100, 200, EmSize, ExSize, 4, MargArray, Document.PixelsPerInch);
 
   VSpaceT := 1;
   VSpaceB := 1;
@@ -4035,7 +4131,7 @@ begin
   begin
     FPanel.Left := -4000; {so will be invisible until placed}
     FControl.Left := 0;
-    if Screen.PixelsPerInch > 100 then
+    if FDocument.PixelsPerInch > 100 then
     begin
       FPanel.Width := 16;
       FPanel.Height := 16;
@@ -4135,7 +4231,7 @@ begin
       MonoBlack := Document.PrintMonoBlack and (GetDeviceCaps(Handle, BITSPIXEL) = 1) and
         (GetDeviceCaps(Handle, PLANES) = 1);
       if Disabled and not MonoBlack then
-        Brush.Color := ThemedColor(clBtnFace {$ifdef has_StyleElements},seClient in Document.StyleElements{$endif})
+        Brush.Color := Document.ThemedColorToRGB(clBtnFace, htseClient)
       else
         Brush.Color := clWhite;
       Pen.Color := clWhite;
@@ -4150,11 +4246,11 @@ begin
       else
       begin
         Pen.Width := 2;
-        Pen.Color := ThemedColor(clBtnShadow {$ifdef has_StyleElements},seClient in Document.StyleElements{$endif});
+        Pen.Color := Document.ThemedColorToRGB(clBtnShadow, htseClient);
       end;
       Arc(X1, Y1, XW, YH, XW, Y1, X1, YH);
       if not MonoBlack then
-        Pen.Color := ThemedColor(clBtnHighlight{$ifdef has_StyleElements},seClient in Document.StyleElements{$endif});//clSilver;
+        Pen.Color := Document.ThemedColorToRGB(clBtnHighlight, htseClient);
       Arc(X1, Y1, XW, YH, X1, YH, XW, Y1);
       if Checked then
       begin
@@ -4181,7 +4277,7 @@ begin
     if Active and Document.TheOwner.ShowFocusRect then //MK20091107
     begin
       Canvas.Brush.Color := clWhite;
-      if Screen.PixelsPerInch > 100 then
+      if Document.PixelsPerInch > 100 then
         Canvas.DrawFocusRect(Rect(Left - 2, Top - 2, Left + 18, Top + 18))
       else
         Canvas.DrawFocusRect(Rect(Left - 3, Top - 2, Left + 16, Top + 16));
@@ -4852,7 +4948,7 @@ var
   CD: ThtConvData;
 begin
   CD := ConvData(100, 100 {width and height not known at this point},  EmSize, ExSize, BorderWidth);
-  ConvVertMargins(MargArrayO, CD, MargArray);
+  ConvVertMargins(MargArrayO, CD, MargArray, Document.PixelsPerInch);
   TopAuto := MarginTop in CD.IsAutoParagraph;
   BottomAuto := MarginBottom in CD.IsAutoParagraph;
   if (MargArray[PaddingTop] <> 0) or (MargArray[BorderTopWidth] <> 0) then {do nothing}
@@ -5006,7 +5102,7 @@ begin
   CodeSite.AddSeparator;
 {$ENDIF}
 
-  StyleUn.ConvMargArray(MargArrayO, BaseWidth, BaseHeight, EmSize, ExSize, BorderWidth, AutoCount, MargArray);
+  StyleUn.ConvMargArray(MargArrayO, BaseWidth, BaseHeight, EmSize, ExSize, BorderWidth, AutoCount, MargArray, Document.PixelsPerInch);
 
 {$IFDEF JPM_DEBUGGING_CONV}
   CodeSite.ExitMethod(Self,'TBlock.ConvMargArray');
@@ -5075,13 +5171,6 @@ begin
 
   ConvMargArray(AvailableWidth, AvailableHeight, AutoCount);
   //HideOverflow := HideOverflow and (MargArray[piWidth] <> Auto) and (MargArray[piWidth] > 20);
-  if HideOverflow and (MargArray[piWidth] <> Auto) and (MargArray[piWidth] > 20) then
-  begin
-    MinCell := MargArray[piWidth];
-    MaxCell := MinCell;
-  end
-  else
-    ContentMinMaxWidth(Canvas, MinCell, MaxCell, AvailableWidth, AvailableHeight);
   if MargArray[MarginLeft] = Auto then
     MargArray[MarginLeft] := 0;
   if MargArray[MarginRight] = Auto then
@@ -5090,6 +5179,13 @@ begin
     MargArray[piWidth] := 0;
   LeftSide := MargArray[MarginLeft] + MargArray[BorderLeftWidth] + MargArray[PaddingLeft];
   RightSide := MargArray[MarginRight] + MargArray[BorderRightWidth] + MargArray[PaddingRight];
+  if HideOverflow and (MargArray[piWidth] <> Auto) and (MargArray[piWidth] > 20) then
+  begin
+    MinCell := MargArray[piWidth];
+    MaxCell := MinCell;
+  end
+  else
+    ContentMinMaxWidth(Canvas, MinCell, MaxCell, AvailableWidth - LeftSide - RightSide, AvailableHeight);
   if MargArray[piWidth] > 0 then
   begin
     Min := MargArray[piWidth] + LeftSide + RightSide;
@@ -5454,15 +5550,24 @@ var
   function GetClientContentBot(ClientContentBot: Integer): Integer;
   var
     H: Integer;
+    S: Variant;
   begin
-    if VarIsIntNull(MargArrayO[piHeight]) then
-      Result := Max(ContentTop, ClientContentBot)
+    S := MargArrayO[piHeight];
+    if VarIsIntNull(S) or VarIsAuto(S) then
+      H := Auto
     else
     begin
-      if Pos('%', VarToStr(MargArrayO[piHeight])) > 0 then
-        H := LengthConv(MargArrayO[piHeight], False, AHeight, EmSize, ExSize, 0)
+      if Pos('%', VarToStr(S)) > 0 then
+        H := LengthConv(S, False, AHeight, EmSize, ExSize, 0, Document.PixelsPerInch)
       else
         H := MargArray[piHeight];
+    end;
+
+    case H of
+      IntNull,
+      Auto:
+        Result := Max(ContentTop, ClientContentBot);
+    else
       Result := Max(H + ContentTop, ContentTop);
     end;
   end;
@@ -6079,7 +6184,7 @@ begin
         if HasBackgroundColor {and (not Document.Printing or Document.PrintBackground)} then
         begin {color the Padding Region}
           Canvas.Brush.Style := bsSolid;
-          Canvas.Brush.Color := ThemedColor(MargArray[BackgroundColor]{$ifdef has_StyleElements},seClient in Document.StyleElements{$endif}) or PalRelative;
+          Canvas.Brush.Color := Document.ThemedColorToRGB(MargArray[BackgroundColor], htseClient) or PalRelative;
         end
         else
           Canvas.Brush.Style := bsClear;
@@ -6154,7 +6259,7 @@ begin
       DrawBorder(Canvas, ORect, IRect,
         htColors(MargArray[BorderLeftColor], MargArray[BorderTopColor], MargArray[BorderRightColor], MargArray[BorderBottomColor]),
         htStyles(ThtBorderStyle(MargArray[BorderLeftStyle]), ThtBorderStyle(MargArray[BorderTopStyle]), ThtBorderStyle(MargArray[BorderRightStyle]), ThtBorderStyle(MargArray[BorderBottomStyle])),
-        MargArray[BackgroundColor], Document.Printing{$ifdef has_StyleElements}, Document.StyleElements {$endif})
+        MargArray[BackgroundColor], Document.Printing, Document.ThemedColorToRGB)
 end;
 
 procedure TBlock.DrawTheList(Canvas: TCanvas; const ARect: TRect; ClipWidth, X, XRef, YRef: Integer);
@@ -6507,7 +6612,7 @@ begin
 
 {need to see if width is defined in style}
   Percent := (VarIsStr(MargArrayO[piWidth])) and (Pos('%', MargArrayO[piWidth]) > 0);
-  StyleUn.ConvMargArray(MargArrayO, 100, 0, EmSize, ExSize, BorderWidth, AutoCount, MargArray);
+  StyleUn.ConvMargArray(MargArrayO, 100, 0, EmSize, ExSize, BorderWidth, AutoCount, MargArray, Document.PixelsPerInch);
   if MargArray[piWidth] > 0 then
   begin
     if Percent then
@@ -6638,10 +6743,11 @@ function TTableBlock.FindWidth(Canvas: TCanvas; AWidth, AHeight, AutoCount: Inte
 var
   LeftSide, RightSide: Integer;
   Min, Max, M, P: Integer;
+  LJustify: ThtJustify;
 begin
   if not HasCaption then
   begin
-    inherited FindWidth(Canvas, AWidth, AHeight, AUtoCount);
+    inherited FindWidth(Canvas, AWidth, AHeight, AutoCount);
 //    if MargArray[MarginLeft] = Auto then
 //      MargArray[MarginLeft] := 0;
 //    if MargArray[MarginRight] = Auto then
@@ -6707,22 +6813,35 @@ begin
   end;
   MargArray[piWidth] := Result;
 
-  if (MargArray[MarginLeft] = 0) and (MargArray[MarginRight] = 0) and (Result + LeftSide + RightSide < AWidth) then
+  if Result + LeftSide + RightSide < AWidth then
   begin
-     M := AWidth - LeftSide - Result - RightSide;
-    case Justify of
-      Centered:
-      begin
-        MargArray[MarginLeft]  := M div 2;
-        MargArray[MarginRight] := M - MargArray[MarginLeft];
+    if (MargArray[MarginLeft] = 0) and (MargArray[MarginRight] = 0) then
+    begin
+      M := AWidth - LeftSide - Result - RightSide;
+      LJustify := Justify;
+      if LJustify = NoJustify then
+        if VarIsAuto(MargArrayO[MarginLeft]) then
+          if VarIsAuto(MargArrayO[MarginRight]) then
+            LJustify := Centered
+          else
+            LJustify := Right
+        else
+          if VarIsAuto(MargArrayO[MarginRight]) then
+            LJustify := Left;
+
+      case LJustify of
+        Centered:
+        begin
+          MargArray[MarginLeft]  := M div 2;
+          MargArray[MarginRight] := M - MargArray[MarginLeft];
+        end;
+
+        Right:
+          MargArray[MarginLeft] := M;
+
+        Left:
+          MargArray[MarginRight] := M;
       end;
-
-      Right:
-        MargArray[MarginLeft] := M;
-
-      Left:
-        MargArray[MarginRight] := M;
-
     end;
   end;
 end;
@@ -7051,7 +7170,7 @@ begin
           NStr := IntToStr(ListNumb);
         end;
         Canvas.Font := ListFont;
-        Canvas.Font.Color := ThemedColor(ListFont.Color{$ifdef has_StyleElements},seFont in Document.StyleElements{$endif});
+        Canvas.Font.Color := Document.ThemedColorToRGB(ListFont.Color, htseFont);
         NStr := NStr + '.';
         BkMode := SetBkMode(Canvas.Handle, Transparent);
         TAlign := SetTextAlign(Canvas.Handle, TA_BASELINE);
@@ -7064,12 +7183,12 @@ begin
         begin
           PenColor := Pen.Color;
           PenStyle := Pen.Style;
-          Pen.Color := ThemedColor(ListFont.Color{$ifdef has_StyleElements},seFont in Document.StyleElements{$endif});
+          Pen.Color := Document.ThemedColorToRGB(ListFont.Color, htseFont);
           Pen.Style := psSolid;
           BrushStyle := Brush.Style;
           BrushColor := Brush.Color;
           Brush.Style := bsSolid;
-          Brush.Color := ThemedColor(ListFont.Color{$ifdef has_StyleElements},seFont in Document.StyleElements{$endif});
+          Brush.Color := Document.ThemedColorToRGB(ListFont.Color, htseFont);
           case ListStyleType of
             lbCircle:
               begin
@@ -7162,7 +7281,7 @@ begin
   {$ENDIF}
   YDraw := Y;
   StartCurs := Curs;
-  StyleUn.ConvMargArray(MargArrayO, AWidth, AHeight, EmSize, ExSize, BorderWidth, AutoCount, MargArray);
+  StyleUn.ConvMargArray(MargArrayO, AWidth, AHeight, EmSize, ExSize, BorderWidth, AutoCount, MargArray, Document.PixelsPerInch);
   if IsAuto(MargArray[MarginLeft]) then MargArray[MarginLeft] := 0;
   if IsAuto(MargArray[MarginRight]) then MargArray[MarginRight] := 0;
   ApplyBoxSettings(MargArray,Document.UseQuirksMode);
@@ -7471,6 +7590,39 @@ begin
   HideControls;
 end;
 
+//-- BG ---------------------------------------------------------- 08.01.2023 --
+function ThtDocument.ThemedColor(AColor: TColor; AStyleElement: ThtStyleElement): TColor;
+begin
+  if TheOwner <> nil then
+    Result := TheOwner.ThemedColor( AColor, AStyleElement )
+  else
+  begin
+    Result := AColor;
+{$ifdef has_StyleElements}
+    case AStyleElement of
+      htseFont:
+        if (seFont in StyleElements) and TStyleManager.IsCustomStyleActive then
+          Result := StyleServices.GetSystemColor(Result);
+      htseClient:
+        if (seClient in StyleElements) and TStyleManager.IsCustomStyleActive then
+          Result := StyleServices.GetSystemColor(Result);
+      htseBorder:
+        if (seBorder in StyleElements) and TStyleManager.IsCustomStyleActive then
+          Result := StyleServices.GetSystemColor(Result);
+    end;
+{$endif}
+  end;
+end;
+
+//-- BG ---------------------------------------------------------- 08.01.2023 --
+function ThtDocument.ThemedColorToRGB(AColor: TColor; AStyleElement: ThtStyleElement): TColor;
+begin
+  if TheOwner <> nil then
+    Result := TheOwner.ThemedColorToRGB( AColor, AStyleElement )
+  else
+    Result := ColorToRGB( ThemedColor( AColor, AStyleElement ));
+end;
+
 procedure ThtDocument.Clear;
 begin
   if not IsCopy then
@@ -7752,6 +7904,7 @@ procedure ThtDocument.SetFonts(const Name, PreName: ThtString; ASize: Integer;
   AColor, AHotSpot, AVisitedColor, AActiveColor, ABackground: TColor; LnksActive, LinkUnderLine: Boolean;
   ACodePage: TBuffCodePage; ACharSet: TFontCharSet; MarginHeight, MarginWidth: Integer);
 begin
+  Styles.PixelsPerInch := PixelsPerInch;
   Styles.Initialize(Name, PreName, ASize, AColor, AHotspot, AVisitedColor,
     AActiveColor, LinkUnderLine, ACodePage, ACharSet, MarginHeight, MarginWidth);
   InitializeFontSizes(ASize);
@@ -7983,7 +8136,7 @@ function ThtDocument.GetTheImage(const BMName: ThtString; var Transparent: ThtIm
       Specific := HTMLToRes(Name, ResType);
       Stream := TResourceStream.Create(HInstance, htStringToString(Specific), PChar({$ifdef LCL}string(ResType){$else}ResType{$endif}) );
     end
-    else if FileExists(Name) then
+    else if htFileExists(Name) then
       Stream := TFileStream.Create( htStringToString(Name), fmOpenRead or fmShareDenyWrite)
     else
       Stream := nil;
@@ -8172,7 +8325,7 @@ begin
         Prop.GetVMarginArray(MargArrayO);
         EmSize := Prop.EmSize;
         ExSize := Prop.ExSize;
-        ConvMargArray(MargArrayO, 200, 200, EmSize, ExSize, 0{4}, Dummy1, MargArray);
+        ConvMargArray(MargArrayO, 200, 200, EmSize, ExSize, 0{4}, Dummy1, MargArray, PixelsPerInch);
       end;
     end
     else {this call has end information}
@@ -8232,11 +8385,14 @@ begin
     Result := 99999999;
 end;
 
+{$ifdef UseGenerics}
+{$else}
 //-- BG ---------------------------------------------------------- 06.10.2016 --
 function TInlineList.Get(Index: Integer): ThtInlineRec;
 begin
   Result := inherited Get(Index);
 end;
+{$endif}
 
 function TInlineList.GetEndB(I: Integer): Integer;
 begin
@@ -8387,9 +8543,13 @@ begin
       Prop.GetVMarginArray(MargArrayO);
     EmSize := Prop.EmSize;
     ExSize := Prop.ExSize;
-    ConvMargArray(MargArrayO, 100, 0, EmSize, ExSize, 0, AutoCount, MargArray);
+    ConvMargArray(MargArrayO, 100, 0, EmSize, ExSize, 0, AutoCount, MargArray, Cell.Document.PixelsPerInch);
     if VarIsStr(MargArrayO[piWidth]) and (MargArray[piWidth] >= 0) then
       FSpecWd := ToSpecWidth(MargArray[piWidth], MargArrayO[piWidth]);
+    if VarIsStr(MargArrayO[piMinWidth]) and (MargArray[piMinWidth] >= 0) then
+      FSpecWdMin := ToSpecWidth(MargArray[piMinWidth], MargArrayO[piMinWidth]);
+    if VarIsStr(MargArrayO[piMaxWidth]) and (MargArray[piMaxWidth] >= 0) then
+      FSpecWdMax := ToSpecWidth(MargArray[piMaxWidth], MargArrayO[piMaxWidth]);
     if VarIsStr(MargArrayO[piHeight]) and (MargArray[piHeight] >= 0) then
       FSpecHt := ToSpecWidth(MargArray[piHeight], MargArrayO[piHeight]);
 
@@ -8407,7 +8567,7 @@ begin
     end;
 
   {In the following, Padding widths in percent aren't accepted}
-    ConvMargArrayForCellPadding(MargArrayO, EmSize, ExSize, MargArray);
+    ConvMargArrayForCellPadding(MargArrayO, EmSize, ExSize, MargArray, Cell.Document.PixelsPerInch);
     FPad.Top := MargArray[PaddingTop];
     FPad.Right := MargArray[PaddingRight];
     FPad.Bottom := MargArray[PaddingBottom];
@@ -8647,7 +8807,7 @@ begin
 
     if Cell.BkGnd then
     begin
-      Canvas.Brush.Color := ThemedColor(Cell.BkColor {$ifdef has_StyleElements},seClient in Cell.Document.StyleElements{$endif}) or PalRelative;
+      Canvas.Brush.Color := Cell.Document.ThemedColorToRGB(Cell.BkColor, htseClient) or PalRelative;
       Canvas.Brush.Style := bsSolid;
       if not Cell.IsCopy or not ImgOK then
       begin
@@ -8742,7 +8902,7 @@ begin
       DrawBorder(Canvas, Rect(BL, BT, BR, BB), Rect(PL, PT, PR, PB),
         htColors(MargArray[BorderLeftColor], MargArray[BorderTopColor], MargArray[BorderRightColor], MargArray[BorderBottomColor]),
         htStyles(ThtBorderStyle(MargArray[BorderLeftStyle]), ThtBorderStyle(MargArray[BorderTopStyle]), ThtBorderStyle(MargArray[BorderRightStyle]), ThtBorderStyle(MargArray[BorderBottomStyle])),
-        MargArray[BackgroundColor], Cell.Document.Printing{$ifdef has_StyleElements},Cell.Document.StyleElements{$endif});
+        MargArray[BackgroundColor], Cell.Document.Printing, Cell.Document.ThemedColorToRGB);
     except
     end;
 end;
@@ -9007,11 +9167,14 @@ begin
 {$ENDIF}
 end;
 
+{$ifdef UseGenerics}
+{$else}
 //-- BG ---------------------------------------------------------- 12.09.2010 --
 function TCellList.GetCellObj(Index: Integer): TCellObjBase;
 begin
   Result := inherited Get(Index);
 end;
+{$endif}
 
 {----------------TCellList.Draw}
 
@@ -9832,6 +9995,25 @@ begin
           CellObj.Cell.MinMaxWidth(Canvas, CellMin, CellMax, 0, 0);
           CellPercent := 0;
           CellRel := 0;
+
+          with CellObj.SpecWdMin do
+          begin
+            case VType of
+              wtAbsolute:
+                if CellMin < Value then
+                  CellMin := Value;
+            end;
+          end;
+
+          with CellObj.SpecWdMax do
+          begin
+            case VType of
+              wtAbsolute:
+                if CellMax > Value then
+                  CellMax := Value;
+            end;
+          end;
+
           with CellObj.SpecWd do
           begin
             CellSpec := VType;
@@ -9845,13 +10027,13 @@ begin
                 //CellMin := Max(CellMin, Value);   // CellMin should be at least the given absolute value
                 //CellMax := Min(CellMax, Value);   // CellMax should be at most  the given absolute value
                 CellMax := Value;   // CellMax should be at most  the given absolute value
-                CellMax := Max(CellMax, CellMin); // CellMax should be at least CellMin
               end;
 
               wtRelative:
                 CellRel := Value;
             end;
           end;
+          CellMax := Max(CellMax, CellMin); // CellMax should be at least CellMin
           Inc(CellMin, CellSpacingHorz + CellObj.HzSpace);
           Inc(CellMax, CellSpacingHorz + CellObj.HzSpace);
 
@@ -11157,6 +11339,8 @@ begin
 
   FO := TFontObj.Create(Self, Prop.Font, 0);
   FO.Title := Prop.PropTitle;
+  Prop.GetVertAlign(FO.SScript);
+
   if Assigned(AnURL) and (Length(AnURL.Url) > 0) then
   begin
     FO.CreateFIArray;
@@ -12451,7 +12635,7 @@ function TSection.DrawLogic1(Canvas: TCanvas; X, Y, XRef, YRef, AWidth, AHeight,
       begin
         Result := 0;
         for I := 0 to NN - 2 do {-2 so as not to count end spaces}
-          if ((PStart + I)^ = ' ') or ((PStart + I)^ = #160) then
+          if ((PStart + I)^ = SpcChar) or ((PStart + I)^ = NbSpcChar) then
             Inc(Result);
       end;
 
@@ -13115,6 +13299,8 @@ var
     Start: PWideChar;
     Cnt, Descent: Integer;
     St: ThtString;
+    Dx: array of Integer;
+    pDx: PInteger;
 
     function AddHyphen(P: PWideChar; N: Integer): ThtString;
     var
@@ -13124,6 +13310,69 @@ var
       for I := 1 to N do
         Result[I] := P[I - 1];
       Result[N + 1] := ThtChar('-');
+    end;
+
+    function CharacterJustification(P: PWideChar; N: Integer): Integer;
+    var
+      Fit: Integer;
+      Size: TSize;
+      Ratio: Double;
+      Width: Integer;
+      Offset: Integer;
+      Extra: Integer;
+      Spaces: Integer;
+      Inserted: Integer;
+      PEnd: PWideChar;
+    begin
+      if (LR.Spaces = 0) or (LR.Extra = 0) then
+      begin
+        pDx := nil;
+        // TextExtent:
+        Result := GetTextExtent(Canvas.Handle, P, N).cx;
+      end
+      else
+      begin
+        SetLength(Dx, N);
+        pDx := @Dx[0];
+        GetTextExtentExPointW(Canvas.Handle, P, N, LR.DrawWidth, @Fit, pDx, Size);
+
+        // pDx, resp Dx contants the width of Fit partial strings. Dx[0] width of P[0], Dx[1] width of P[0] and P[1], ...
+        // To justify output in ExtTextOut it needs offsets from one character to the next one: Dx[0] is offset from P[0] to P[1], ...
+        Width := 0;
+        Spaces := 0;
+        Inserted := 0;
+        Ratio := LR.Extra / LR.Spaces;
+        PEnd := @P[N];
+        while P <> PEnd do
+        begin
+          Offset := pDx^ - Width; // remove length of previous partial string
+
+          // insert additional pixels at spaces
+          case P^ of
+            SpcChar,
+            NbSpcChar:
+            begin
+              Inc(Spaces);
+
+              // add rounded number of pixels:
+              Extra := Floor(Spaces * Ratio + 1E-6) - Inserted;
+              Inc(Inserted, Extra);
+              Inc(Offset, Extra);
+            end;
+          end;
+
+          Width := pDx^;
+          pDx^ := Offset;
+          Inc(pDx);
+          Inc(P);
+        end;
+
+        // Reset pDx for ExtTextOut().
+        pDx := @Dx[0];
+
+        // TextExtent:
+        Result := Size.cx + Inserted;
+      end;
     end;
 
     function ChkInversion(Start: PWideChar; out Count: Integer): Boolean;
@@ -13197,12 +13446,10 @@ var
       ForeColor := Canvas.Font.Color;
       BackColor := FO.TheFont.bgColor;
       if ForeColor <> clNone then
-         ForeColor := ThemedColor(ForeColor{$ifdef has_StyleElements},seFont in Document.StyleElements{$endif});
+         ForeColor := Document.ThemedColorToRGB(ForeColor, htseFont);
       if BackColor <> clNone then
-         BackColor := ThemedColor(BackColor{$ifdef has_StyleElements},seFont in Document.StyleElements{$endif});
+         BackColor := Document.ThemedColorToRGB(BackColor, htseFont);
       Canvas.Font.Color := ForeColor;
-      if Document.Printing and (Canvas.Font.Color = ForeColor) then
-        Canvas.Font.Color := clBlack;
       if J2 = -1 then
       begin {it's an image or panel}
         if FlObj is TImageObj then
@@ -13473,12 +13720,12 @@ var
         SetTextAlign(Canvas.Handle, TA_BaseLine);
       {figure any offset for subscript or superscript}
         with FO do
-          if SScript = ANone then
-            Addon := 0
-          else if SScript = ASuper then
-            Addon := -(FontHeight div 3)
+          case SScript of
+            aSuper: Addon := -(FontHeight div 3);
+            aSub  : Addon := Descent div 2 + 1;
           else
-            Addon := Descent div 2 + 1;
+            Addon := 0;
+          end;
         NewCP := NewCP or (Addon <> 0);
       {calc a new CP if required}
         if NewCP then
@@ -13504,31 +13751,28 @@ var
           end
           else
           begin
-            if LR.Spaces = 0 then
-              SetTextJustification(Canvas.Handle, 0, 0)
-            else
-              SetTextJustification(Canvas.Handle, LR.Extra, LR.Spaces);
+            SetTextJustification(Canvas.Handle, 0, 0);
             if not IsWin95 then {use TextOutW}
             begin
               if (Cnt - I <= 0) and LR.Shy then
               begin
                 St := AddHyphen(Start, Tmp);
-                TextOutW(Canvas.Handle, CPx, CPy, PWideChar(St), Length(St));
-                CP1x := CPx + GetTextExtent(Canvas.Handle, PWideChar(St), Length(St)).cx;
+                CP1x := CPx + CharacterJustification(PWideChar(St), Length(St));
+                ExtTextOutW(Canvas.Handle, CPx, CPy, 0, nil, PWideChar(St), Length(St), pDx);
               end
               else
               begin
-                TextOutW(Canvas.Handle, CPx, CPy, Start, Tmp);
-                CP1x := CPx + GetTextExtent(Canvas.Handle, Start, Tmp).cx;
+                CP1x := CPx + CharacterJustification(Start, Tmp);
+                ExtTextOutW(Canvas.Handle, CPx, CPy, 0, nil, Start, Tmp, pDx);
               end
             end
             else
             begin {Win95}
             {Win95 has bug which extends text underline for proportional font in TextOutW.
              Use clipping to clip the extra underline.}
-              CP1x := CPx + GetTextExtent(Canvas.Handle, Start, Tmp).cx;
+              CP1x := CPx + CharacterJustification(Start, Tmp);
               ARect := Rect(CPx, Y - LR.LineHt - LR.SpaceBefore - YOffset, CP1x, Y - YOffset + 1);
-              ExtTextOutW(Canvas.Handle, CPx, CPy, ETO_CLIPPED, @ARect, Start, Tmp, nil)
+              ExtTextOutW(Canvas.Handle, CPx, CPy, ETO_CLIPPED, @ARect, Start, Tmp, pDx);
             end;
           end;
           Document.Printed := True;
@@ -13615,7 +13859,7 @@ var
         for K := 0 to BorderList.Count - 1 do
         begin
           BR := BorderList[K];
-          BR.DrawTheBorder(Canvas, XOffset, YOffSet, Document.Printing{$ifdef has_StyleElements}, Document.StyleElements{$endif});
+          BR.DrawTheBorder(Canvas, XOffset, YOffSet, Document.Printing, Document.ThemedColorToRGB);
         end;
       DrawTheText(I); {draw the text, etc., in this line}
       Inc(Y, SpaceAfter);
@@ -14735,18 +14979,7 @@ begin
   {$ENDIF}
 end;
 
-
 { TDrawList }
-
-type
-  TImageRec = class(TObject)
-  public
-    AObj: TImageObj;
-    ACanvas: TCanvas;
-    AX, AY: Integer;
-    AYBaseline: Integer;
-    AFO: TFontObj;
-  end;
 
 procedure TDrawList.AddImage(Obj: TImageObj; Canvas: TCanvas; X, Y, YBaseline: Integer; FO: TFontObj);
 var
@@ -14853,8 +15086,7 @@ end;
 
 {----------------ThtBorderRec.DrawTheBorder}
 
-procedure ThtBorderRec.DrawTheBorder(Canvas: TCanvas; XOffset, YOffSet: Integer; Printing: Boolean
-      {$ifdef has_StyleElements}; const AStyleElements : TStyleElements {$endif});
+procedure ThtBorderRec.DrawTheBorder(Canvas: TCanvas; XOffset, YOffSet: Integer; Printing: Boolean; ThemedColorToRGB: ThtThemedColor);
 var
   IRect, ORect: TRect;
 begin
@@ -14870,7 +15102,7 @@ begin
 
   if MargArray[BackgroundColor] <> clNone then
   begin
-    Canvas.Brush.Color := ThemedColor(MargArray[BackgroundColor]{$ifdef has_StyleElements},seClient in AStyleElements{$endif}) or PalRelative;
+    Canvas.Brush.Color := ThemedColorToRGB(MargArray[BackgroundColor], htseClient) or PalRelative;
     Canvas.Brush.Style := bsSolid;
     Canvas.FillRect(IRect);
   end;
@@ -14883,7 +15115,7 @@ begin
   DrawBorder(Canvas, ORect, IRect,
     htColors(MargArray[BorderLeftColor], MargArray[BorderTopColor], MargArray[BorderRightColor], MargArray[BorderBottomColor]),
     htStyles(ThtBorderStyle(MargArray[BorderLeftStyle]), ThtBorderStyle(MargArray[BorderTopStyle]), ThtBorderStyle(MargArray[BorderRightStyle]), ThtBorderStyle(MargArray[BorderBottomStyle])),
-    MargArray[BackgroundColor], Printing{$ifdef has_StyleElements},AStyleElements{$endif})
+    MargArray[BackgroundColor], Printing, ThemedColorToRGB)
 end;
 
 {----------------TPage.Draw1}
@@ -15048,7 +15280,7 @@ begin
     begin
       if Color <> clNone then
       begin
-        Brush.Color := ThemedColor(Color {$ifdef has_StyleElements},seClient in Document.StyleElements{$endif}) or $2000000;
+        Brush.Color := Document.ThemedColorToRGB(Color, htseClient) or $2000000;
         Brush.Style := bsSolid;
         FillRect(Rect(X, YT, XR + 1, YT + VSize));
       end
@@ -15057,7 +15289,7 @@ begin
         if UseDefBorder then begin
           with Document do
           begin
-            White := Printing or (ThemedColor(Background{$ifdef has_StyleElements},seFont in Document.StyleElements{$endif}) = clWhite);
+            White := Printing or (Document.ThemedColorToRGB(Background, htseFont) = clWhite);
             BlackBorder := NoShade or (Printing and (GetDeviceCaps(Handle, BITSPIXEL) = 1) and (GetDeviceCaps(Handle, PLANES) = 1));
           end;
           if BlackBorder then
@@ -15065,14 +15297,14 @@ begin
           else if White then
             Pen.Color := clSilver
           else
-            Pen.Color := ThemedColor(clBtnHighLight {$ifdef has_StyleElements},seClient in Document.StyleElements{$endif});
+            Pen.Color := Document.ThemedColorToRGB(clBtnHighLight, htseClient);
           MoveTo(XR, YT);
           LineTo(XR, YT + VSize - 1);
           LineTo(X, YT + VSize - 1);
           if BlackBorder then
             Pen.Color := clBlack
           else
-            Pen.Color := ThemedColor(clBtnShadow{$ifdef has_StyleElements},seFont in Document.StyleElements{$endif});
+            Pen.Color := Document.ThemedColorToRGB(clBtnShadow, htseFont);
           LineTo(X, YT);
           LineTo(XR, YT);
         end;
@@ -15091,7 +15323,7 @@ var
   Tag: ThtString;
 begin
   Tag := SymbToStr(Sym);
-  NewProp := TProperties.Create(Self, Document.UseQuirksMode);
+  NewProp := TProperties.Create(Self, Document.UseQuirksMode, Document.PixelsPerInch);
   NewProp.PropSym := Sym;
   NewProp.Inherit(Tag, Last);
   Add(NewProp);
@@ -15163,7 +15395,7 @@ var
   PaddTop, Delta: Integer;
 begin
   inherited ConvMargArray(BaseWidth, BaseHeight,AutoCount);
-  MargArray[MarginTop] := VMargToMarg(MargArrayO[MarginTop], False, BaseHeight, EmSize, ExSize, 10);
+  MargArray[MarginTop] := VMargToMarg(MargArrayO[MarginTop], False, BaseHeight, EmSize, ExSize, 10, Document.PixelsPerInch);
   Delta := Legend.CellHeight - (MargArray[MarginTop] + MargArray[BorderTopWidth] + MargArray[PaddingTop]);
   if Delta > 0 then
   begin
@@ -15273,7 +15505,7 @@ begin
     end;
 
   else
-    StyleUn.ConvMargArray(MargArrayO, AWidth, AHeight, EmSize, ExSize, self.BorderWidth, AutoCount, MargArray);
+    StyleUn.ConvMargArray(MargArrayO, AWidth, AHeight, EmSize, ExSize, self.BorderWidth, AutoCount, MargArray, Document.PixelsPerInch);
     StyleUn.ApplyBoxSettings(MargArray,Document.UseQuirksMode);
     BorderWidth.Left := MargArray[MarginLeft] + MargArray[BorderLeftWidth] + MargArray[PaddingLeft];
     BorderWidth.Right := MargArray[MarginRight] + MargArray[BorderRightWidth] + MargArray[PaddingRight];
@@ -15363,7 +15595,11 @@ end;
 //-- BG ---------------------------------------------------------- 15.01.2011 --
 function TFormControlObjList.GetItem(Index: Integer): TFormControlObj;
 begin
+{$ifdef UseGenerics}
+  Result := inherited Items[Index] as TFormControlObj;
+{$else}
   Result := Get(Index);
+{$endif}
 end;
 
 { TSizeableObj }
@@ -15397,7 +15633,7 @@ begin
     MargArrayO[piMaxHeight] := IntNull;
   end;
 
-  ConvInlineMargArray(MargArrayO, AvailableWidth, AvailableHeight, EmSize, ExSize, BorderWidth, MargArray);
+  ConvInlineMargArray(MargArrayO, AvailableWidth, AvailableHeight, EmSize, ExSize, BorderWidth, MargArray, Document.PixelsPerInch);
 
   if PercentWidth then
   begin
@@ -15629,7 +15865,7 @@ begin
   Prop.GetVMarginArray(MargArrayO);
   EmSize := Prop.EmSize;
   ExSize := Prop.ExSize;
-  ConvInlineMargArray(MargArrayO, DummyHtWd, DummyHtWd, EmSize, ExSize, BorderWidth, MargArray);
+  ConvInlineMargArray(MargArrayO, DummyHtWd, DummyHtWd, EmSize, ExSize, BorderWidth, MargArray, Document.PixelsPerInch);
 
   if MargArray[MarginLeft] <> IntNull then
     HSpaceL := MargArray[MarginLeft];
@@ -16014,10 +16250,13 @@ begin
     end
 end;
 
+{$ifdef UseGenerics}
+{$else}
 function TSectionBaseList.GetItem(Index: Integer): TSectionBase;
 begin
   Result := inherited Get(Index);
 end;
+{$endif}
 
 function TSectionBaseList.PtInObject(X, Y: Integer; var Obj: TObject; var IX, IY: Integer): Boolean;
 {Y is absolute}
@@ -16076,8 +16315,8 @@ begin
     OldBrushStyle := Canvas.Brush.Style; {save style first}
     OldBrushColor := Canvas.Brush.Color;
     OldPenColor := Canvas.Pen.Color;
-    Canvas.Pen.Color := ThemedColor(FO.TheFont.Color {$ifdef has_StyleElements},seFont in Document.StyleElements{$endif} );
-    Canvas.Brush.Color := ThemedColor(BackgroundColor {$ifdef has_StyleElements},seClient in Document.StyleElements{$endif});
+    Canvas.Pen.Color := Document.ThemedColorToRGB(FO.TheFont.Color, htseFont);
+    Canvas.Brush.Color := Document.ThemedColorToRGB(BackgroundColor, htseClient);
     Canvas.Brush.Style := bsSolid;
     try
       // paint a rectangular placeholder
@@ -16286,6 +16525,9 @@ begin
   end;
 end;
 
+{$ifdef UseGenerics}
+{$else}
+
 { TRowList }
 
 //-- BG ---------------------------------------------------------- 26.12.2011 --
@@ -16301,6 +16543,8 @@ function TColSpecList.GetItem(Index: Integer): TColSpec;
 begin
   Result := Get(Index);
 end;
+
+{$endif}
 
 { TColSpec }
 
@@ -16415,11 +16659,20 @@ begin
     Result := nil;
 end;
 
+{$ifdef UseGenerics}
+{$else}
 //-- BG ---------------------------------------------------------- 07.08.2013 --
 function TFloatingObjList.GetItem(Index: Integer): TFloatingObj;
 begin
   Result := Get(Index);
 end;
+
+//-- BG ---------------------------------------------------------- 07.08.2013 --
+procedure TFloatingObjList.SetItem(Index: Integer; const Item: TFloatingObj);
+begin
+  Put(Index, Item);
+end;
+{$endif}
 
 //-- BG ---------------------------------------------------------- 05.08.2013 --
 function TFloatingObjList.GetObjectAt(Posn: Integer; out Obj): Integer;
@@ -16504,12 +16757,6 @@ begin
   Result := False;
 end;
 
-//-- BG ---------------------------------------------------------- 07.08.2013 --
-procedure TFloatingObjList.SetItem(Index: Integer; const Item: TFloatingObj);
-begin
-  Put(Index, Item);
-end;
-
 { TBlockBase }
 
 //-- BG ---------------------------------------------------------- 31.08.2013 --
@@ -16587,6 +16834,9 @@ begin
     end;
 end;
 
+{$ifdef UseGenerics}
+{$else}
+
 { ThtIndexObjList }
 
 //-- BG ---------------------------------------------------------- 06.10.2016 --
@@ -16634,6 +16884,7 @@ function TPanelObjList.Get(Index: Integer): TPanelObj;
 begin
   Result := inherited Get(Index);
 end;
+{$endif}
 
 initialization
 {$ifdef UNICODE}

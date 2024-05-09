@@ -1,8 +1,8 @@
 {
-Version   11.7
+Version   11.10
 Copyright (c) 1995-2008 by L. David Baldwin
 Copyright (c) 2008-2010 by HtmlViewer Team
-Copyright (c) 2011-2016 by Bernd Gabriel
+Copyright (c) 2011-2022 by Bernd Gabriel
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -40,78 +40,41 @@ unit vwPrint;
 interface
 
 uses
-  {$ifdef FPC}
-    RtlConsts,
+{$ifdef FPC}
+  RtlConsts,
   LclType,
   HtmlMisc,
-    {$IFDEF MSWindows}
-      WinUtilPrn,
-    {$else}
-    {$endif}
-    LCLVersion,
+  {$IFDEF MSWindows}
+    WinUtilPrn,
   {$else}
-    Consts,
   {$endif}
-  {$ifdef MSWINDOWS}
-    Windows,
-  {$endif}
+  LCLVersion,
+{$else}
+  Consts,
+{$endif}
+{$ifdef MSWINDOWS}
+  Windows,
+{$endif}
+{$ifdef UseGenerics}
+  System.Generics.Collections,
+{$endif}
   SysUtils, Forms, Contnrs,
   Classes, Graphics, Printers,
-  HtmlGlobals;
+  HtmlGlobals,
+  HtmlPrinter;
 
 type
-
-  // BG, 30.01.2012: base class for TvwPrinter and TMetaFilePrinter
-  // Allows merging the lengthy duplicate methods THtmlViewer.Print()
-  // and THtmlViewer.PrintPreview() at last.
-  ThtPrinter = class(TComponent)
-  private
-    FOffsetX: Integer;      // Physical Printable Area x margin
-    FOffsetY: Integer;      // Physical Printable Area y margin
-    FPaperHeight: Integer;  // Physical Height in device units
-    FPaperWidth: Integer;   // Physical Width in device units
-    FPgHeight: Integer;     // Vertical height in pixels
-    FPgWidth: Integer;      // Horizontal width in pixels
-    FPPIX: Integer;         // Logical pixels per inch in X
-    FPPIY: Integer;         // Logical pixels per inch in Y
-    FPrinting: Boolean;
-    FTitle: ThtString;         // Printed Document's Title
-  protected
-    function GetCanvas: TCanvas; virtual; abstract;
-    function GetPageNum: Integer; virtual; abstract;
-    procedure CheckPrinting(Value: Boolean);
-    procedure GetPrinterCapsOf(Printer: TPrinter);
-    procedure SetPrinting(Value: Boolean);
-  public
-    procedure BeginDoc; virtual; abstract;
-    procedure NewPage; virtual; abstract;
-    procedure EndDoc; virtual; abstract;
-    procedure Abort; virtual; abstract;
-    procedure Assign(Source: TPersistent); override;
-    property Canvas: TCanvas read GetCanvas;
-    property OffsetX: Integer read FOffsetX;
-    property OffsetY: Integer read FOffsetY;
-    property PageNumber: Integer read GetPageNum;
-    property PageHeight: Integer read FPgHeight;
-    property PageWidth: Integer read FPgWidth;
-    property PaperHeight: Integer read FPaperHeight;
-    property PaperWidth: Integer read FPaperWidth;
-    property PixelsPerInchX: Integer read FPPIX;
-    property PixelsPerInchY: Integer read FPPIY;
-    property Printing: Boolean read FPrinting; // becomes True in BeginDoc and back to False in EndDoc.
-    property Title: ThtString read FTitle write FTitle;
-  end;
-
   TvwPrinterState = (psNoHandle, psHandleIC, psHandleDC);
 
   TvwPrinter = class(ThtPrinter)
   private
     FCanvas: TCanvas;
     FPageNumber: Integer;
-    FAborted: Boolean;
     State: TvwPrinterState;
     DC: HDC;
+{$ifdef MSWINDOWS}
     DevMode: {$if lcl_fullversion >= 1080000} PDeviceModeW {$else} PDeviceMode {$ifend};
+{$endif}
     DeviceMode: HGLOBAL;
     procedure SetState(Value: TvwPrinterState);
     function GetHandle: HDC;
@@ -125,7 +88,6 @@ type
     procedure BeginDoc; override;
     procedure EndDoc; override;
     procedure NewPage; override;
-    property Aborted: Boolean read FAborted;
     property Handle: HDC read GetHandle;
   end;
 
@@ -144,7 +106,11 @@ type
   // BG, 29.01.2012: allow multiple prints of several THtmlViewer components at a time.
   TMap = class(TObject)
   private
+{$ifdef UseGenerics}
+    FItems: TObjectList<TMapItem>;
+{$else}
     FItems: TObjectList;
+{$endif}
     function GetItem(Index: HDC): TMapItem;
     property Items[Index: HDC]: TMapItem read GetItem;
   public
@@ -165,7 +131,7 @@ end;
 
 function AbortProc(Prn: HDC; Error: Integer): Bool; stdcall;
 var
-  Printer: TvwPrinter;
+  Printer: ThtPrinter;
 begin
   Application.ProcessMessages;
   if FPrinters <> nil then
@@ -193,7 +159,11 @@ end;
 constructor TMap.Create;
 begin
   inherited Create;
+{$ifdef UseGenerics}
+  FItems := TObjectList<TMapItem>.Create;
+{$else}
   FItems := TObjectList.Create;
+{$endif}
 end;
 
 //-- BG ---------------------------------------------------------- 29.01.2012 --
@@ -253,68 +223,6 @@ begin
       exit;
     end;
   Result := nil;
-end;
-
-{ ThtPrinter }
-
-//-- BG ---------------------------------------------------------- 29.01.2012 --
-procedure ThtPrinter.Assign(Source: TPersistent);
-var
-  Src: ThtPrinter absolute Source;
-begin
-  inherited;
-  if Source is ThtPrinter then
-  begin
-    FPPIX := Src.FPPIX;
-    FPPIY := Src.FPPIY;
-    FPaperWidth  := Src.FPaperWidth;
-    FPaperHeight := Src.FPaperHeight;
-    FOffsetX  := Src.FOffsetX;
-    FOffsetY  := Src.FOffsetY;
-    FPgHeight := Src.FPgHeight;
-    FPgWidth  := Src.FPgWidth;
-  end;
-end;
-
-procedure ThtPrinter.CheckPrinting(Value: Boolean);
-begin
-  if Printing <> Value then
-    if Value then
-      RaiseError(SNotPrinting)
-    else
-      RaiseError(SPrinting);
-end;
-
-//-- BG ---------------------------------------------------------- 29.01.2012 --
-procedure ThtPrinter.GetPrinterCapsOf(Printer: TPrinter);
-begin
-  if Printer.Printers.Count = 0 then
-    raise Exception.Create('Printer not available');
-
-{$ifdef LCL}
-  FPPIX := Printer.XDPI;
-  FPPIY := Printer.YDPI;
-  FPaperWidth := Printer.PaperSize.PaperRect.PhysicalRect.Right;
-  FPaperHeight := Printer.PaperSize.PaperRect.PhysicalRect.Bottom;
-  FOffsetX := Printer.PaperSize.PaperRect.WorkRect.Left;
-  FOffsetY := Printer.PaperSize.PaperRect.WorkRect.Top;
-  FPgHeight := Printer.PageHeight;
-  FPgWidth := Printer.PageWidth;
-{$else}
-  FPPIX := GetDeviceCaps(Printer.Handle, LOGPIXELSX);
-  FPPIY := GetDeviceCaps(Printer.Handle, LOGPIXELSY);
-  FPaperWidth := GetDeviceCaps(Printer.Handle, PHYSICALWIDTH);
-  FPaperHeight := GetDeviceCaps(Printer.Handle, PHYSICALHEIGHT);
-  FOffsetX := GetDeviceCaps(Printer.Handle, PHYSICALOFFSETX);
-  FOffsetY := GetDeviceCaps(Printer.Handle, PHYSICALOFFSETY);
-  FPgHeight := Printer.PageHeight;
-  FPgWidth := Printer.PageWidth;
-{$endif}
-end;
-
-procedure ThtPrinter.SetPrinting(Value: Boolean);
-begin
-  FPrinting := Value;
 end;
 
 { TPrinterCanvas }
@@ -494,7 +402,7 @@ begin
 {$ifdef MsWindows}
   AbortDoc(Canvas.Handle);
 {$endif}
-  FAborted := True;
+  SetAborted(True);
   EndDoc;
 end;
 
@@ -508,7 +416,7 @@ begin
   SetState(psHandleDC);
   GetPrinterCapsOf(Printer);
   Canvas.Refresh;
-  FAborted := False;
+  SetAborted(False);
   FPageNumber := 1;
 
 {$ifdef MsWindows}
@@ -542,7 +450,7 @@ begin
     Windows.EndDoc(DC);
 {$endif}
   SetPrinting(False);
-  FAborted := False;
+  SetAborted(False);
   FPageNumber := 0;
   if DeviceMode <> 0 then
   begin

@@ -31,16 +31,16 @@ object frmMain: TfrmMain
   TextHeight = 15
   object ClientPanel: TPanel
     Left = 44
-    Top = 36
+    Top = 38
     Width = 959
-    Height = 530
+    Height = 528
     Align = alClient
     TabOrder = 4
     object PageControl: TPageControl
       Left = 1
       Top = 35
       Width = 957
-      Height = 494
+      Height = 492
       Align = alClient
       Images = VirtualImageList
       TabOrder = 0
@@ -56,9 +56,10 @@ object frmMain: TfrmMain
       Height = 22
       Cursor = crHandPoint
       BevelOuter = bvNone
-      ParentBackground = False
+      ParentColor = True
       TabOrder = 1
       Visible = False
+      StyleElements = [seFont, seBorder]
       object SVGIconImageCloseButton: TSVGIconImage
         Left = 0
         Top = 0
@@ -102,104 +103,100 @@ object frmMain: TfrmMain
       object btSeparator1: TStyledToolButton
         Left = 84
         Top = 0
-        Width = 10
-        Enabled = False
+        Style = tbsSeparator
       end
       object btLink: TStyledToolButton
-        Left = 94
+        Left = 90
         Top = 0
         Action = acLink
       end
       object btImage: TStyledToolButton
-        Left = 122
+        Left = 118
         Top = 0
         Action = acImage
       end
       object btTable: TStyledToolButton
-        Left = 168
+        Left = 146
         Top = 0
         Action = acTable
       end
       object btSeparator2: TStyledToolButton
-        Left = 150
+        Left = 174
         Top = 0
-        Width = 10
-        Enabled = False
+        Style = tbsSeparator
       end
       object btBold: TStyledToolButton
-        Left = 160
+        Left = 180
         Top = 0
         Action = acBold
       end
       object btItalic: TStyledToolButton
-        Left = 188
+        Left = 208
         Top = 0
         Action = acItalic
       end
       object btStrike: TStyledToolButton
-        Left = 280
+        Left = 236
         Top = 0
         Action = acStrike
       end
       object btUnderline: TStyledToolButton
-        Left = 308
+        Left = 264
         Top = 0
         Action = acUnderline
       end
       object btCode: TStyledToolButton
-        Left = 216
+        Left = 292
         Top = 0
         Action = acCode
       end
       object btMarker: TStyledToolButton
-        Left = 280
+        Left = 320
         Top = 0
         Action = acMarker
       end
       object btSuperscript: TStyledToolButton
-        Left = 244
+        Left = 348
         Top = 0
         Action = acSuperscript
       end
       object btSubscript: TStyledToolButton
-        Left = 272
+        Left = 376
         Top = 0
         Action = acSubscript
       end
       object btSeparator3: TStyledToolButton
-        Left = 300
+        Left = 404
         Top = 0
-        Width = 10
-        Enabled = False
+        Style = tbsSeparator
       end
       object btUnorderedList: TStyledToolButton
-        Left = 310
+        Left = 410
         Top = 0
         Action = acUnorderedList
       end
       object btOrderedList: TStyledToolButton
-        Left = 338
+        Left = 438
         Top = 0
         Action = acOrderedList
       end
       object btBlockquote: TStyledToolButton
-        Left = 366
+        Left = 466
         Top = 0
         Action = acBlockquote
       end
       object btHorizontalRule: TStyledToolButton
-        Left = 394
+        Left = 494
         Top = 0
         Action = acHorizontalRule
       end
       object btSeparator4: TStyledToolButton
-        Left = 422
+        Left = 522
         Top = 0
-        Width = 10
-        Enabled = False
+        Style = tbsSeparator
       end
       object btHelp: TStyledToolButton
-        Left = 432
+        Left = 528
         Top = 0
         Action = acHelp
       end
@@ -251,7 +248,7 @@ object frmMain: TfrmMain
     OnClosing = SVClosing
     OnOpened = SVOpened
     OnOpening = SVOpening
-    object catMenuItems: TCategoryButtons
+    object catMenuItems: TStyledCategoryButtons
       Left = 0
       Top = 0
       Width = 44
@@ -361,23 +358,24 @@ object frmMain: TfrmMain
     Left = 0
     Top = 0
     Width = 1003
-    Height = 36
+    Height = 38
     Align = alTop
     BevelOuter = bvNone
     ParentBackground = False
     TabOrder = 1
     DesignSize = (
       1003
-      36)
+      38)
     object lblTitle: TLabel
       AlignWithMargins = True
-      Left = 41
+      Left = 40
       Top = 3
       Width = 116
-      Height = 30
+      Height = 32
       Align = alLeft
       Caption = 'MarkDown Text Editor'
       Layout = tlCenter
+      ExplicitHeight = 15
     end
     object ProcessorDialectLabel: TLabel
       Left = 518
@@ -388,88 +386,81 @@ object frmMain: TfrmMain
       Anchors = [akTop, akRight]
       Caption = 'Transformation:'
     end
-    object SettingsToolBar: TToolBar
+    object SettingsToolBar: TStyledToolbar
       AlignWithMargins = True
       Left = 800
       Top = 3
       Width = 200
-      Height = 30
+      Height = 32
       Align = alRight
-      AutoSize = True
       ButtonHeight = 32
       ButtonWidth = 32
-      Color = clYellow
+      Images = VirtualImageList
+      Indent = 3
+      TabOrder = 0
       DrawingStyle = dsGradient
       GradientEndColor = clBtnFace
       GradientStartColor = clBtnFace
-      Images = VirtualImageList
-      ParentColor = False
-      TabOrder = 0
-      Transparent = True
-      object ColorSettingsToolButton: TToolButton
+      ExplicitHeight = 30
+      object ColorSettingsToolButton: TStyledToolButton
         Left = 0
         Top = 0
         Action = actnSettings
       end
-      object EditOptionsToolButton: TToolButton
+      object EditOptionsToolButton: TStyledToolButton
         Left = 32
         Top = 0
         Action = actnEditOptions
       end
-      object PageSetupToolButton: TToolButton
+      object PageSetupToolButton: TStyledToolButton
         Left = 64
         Top = 0
         Action = actnPageSetup
       end
-      object PrinterSetupToolButton: TToolButton
+      object PrinterSetupToolButton: TStyledToolButton
         Left = 96
         Top = 0
         Action = actnPrinterSetup
       end
-      object ToolButton9: TToolButton
+      object ToolButton9: TStyledToolButton
         Left = 128
         Top = 0
-        Width = 8
         ImageIndex = 23
         ImageName = 'about'
         Style = tbsSeparator
       end
-      object AboutToolButton: TToolButton
-        Left = 136
+      object AbouTStyledToolButton: TStyledToolButton
+        Left = 134
         Top = 0
         Action = acAbout
       end
-      object QuitToolButton: TToolButton
-        Left = 168
+      object QuitToolButton: TStyledToolButton
+        Left = 166
         Top = 0
         Action = acQuit
         ImageName = 'Exit'
       end
     end
-    object MenuButtonToolbar: TToolBar
+    object MenuButtonToolbar: TStyledToolbar
       AlignWithMargins = True
       Left = 3
       Top = 3
-      Width = 32
-      Height = 30
+      Width = 31
+      Height = 32
       Align = alLeft
-      AutoSize = True
       ButtonHeight = 32
       ButtonWidth = 32
-      Color = clYellow
+      Images = VirtualImageList
+      Indent = 3
+      TabOrder = 1
       DrawingStyle = dsGradient
       GradientEndColor = clBtnFace
       GradientStartColor = clBtnFace
-      Images = VirtualImageList
-      ParentColor = False
-      TabOrder = 1
-      Transparent = True
-      object MenuToolButton: TToolButton
-        AlignWithMargins = True
+      ExplicitHeight = 30
+      object MenuToolButton: TStyledToolButton
         Left = 0
         Top = 0
         Action = actMenu
-        AutoSize = True
       end
     end
     object ProcessorDialectComboBox: TComboBox
@@ -1247,6 +1238,12 @@ object frmMain: TfrmMain
     Enabled = False
     OnTimer = LoadTimerTimer
     Left = 272
+    Top = 352
+  end
+  object CheckFileChangedTimer: TTimer
+    Interval = 3000
+    OnTimer = CheckFileChangedTimerTimer
+    Left = 144
     Top = 352
   end
   object VirtualImageListToolbar: TVirtualImageList

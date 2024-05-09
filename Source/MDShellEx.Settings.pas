@@ -140,11 +140,17 @@ type
   TEditorSettings = class(TSettings)
   private
     FDownloadFromWEB: Boolean;
+    FButtonDrawRounded: Boolean;
+    FToolbarDrawRounded: Boolean;
+    FMenuDrawRounded: Boolean;
     procedure SetDownloadFromWEB(const Value: Boolean);
     procedure WriteSynEditorOptions(
       const ASynEditorOptions: TSynEditorOptionsContainer);
     procedure ReadSynEditorOptions(
       const ASynEditorOptions: TSynEditorOptionsContainer);
+    procedure SetButtonDrawRounded(const Value: Boolean);
+    procedure SetToolbarDrawRounded(const Value: Boolean);
+    procedure SetMenuDrawRounded(const Value: Boolean);
   public
     HistoryFileList: TStrings;
     OpenedFileList: TStrings;
@@ -159,6 +165,9 @@ type
     destructor Destroy; override;
     procedure UpdateOpenedFiles(AFileList: TStrings; const ACurrentFileName: string);
     property DownloadFromWEB: Boolean read FDownloadFromWEB write SetDownloadFromWEB;
+    property ButtonDrawRounded: Boolean read FButtonDrawRounded write SetButtonDrawRounded;
+    property ToolbarDrawRounded: Boolean read FToolbarDrawRounded write SetToolbarDrawRounded;
+    property MenuDrawRounded: Boolean read FMenuDrawRounded write SetMenuDrawRounded;
   end;
 
 implementation
@@ -460,9 +469,20 @@ end;
 
 { TEditorSettings }
 
+procedure TEditorSettings.SetToolbarDrawRounded(
+  const Value: Boolean);
+begin
+  FToolbarDrawRounded := Value;
+end;
+
 procedure TEditorSettings.SetDownloadFromWEB(const Value: Boolean);
 begin
   FDownloadFromWEB := Value;
+end;
+
+procedure TEditorSettings.SetMenuDrawRounded(const Value: Boolean);
+begin
+  FMenuDrawRounded := Value;
 end;
 
 constructor TEditorSettings.CreateSettings(const ASynEditHighilighter: TSynCustomHighlighter;
@@ -531,6 +551,9 @@ begin
       end;
     end;
     CurrentFileName := FIniFile.ReadString('Global', 'CurrentFileName', '');
+    ToolbarDrawRounded := FIniFile.ReadBool('Global', 'ToolbarDrawRounded', false);
+    ButtonDrawRounded := FIniFile.ReadBool('Global', 'ButtonDrawRounded', false);
+    MenuDrawRounded := FIniFile.ReadBool('Global', 'MenuDrawRounded', false);
   end;
 end;
 
@@ -640,8 +663,16 @@ begin
       OpenedFileList.strings[i]);
   end;
   FIniFile.WriteString('Global', 'CurrentFileName', CurrentFileName);
+  FIniFile.WriteBool('Global', 'ToolbarDrawRounded', ToolbarDrawRounded);
+  FIniFile.WriteBool('Global', 'ButtonDrawRounded', ButtonDrawRounded);
+  FIniFile.WriteBool('Global', 'MenuDrawRounded', MenuDrawRounded);
 
   WriteSynEditorOptions(ASynEditorOptions);
+end;
+
+procedure TEditorSettings.SetButtonDrawRounded(const Value: Boolean);
+begin
+  FButtonDrawRounded := Value;
 end;
 
 procedure TEditorSettings.WriteSynEditorOptions(
@@ -651,7 +682,6 @@ procedure TEditorSettings.WriteSynEditorOptions(
   begin
     FIniFile.WriteBool(EDITOPTION_OPTIONS, AName, AValue in ASynEditorOptions.Options);
   end;
-
 begin
   if not Assigned(ASynEditorOptions) then
     Exit;

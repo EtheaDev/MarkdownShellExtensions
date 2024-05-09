@@ -1,7 +1,7 @@
 {
-Version   11.9
+Version   11.10
 Copyright (c) 1995-2008 by L. David Baldwin,
-Copyright (c) 2008-2018 by HtmlViewer Team
+Copyright (c) 2008-2022 by HtmlViewer Team
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -38,6 +38,9 @@ uses
   Windows, Jpeg,
 {$endif}
   Contnrs, Graphics, Forms, Controls,
+{$ifdef UseGenerics}
+  System.Generics.Collections,
+{$endif}
   //Messages,
   //Variants,
   Types,
@@ -123,12 +126,16 @@ type
     property Animate: Boolean read GetAnimate write SetAnimate;
   end;
 
+{$ifdef UseGenerics}
+  ThtImageList = class(TObjectList<ThtImage>);
+{$else}
   ThtImageList = class(TObjectList)
   private
     function Get(Index: Integer): ThtImage; {$ifdef UseInline} inline; {$endif}
   public
     property Items[Index: Integer]: ThtImage read Get; default;
   end;
+{$endif}
 
   TGetImageEvent = function(Sender: TObject; const Url: ThtString): ThtImage of object;
 
@@ -845,10 +852,16 @@ var
     PngImage := TPngImage.Create;
     try
       PngImage.LoadFromStream(Stream);
-      Result := ThtGraphicImage.Create(PngImage);
-    except
+      // As TPngImage cannot paint transparently on MetaFileCanvas in
+      // TransparencyMode = ptmBit we convert it to a Bitmap.
+      Bitmap := ThtBitmap.Create(PngImage.TransparencyMode = ptmBit);
+      Bitmap.Assign(PngImage);
+      // avoid ConvertImage:
+      Result := ThtGraphicImage.Create(Bitmap);
+      Result.Transp := itrIntrinsic;
+      Bitmap := nil;
+    finally
       PngImage.Free;
-      raise;
     end;
 {$else}
   begin
@@ -2604,11 +2617,14 @@ end;
 
 { ThtImageList }
 
+{$ifdef UseGenerics}
+{$else}
 //-- BG ---------------------------------------------------------- 06.10.2016 --
 function ThtImageList.Get(Index: Integer): ThtImage;
 begin
   Result := inherited Get(Index);
 end;
+{$endif}
 
 initialization
   DefBitMap := TBitmap.Create;
@@ -2619,7 +2635,9 @@ initialization
   DefBitMap.LoadFromLazarusResource('DefaultBitmap');
   ErrorBitMap.LoadFromLazarusResource('ErrBitmap');
   ErrorBitMapMask.LoadFromLazarusResource('ErrBitmapMask');
+{$ifdef UseHandCursor}
   Screen.Cursors[HandCursor] := LoadCursorFromLazarusResource('Hand_Cursor');
+{$endif}
   Screen.Cursors[UpDownCursor] := LoadCursorFromLazarusResource('UPDOWNCURSOR');
   Screen.Cursors[UpOnlyCursor] := LoadCursorFromLazarusResource('UPONLYCURSOR');
   Screen.Cursors[DownOnlyCursor] := LoadCursorFromLazarusResource('DOWNONLYCURSOR');
@@ -2628,7 +2646,9 @@ initialization
   DefBitMap.Handle := LoadBitmap(HInstance, MakeIntResource(DefaultBitmap));
   ErrorBitMap.Handle := LoadBitmap(HInstance, MakeIntResource(ErrBitmap));
   ErrorBitMapMask.Handle := LoadBitmap(HInstance, MakeIntResource(ErrBitmapMask));
+{$ifdef UseHandCursor}
   Screen.Cursors[HandCursor] := LoadCursor(HInstance, MakeIntResource(Hand_Cursor));
+{$endif}
   Screen.Cursors[UpDownCursor] := LoadCursor(HInstance, 'UPDOWNCURSOR');
   Screen.Cursors[UpOnlyCursor] := LoadCursor(HInstance, 'UPONLYCURSOR');
   Screen.Cursors[DownOnlyCursor] := LoadCursor(HInstance, 'DOWNONLYCURSOR');

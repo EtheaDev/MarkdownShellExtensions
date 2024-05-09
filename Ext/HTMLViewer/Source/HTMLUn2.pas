@@ -1,7 +1,7 @@
 {
-Version   11.9
+Version   11.10
 Copyright (c) 1995-2008 by L. David Baldwin
-Copyright (c) 2008-2018 by HtmlViewer Team
+Copyright (c) 2008-2023 by HtmlViewer Team
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -39,12 +39,16 @@ uses
 {$else}
   Windows,
 {$endif}
-  SysUtils, Contnrs, Classes, Graphics, ClipBrd, Controls, ExtCtrls, Messages, Variants, Types, ComCtrls,
+  SysUtils, Contnrs, Classes, Graphics, ClipBrd, Controls, ExtCtrls, Messages,
+  Variants, Types, ComCtrls, Forms,
 {$ifdef Compiler20_Plus}
   CommCtrl,
 {$endif}
 {$ifndef NoGDIPlus}
   GDIPL2A,
+{$endif}
+{$ifdef UseGenerics}
+  System.Generics.Collections,
 {$endif}
 {$ifdef METAFILEMISSING}
   MetaFilePrinter,
@@ -57,7 +61,7 @@ uses
   HtmlSymb;
 
 const
-  VersionNo = '11.9';
+  VersionNo = '11.10';
   MaxHScroll = 100000; {max horizontal display in pixels}
   Tokenleng = 300;
   TopLim = -200; {drawing limits}
@@ -107,24 +111,38 @@ type
     property AsDouble: Double read DblValue;
   end;
 
+{$ifdef UseGenerics}
+  TAttributeList = class(TObjectList<TAttribute>) {a list of tag attributes}
+{$else}
   TAttributeList = class(TObjectList) {a list of tag attributes,(TAttributes)}
+{$endif}
   private
     SaveID: ThtString;
     function GetClass: ThtString;
     function GetID: ThtString;
     function GetTitle: ThtString;
+{$ifdef UseGenerics}
+{$else}
     function GetAttribute(Index: Integer): TAttribute; {$ifdef UseInline} inline; {$endif}
+{$endif}
   public
     constructor CreateCopy(ASource: TAttributeList);
     function Clone: TAttributeList; virtual;
+{$ifdef UseGenerics}
+    procedure Clear; virtual;
+{$else}
     procedure Clear; override;
+{$endif}
     function Find(const Name: ThtString; var T: TAttribute): Boolean; overload; {$ifdef UseInline} inline; {$endif}
     function Find(Sy: TAttrSymb; var T: TAttribute): Boolean; overload; {$ifdef UseInline} inline; {$endif}
     function CreateStringList: ThtStringList;
     property TheClass: ThtString read GetClass;
     property TheID: ThtString read GetID;
     property TheTitle: ThtString read GetTitle;
+{$ifdef UseGenerics}
+{$else}
     property Items[Index: Integer]: TAttribute read GetAttribute; default;
+{$endif}
   end;
 
 //------------------------------------------------------------------------------
@@ -195,12 +213,16 @@ type
   end;
 
   // BG, 31.12.2011:
+{$ifdef UseGenerics}
+  TMapAreaList = class(TObjectList<TMapArea>);
+{$else}
   TMapAreaList = class(TObjectList)
   private
     function GetArea(Index: Integer): TMapArea; {$ifdef UseInline} inline; {$endif}
   public
     property Items[Index: Integer]: TMapArea read GetArea; default;
   end;
+{$endif}
 
   TMapItem = class {holds a client map info}
   private
@@ -213,32 +235,32 @@ type
     procedure AddArea(Attrib: TAttributeList);
   end;
 
+{$ifdef UseGenerics}
+  ThtMap = class(TObjectList<TMapItem>);
+{$else}
   ThtMap = class(TObjectList)
   private
     function Get(Index: Integer): TMapItem; {$ifdef UseInline} inline; {$endif}
   public
     property Items[Index: Integer]: TMapItem read Get; default;
   end;
+{$endif}
 
   TFontObjBase = class {font information}
   public
     UrlTarget: TUrlTarget;
   end;
 
+{$ifdef UseGenerics}
+  TFontObjBaseList = class(TObjectList<TFontObjBase>);
+{$else}
   TFontObjBaseList = class(TObjectList)
   private
-    {$if compilerversion > 35}
-    function GetBase(Index: NativeInt): TFontObjBase; {$ifdef UseInline} inline; {$endif}
-    {$else}
     function GetBase(Index: Integer): TFontObjBase; {$ifdef UseInline} inline; {$endif}
-    {$ifend}
   public
-    {$if compilerversion > 35}
-    property Items[Index: NativeInt]: TFontObjBase read GetBase; default;
-    {$else}
     property Items[Index: Integer]: TFontObjBase read GetBase; default;
-    {$ifend}
   end;
+{$endif}
 
 //------------------------------------------------------------------------------
 // indentation manager
@@ -567,7 +589,26 @@ type
     FQuirksMode : THtQuirksMode;
     function StoreFontName: Boolean;
     function StorePreFontName: Boolean;
+    function GetPPI: Integer;
+{$ifndef Compiler31_Plus}
+    function FormPixelsPerInch: Integer;
+{$endif}
+    procedure CMParentColorChanged(var Message: TMessage); message CM_PARENTCOLORCHANGED;
+    procedure CMParentFontChanged(var Message: TMessage); message CM_PARENTFONTCHANGED;
   protected
+    FInCMParentColorChanged: Integer;
+{$ifndef Compiler31_Plus}
+    FCurrentPPI: Integer;
+    procedure SetPPI(Value: Integer); virtual;
+    procedure SetParent(NewParent: TWinControl); override;
+{$endif}
+    procedure StyleChanged; virtual; abstract;
+    procedure ScaleChanged; virtual; abstract;
+    procedure ChangeScale(M, D: Integer{$ifdef Compiler31_Plus}; isDpiChange: Boolean{$endif}); override;
+{$ifdef LCL}
+    procedure DoAutoAdjustLayout(const AMode: TLayoutAdjustmentPolicy;
+      const AXProportion, AYProportion: Double); override;
+{$endif}
     {$ifdef has_StyleElements}
     procedure UpdateStyleElements; override;
     {$endif}
@@ -639,12 +680,18 @@ type
     procedure Load(const Url: ThtString); virtual; abstract;
     // HtmlExpandFilename(Filename, CurrentFilename): Try to get the absolute pathname of the given filename in the local filesystem
     function HtmlExpandFilename(const Filename: ThtString; const CurrentFilename: ThtString = ''): ThtString; virtual; abstract;
+{$ifndef Compiler31_Plus}
+    function ParentForm: TCustomForm;
+{$endif}
+    function ThemedColor(AColor: TColor; AStyleElement: ThtStyleElement): TColor;
+    function ThemedColorToRGB(AColor: TColor; AStyleElement: ThtStyleElement): TColor;
+
     property QuirksMode : THtQuirksMode read FQuirksMode write SetQuirksMode default qmStandards;
     // set to determine if child objects should be in "quirks" mode
     property UseQuirksMode: Boolean read GetUseQuirksMode;
     property CodePage: Integer read FCodePage write SetCodePage default 0;
     property CharSet: TFontCharset read FCharSet write SetCharset default DEFAULT_CHARSET;
-    property DefBackground: TColor read FBackground write SetDefBackground default clBtnFace;
+    property DefBackground: TColor read FBackGround write SetDefBackground default clBtnFace;
     property DefFontColor: TColor read FFontColor write SetFontColor default clBtnText;
     property DefFontName: TFontName read FFontName write SetFontName stored StoreFontName;
     property DefFontSize: Integer read FFontSize write SetFontSize default 12;
@@ -658,6 +705,7 @@ type
     property MarginHeight: Integer read FMarginHeight write SetMarginHeight default 5;
     property MarginWidth: Integer read FMarginWidth write SetMarginWidth default 10;
     property NoSelect: Boolean read FNoSelect write SetNoSelect;
+    property PixelsPerInch: Integer read GetPPI;
     property PrintMarginBottom: Double read FPrintMarginBottom write SetPrintMarginBottom;
     property PrintMarginLeft: Double read FPrintMarginLeft write SetPrintMarginLeft;
     property PrintMarginRight: Double read FPrintMarginRight write SetPrintMarginRight;
@@ -771,12 +819,12 @@ function ToSpecWidth(AsInteger: Integer; AsString: ThtString): TSpecWidth;
 function CalcClipRect(Canvas: TCanvas; const Rect: TRect; Printing: boolean): TRect;
 procedure GetClippingRgn(Canvas: TCanvas; const ARect: TRect; Printing: boolean; var Rgn, SaveRgn: HRgn);
 
-procedure FillRectWhite(Canvas: TCanvas; X1, Y1, X2, Y2: Integer; Color: TColor {$ifdef has_StyleElements};const AStyleElements : TStyleElements{$endif});
-procedure DrawFormControlRect(Canvas: TCanvas; X1, Y1, X2, Y2: Integer; Raised, PrintMonoBlack, Disabled: boolean; Color: TColor
-  {$ifdef has_StyleElements};const AStyleElements : TStyleElements{$endif});
-procedure DrawBorder(Canvas: TCanvas; ORect, IRect: TRect; const C: ThtColorArray;
-  const S: ThtBorderStyleArray; BGround: TColor; Print: boolean
-  {$ifdef has_StyleElements};const AStyleElements : TStyleElements{$endif});
+procedure FillRectWhite(Canvas: TCanvas; X1, Y1, X2, Y2: Integer; Color: TColor);
+procedure DrawFormControlRect(Canvas: TCanvas; X1, Y1, X2, Y2: Integer;
+  Raised, PrintMonoBlack, Disabled: Boolean; Color: TColor; ThemedColor: ThtThemedColor);
+procedure DrawBorder(Canvas: TCanvas; ORect, IRect: TRect;
+  const C: ThtColorArray; const S: ThtBorderStyleArray;
+  BGround: TColor; Print: Boolean; ThemedColor: ThtThemedColor);
 
 type
   THtBorderPointArray = array[0..3] of TPoint;
@@ -784,7 +832,7 @@ type
 implementation
 
 uses
-  Forms,  {$ifndef UseInline} Math, {$endif}
+  {$ifndef UseInline} Math, {$endif}
   {$ifdef UseVCLStyles}
   Vcl.Themes,
   {$endif}
@@ -1004,12 +1052,20 @@ begin
 
   if not IsWin32Platform then
   begin
+    if Width < Max then
+    begin
+      // speed up calculating long S, which obviously cannot fit into Width as
+      // characters usually are wider than 1 pixel.
+      SetLength(Ints, Width);
+      if GetTextExtentExPointW(DC, S, Width, Width, @Result, @Ints[0], Extent) then
+        if Result < Width then
+          Exit;
+
+        // Oh, Result = Width. Better continue and try the complete string:
+    end;
+
     SetLength(Ints, Max);
-    if GetTextExtentExPointW(DC, S, Max, Width, @Result, @Ints[0], Extent) then
-      if Result > 0 then
-        Extent.cx := Ints[Result - 1]
-      else
-        Extent.cx := 0;
+    GetTextExtentExPointW(DC, S, Max, Width, @Result, @Ints[0], Extent);
   end
   else {GetTextExtentExPointW not available in win98, 95}
   begin {optimize this by looking for Max to fit first -- it usually does}
@@ -1219,17 +1275,11 @@ end;
 
 function GetTextExtent(DC: HDC; P: PWideChar; N: Integer): TSize;
  {$ifdef UseInline} inline; {$endif}
-var
-  Dummy: Integer;
 begin
-  if not IsWin32Platform then
-    GetTextExtentExPointW(DC, P, N, 0, @Dummy, nil, Result)
-  else
     GetTextExtentPoint32W(DC, P, N, Result); {win95, 98 ME}
 end;
 
-procedure FillRectWhite(Canvas: TCanvas; X1, Y1, X2, Y2: Integer; Color: TColor
- {$ifdef has_StyleElements};const AStyleElements : TStyleElements{$endif});
+procedure FillRectWhite(Canvas: TCanvas; X1, Y1, X2, Y2: Integer; Color: TColor);
  {$ifdef UseInline} inline; {$endif}
 var
   OldBrushStyle: TBrushStyle;
@@ -1239,8 +1289,7 @@ begin
   begin
     OldBrushStyle := Brush.Style; {save style first}
     OldBrushColor := Brush.Color;
-    Brush.Color := ThemedColor(Color
-      {$ifdef has_StyleElements},seClient in AStyleElements{$endif});
+    Brush.Color := Color;
     Brush.Style := bsSolid;
     FillRect(Rect(X1, Y1, X2, Y2));
     Brush.Color := OldBrushColor;
@@ -1248,13 +1297,7 @@ begin
   end;
 end;
 
-{$ifdef has_StyleElements}
-procedure DrawFormControlRect(Canvas: TCanvas; X1, Y1, X2, Y2: Integer; Raised, PrintMonoBlack, Disabled: boolean; Color: TColor;
-  const AStyleElements : TStyleElements);
-{$else}
-procedure DrawFormControlRect(Canvas: TCanvas; X1, Y1, X2, Y2: Integer; Raised, PrintMonoBlack, Disabled: boolean; Color: TColor);
-{$endif}
- {$ifdef UseInline} inline; {$endif}
+procedure DrawFormControlRect(Canvas: TCanvas; X1, Y1, X2, Y2: Integer; Raised, PrintMonoBlack, Disabled: Boolean; Color: TColor; ThemedColor: ThtThemedColor);
 {Draws lowered rectangles for form control printing}
 var
   OldStyle: TPenStyle;
@@ -1272,13 +1315,13 @@ begin
     OldStyle := Pen.Style;
     OldBrushStyle := Brush.Style; {save style first}
     OldBrushColor := Brush.Color;
-    if not MonoBlack then 
+    if not MonoBlack then
     begin
       if Disabled then
-        Brush.Color := ThemedColor(clBtnFace{$ifdef has_StyleElements},seClient in AStyleElements{$endif})
+        Brush.Color := ThemedColor(clBtnFace, htseClient)
       else
-        Brush.Color := ThemedColor(color{$ifdef has_StyleElements},seClient in AStyleElements{$endif});
-    end 
+        Brush.Color := ThemedColor(Color, htseClient);
+    end
     else
       Brush.Color := clBlack;//color;
     Brush.Style := bsSolid;
@@ -1296,19 +1339,19 @@ begin
     begin
       Pen.Width := 2;
       if Raised then
-        Pen.Color := ThemedColor(clBtnHighlight{$ifdef has_StyleElements},seClient in AStyleElements{$endif})//clSilver
+        Pen.Color := ThemedColor(clBtnHighlight, htseClient)
       else
-        Pen.Color := ThemedColor(clBtnShadow{$ifdef has_StyleElements},seClient in AStyleElements{$endif});
+        Pen.Color := ThemedColor(clBtnShadow, htseClient);
     end;
     MoveTo(X1, Y2);
     LineTo(X1, Y1);
     LineTo(X2, Y1);
-    if not MonoBlack then 
+    if not MonoBlack then
     begin
       if Raised then
-        Pen.Color := ThemedColor(clBtnShadow{$ifdef has_StyleElements},seClient in AStyleElements{$endif})
+        Pen.Color := ThemedColor(clBtnShadow, htseClient)
       else
-        Pen.Color := ThemedColor(clBtnHighlight{$ifdef has_StyleElements},seClient in AStyleElements{$endif});//clSilver;
+        Pen.Color := ThemedColor(clBtnHighlight, htseClient);
     end
     else
       Pen.Color := clSilver;
@@ -1446,10 +1489,13 @@ begin
   Result := False;
 end;
 
+{$ifdef UseGenerics}
+{$else}
 function TAttributeList.GetAttribute(Index: Integer): TAttribute;
 begin
   Result := Get(Index);
 end;
+{$endif}
 
 function TAttributeList.GetClass: ThtString;
 var
@@ -1651,6 +1697,9 @@ begin
   Result := PtInRegion(FRegion, X, Y);
 end;
 
+{$ifdef UseGenerics}
+{$else}
+
 { TMapAreaList }
 
 //-- BG ---------------------------------------------------------- 31.12.2011 --
@@ -1658,6 +1707,8 @@ function TMapAreaList.GetArea(Index: Integer): TMapArea;
 begin
   Result := Get(Index);
 end;
+
+{$endif}
 
 { TMapItem }
 
@@ -2669,17 +2720,9 @@ begin
 end;
 
 {----------------DrawBorder}
- {$ifdef has_StyleElements}
-
-procedure DrawBorder(Canvas: TCanvas; ORect, IRect: TRect; const C: ThtColorArray;
-  const S: ThtBorderStyleArray; BGround: TColor; Print: boolean;
-  const AStyleElements : TStyleElements);
-
- {$else}
-procedure DrawBorder(Canvas: TCanvas; ORect, IRect: TRect; const C: ThtColorArray;
-  const S: ThtBorderStyleArray; BGround: TColor; Print: boolean);
-  {$endif}
- {$ifdef UseInline} inline; {$endif}
+procedure DrawBorder(Canvas: TCanvas; ORect, IRect: TRect;
+  const C: ThtColorArray; const S: ThtBorderStyleArray;
+  BGround: TColor; Print: Boolean; ThemedColor: ThtThemedColor);
 {Draw the 4 sides of a border.  The sides may be of different styles or colors.
  The side indices, 0,1,2,3, represent left, top, right, bottom.
  ORect is the outside rectangle of the border, IRect the inside Rectangle.
@@ -2794,7 +2837,7 @@ begin
     CombineRgn(OuterRegion, OuterRegion, InnerRegion, RGN_DIFF);
     Brush := TBrush.Create;
     try
-      Brush.Color := ThemedColor(BGround{$ifdef has_StyleElements},seClient in AStyleElements{$endif}) or PalRelative;
+      Brush.Color := ThemedColor(BGround, htseClient) or PalRelative;
       Brush.Style := bsSolid;
       FillRgn(Canvas.Handle, OuterRegion, Brush.Handle);
     finally
@@ -2812,7 +2855,7 @@ begin
   try
     for I := 0 to 3 do
     begin
-      Color := ThemedColor(C[I]{$ifdef has_StyleElements},seClient in AStyleElements{$endif});
+      Color := ThemedColor(C[I], htseClient);
       case S[I] of
         bssSolid, bssInset, bssOutset:
         begin
@@ -2942,14 +2985,15 @@ end;
 
 //-- BG ---------------------------------------------------------- 24.11.2011 --
 constructor TViewerBase.Create(AOwner: TComponent);
-const
-  defaultPrintMargin = 0.8;//2.0;
 begin
   inherited;
-  PrintMarginLeft := defaultPrintMargin;
-  PrintMarginRight := defaultPrintMargin;
-  PrintMarginTop := defaultPrintMargin;
-  PrintMarginBottom := defaultPrintMargin;
+{$ifndef Compiler31_Plus}
+  FCurrentPPI := FormPixelsPerInch;
+{$endif}
+  PrintMarginLeft := 2.0;
+  PrintMarginRight := 2.0;
+  PrintMarginTop := 2.0;
+  PrintMarginBottom := 2.0;
   PrintMaxHPages := 2;
   PrintScale := 1.0;
   Charset := DEFAULT_CHARSET;
@@ -2991,6 +3035,8 @@ begin
   LoadCursor := Source.LoadCursor;
   NoSelect := Source.NoSelect;
   ServerRoot := Source.ServerRoot;
+  ParentColor := Source.ParentColor;
+  ParentFont := Source.ParentFont;
 
   MarginHeight := Source.MarginHeight;
   MarginWidth := Source.MarginWidth;
@@ -3039,19 +3085,152 @@ begin
   OnScript := Source.OnScript;
   OnSoundRequest := Source.OnSoundRequest;
 
-  Cursor := Cursor;
-  OnKeyDown := OnKeyDown;
-  OnKeyPress := OnKeyPress;
-  OnKeyUp := OnKeyUp;
-  OnMouseDown := OnMouseDown;
-  OnMouseMove := OnMouseMove;
-  OnMouseUp := OnMouseUp;
+  Cursor := Source.Cursor;
+  ParentColor := Source.ParentColor;
+  ParentFont := Source.ParentFont;
+  ParentShowHint := Source.ParentShowHint;
+  OnKeyDown := Source.OnKeyDown;
+  OnKeyPress := Source.OnKeyPress;
+  OnKeyUp := Source.OnKeyUp;
+  OnMouseDown := Source.OnMouseDown;
+  OnMouseMove := Source.OnMouseMove;
+  OnMouseUp := Source.OnMouseUp;
 
 {$ifdef HasGestures}
   Touch := Source.Touch;
   OnGesture := Source.OnGesture;
 {$endif}
 end;
+
+//-- BG ---------------------------------------------------------- 08.01.2023 --
+function TViewerBase.ThemedColor(AColor: TColor; AStyleElement: ThtStyleElement): TColor;
+begin
+  Result := AColor;
+{$ifdef LCL}
+  if Result = clDefault then
+    case AStyleElement of
+      htseClient: Result := GetDefaultColor(dctBrush);
+      htseFont  : Result := GetDefaultColor(dctFont);
+    end;
+{$endif}
+
+{$ifdef UseVCLStyles}
+{$ifdef has_StyleElements}
+  case AStyleElement of
+    htseFont:
+      if (seFont in StyleElements) and TStyleManager.IsCustomStyleActive then
+        Result := StyleServices.GetSystemColor(Result);
+    htseClient:
+      if (seClient in StyleElements) and TStyleManager.IsCustomStyleActive then
+        Result := StyleServices.GetSystemColor(Result);
+    htseBorder:
+      if (seBorder in StyleElements) and TStyleManager.IsCustomStyleActive then
+        Result := StyleServices.GetSystemColor(Result);
+  end;
+{$else}
+    if TStyleManager.IsCustomStyleActive then
+      Result := StyleServices.GetSystemColor(Result);
+{$endif}
+{$endif}
+end;
+
+//-- BG ---------------------------------------------------------- 08.01.2023 --
+function TViewerBase.ThemedColorToRGB(AColor: TColor; AStyleElement: ThtStyleElement): TColor;
+begin
+  Result := ColorToRGB( ThemedColor( AColor, AStyleElement ));
+end;
+
+//-- BG ---------------------------------------------------------- 06.12.2022 --
+procedure TViewerBase.CMParentColorChanged(var Message: TMessage);
+var
+  OldColor: TColor;
+  LName: string;
+  LClassName: string;
+begin
+  if csLoading in ComponentState then Exit;
+  LName := Name;
+  lClassName := ClassName;
+
+  OldColor := ThemedColorToRGB(Color, htseClient);
+  Inc(FInCMParentColorChanged); // in FPC inherited produces recursive calls to CMParentColorChanged when ParentColor changed to tr
+  if FInCMParentColorChanged = 1 then
+  begin
+    inherited;
+    if not ParentColor then
+      Color := FBackGround;
+    if OldColor <> ThemedColorToRGB(Color, htseClient) then
+      StyleChanged;
+  end;
+  Dec(FInCMParentColorChanged);
+end;
+
+procedure TViewerBase.CMParentFontChanged(var Message: TMessage);
+begin
+  if csLoading in ComponentState then Exit;
+  inherited;
+  StyleChanged;
+end;
+
+//-- BG ------------------------------------------------------- 24.07.2022 --
+procedure TViewerBase.ChangeScale(M, D: Integer{$ifdef Compiler31_Plus}; isDpiChange: Boolean{$endif});
+begin
+  inherited;
+  if M <> D then
+    ScaleChanged;
+end;
+
+{$ifndef Compiler31_Plus}
+
+//-- BG ------------------------------------------------------- 03.10.2022 --
+function TViewerBase.ParentForm: TCustomForm;
+begin
+  Result := GetParentForm(Self);
+end;
+
+//-- BG ------------------------------------------------------- 29.09.2022 --
+function TViewerBase.FormPixelsPerInch: Integer;
+var
+  P: TCustomForm;
+begin
+  P := ParentForm;
+
+  if P <> nil then
+    Result := {$ifndef LCL}ThtCustomForm{$endif}(P).PixelsPerInch
+  else
+    Result := Screen.PixelsPerInch;
+end;
+
+//-- BG ------------------------------------------------------- 03.10.2022 --
+procedure TViewerBase.SetPPI(Value: Integer);
+begin
+  FCurrentPPI := Value;
+end;
+
+//-- BG ------------------------------------------------------- 29.09.2022 --
+procedure TViewerBase.SetParent(NewParent: TWinControl);
+begin
+  inherited SetParent(NewParent);
+  if not (csDestroying in ComponentState) then
+    SetPPI( FormPixelsPerInch );
+end;
+{$endif}
+
+{$ifdef LCL}
+//-- BG ------------------------------------------------------- 29.09.2022 --
+procedure TViewerBase.DoAutoAdjustLayout(const AMode: TLayoutAdjustmentPolicy;
+  const AXProportion, AYProportion: Double);
+var
+  NewPPI: Integer;
+begin
+  inherited DoAutoAdjustLayout(AMode, AXProportion, AYProportion);
+  NewPPI := Round(FCurrentPPI * AYProportion);
+  if FCurrentPPI <> NewPPI then
+  begin
+    FCurrentPPI := NewPPI;
+    ScaleChanged;
+  end;
+end;
+{$endif}
 
 procedure TViewerBase.SetActiveColor(const Value: TColor);
 begin
@@ -3070,7 +3249,15 @@ end;
 
 procedure TViewerBase.SetDefBackground(const Value: TColor);
 begin
-  FBackground := Value;
+  if FBackGround <> Value then
+  begin
+    FBackGround := Value;
+    if not ParentColor then
+    begin
+      Color := FBackGround;
+      StyleChanged;
+    end;
+  end;
 end;
 
 procedure TViewerBase.SetOnBitmapRequest(const Value: TGetBitmapEvent);
@@ -3352,6 +3539,12 @@ begin
   Result := FFontName <> htDefFontName;
 end;
 
+//-- BG ---------------------------------------------------------- 29.09.2022 --
+function TViewerBase.GetPPI: Integer;
+begin
+  Result := FCurrentPPI;
+end;
+
 function TViewerBase.StorePreFontName: Boolean;
 begin
   Result := FPreFontName <> htDefPreFontName;
@@ -3591,6 +3784,9 @@ begin
   Result := inherited Get(Index);
 end;
 
+{$ifdef UseGenerics}
+{$else}
+
 { ThtMap }
 
 //-- BG ---------------------------------------------------------- 06.10.2016 --
@@ -3602,14 +3798,12 @@ end;
 { TFontObjBaseList }
 
 //-- BG ---------------------------------------------------------- 06.10.2016 --
-{$if compilerversion > 35}
-function TFontObjBaseList.GetBase(Index: NativeInt): TFontObjBase;
-{$else}
 function TFontObjBaseList.GetBase(Index: Integer): TFontObjBase;
-{$ifend}
 begin
   Result := inherited Get(Index);
 end;
+
+{$endif}
 
 initialization
 {$ifdef UseGlobalObjectId}

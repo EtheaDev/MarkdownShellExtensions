@@ -1,7 +1,7 @@
 {******************************************************************************}
 {                                                                              }
-{  StyledAnimatedTaskDialog: a Task Dialog Component with StyleButtons         }
-{  and animations using Skia4Delphi                                            }
+{  StyledMessagesHooks: an interposer Unit to use Styled Dialog Boxes          }
+{  using Standard Delphi calls MessageDialog or ShowMessage                    }
 {                                                                              }
 {  Copyright (c) 2022-2024 (Ethea S.r.l.)                                      }
 {  Author: Carlo Barazzetta                                                    }
@@ -24,35 +24,58 @@
 {  limitations under the License.                                              }
 {                                                                              }
 {******************************************************************************}
-unit Vcl.StyledAnimatedTaskDialog;
-
-{$INCLUDE StyledComponents.inc}
+unit Vcl.StyledMessagesHooks;
 
 interface
 
+{$INCLUDE StyledComponents.inc}
+
 uses
-  System.SysUtils
-  , System.Classes
-  , WinApi.Windows
-  , Vcl.StyledTaskDialog
+  Vcl.Dialogs
   ;
 
-//{$WARN SYMBOL_PLATFORM OFF}
-type
-  TStyledAnimatedTaskDialog = class(TStyledTaskDialog)
-  private
-  strict protected
-  public
-  end;
+function MessageDlg(const Msg: string; DlgType: TMsgDlgType;
+  Buttons: TMsgDlgButtons; HelpCtx: Longint): Integer;
+
+function MessageDlgPos(const Msg: string; DlgType: TMsgDlgType;
+  Buttons: TMsgDlgButtons; HelpCtx: Longint;
+  X: Integer = -1; Y: Integer = -1): Integer;
+
+function TaskDlgPos(const Title, Msg: string; DlgType: TMsgDlgType;
+  Buttons: TMsgDlgButtons; HelpCtx: Longint;
+  X: Integer = -1; Y: Integer = -1): Integer;
+
+procedure ShowMessage(const Msg: string);
 
 implementation
 
 uses
-  Skia.Vcl.StyledTaskDialogAnimatedUnit //to register StyledTaskDialogAnimatedUnit
+  Vcl.StyledTaskDialog
   ;
 
-initialization
+function MessageDlg(const Msg: string; DlgType: TMsgDlgType;
+  Buttons: TMsgDlgButtons; HelpCtx: Longint): Integer;
+begin
+  Result := StyledMessageDlg(Msg, DlgType, Buttons, HelpCtx);
+end;
 
-finalization
+function MessageDlgPos(const Msg: string; DlgType: TMsgDlgType;
+  Buttons: TMsgDlgButtons; HelpCtx: Longint;
+  X: Integer = -1; Y: Integer = -1): Integer;
+begin
+  Result := StyledMessageDlgPos(Msg, DlgType, Buttons, HelpCtx, X, Y);
+end;
+
+function TaskDlgPos(const Title, Msg: string; DlgType: TMsgDlgType;
+  Buttons: TMsgDlgButtons; HelpCtx: Longint;
+  X: Integer = -1; Y: Integer = -1): Integer;
+begin
+  Result := StyledTaskDlgPos(Title, Msg, DlgType, Buttons, HelpCtx, X, Y);
+end;
+
+procedure ShowMessage(const Msg: string);
+begin
+  StyledShowMessage(Msg);
+end;
 
 end.

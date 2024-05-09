@@ -1,13 +1,13 @@
 {******************************************************************************}
 {                                                                              }
-{       StyledToolbar: a Toolbar with TStyledAnimatedToolButtons inside        }
-{       Based on TStyledToolbar and animations using Skia4Delphi               }
+{  StyledToolbar: a Toolbar with TStyledAnimatedToolButtons inside             }
+{  Based on TStyledToolbar and animations using Skia4Delphi                    }
 {                                                                              }
-{       Copyright (c) 2022-2024 (Ethea S.r.l.)                                 }
-{       Author: Carlo Barazzetta                                               }
-{       Contributors:                                                          }
+{  Copyright (c) 2022-2024 (Ethea S.r.l.)                                      }
+{  Author: Carlo Barazzetta                                                    }
+{  Contributors:                                                               }
 {                                                                              }
-{       https://github.com/EtheaDev/StyledComponents                           }
+{  https://github.com/EtheaDev/StyledComponents                                }
 {                                                                              }
 {******************************************************************************}
 {                                                                              }
@@ -266,7 +266,7 @@ end;
 
 procedure TStyledAnimatedToolButton.WMSetFocus(var Message: TMessage);
 begin
-  if AnimateOnFocused in FAutoAnimationTypes then
+  if AnimateOnFocus in FAutoAnimationTypes then
       AnimatedImage.StartAnimation;
   inherited;
 end;
@@ -316,11 +316,13 @@ begin
 end;
 
 procedure TStyledAnimatedToolButton.Paint;
+(*
 var
   LImageRect: TRect;
   LImageList: TCustomImageList;
   LImageIndex: Integer;
   LImageWidth, LImageHeight: Integer;
+*)
 begin
 (*
   if Assigned(FSkAnimatedImage) then

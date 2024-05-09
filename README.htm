@@ -1,0 +1,226 @@
+<style type="text/css">
+code{
+  font-family: "Consolas", monospace;
+}
+pre{
+  border: 1px solid #ddd;
+  border-left: 3px solid #f36d33;
+  overflow: auto;
+  padding: 1em 1.5em;
+  display: block;
+}
+Blockquote{
+  border-left: 3px solid #d0d0d0;
+  padding-left: 0.5em;
+  margin-left:1em;
+}
+Blockquote p{
+  margin: 0;
+}
+table{
+  border:1px solid;
+  border-collapse:collapse;
+}
+th{  padding:5px;
+  border:1px solid;
+}
+td{
+  padding:5px;
+  border:1px solid;
+}
+</style>
+<h1>Markdown Editor and Shell Extensions <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg" alt="License"/></a></h1>
+<p><strong>Latest Version 2.2.1 - 09 May 2023</strong></p>
+<p><strong>A collection of tools for markdown files, to edit and view content:</strong></p>
+<ul>
+<li><p>A <strong>Markdown Text Editor</strong> to manually edit a markdown file, with instant preview of the output in a HTML Viewer.</p>
+</li>
+<li><p>A <strong>Preview handler</strong> which allows you to see the content of the markdown file without open it, in the &ldquo;Preview Panel&rdquo;, integrated into Windows Explorer.</p>
+</li>
+</ul>
+<h3>Features</h3>
+<ul>
+<li><p>No need to built the project with Delphi: an easy Setup is provided.</p>
+</li>
+<li><p>Supports Windows Vista, 7, 8, 10 and 11 (for 32 bits and 64 bits).</p>
+</li>
+<li><p>Themes (Dark and Light) according to user preferences of Windows Theme</p>
+</li>
+<li><p>Integrated also with other Shell Applications (like XYplorer)</p>
+</li>
+</ul>
+<h3>Delphi: integration with MarkDown Help Viewer</h3>
+<ul>
+<li>For Delphi developers: use this tool to prepare and integrate a Help System in your application, using the <a href="https://github.com/EtheaDev/MarkdownHelpViewer">&ldquo;MarkDown Help Viewer&rdquo;</a> project.</li>
+<li>Use the <strong>Markdown Text Editor</strong> to edit your help files and use the <strong>Markdown Help Viewer</strong> to show them.</li>
+</ul>
+<h3>Setup using the Installer</h3>
+<p>Click to download the <a href="https://github.com/EtheaDev/MarkdownShellExtensions/releases/latest/download/MDShellExtensionsSetup.exe">MDShellExtensionsSetup.exe</a> located also in the Release area. The Installer works both for 32 and 64 bit system.</p>
+<p><img src="./Images/Setup.png" alt="Markdown Setup_Program"/></p>
+<p><strong><em>For a clean Setup close all the windows explorer instances which have the preview handler active or the preview handler was used (remember the dll remains in memory until the windows explorer was closed).</em></strong></p>
+<h3>Markdown Text Editor</h3>
+<p>A useful Text editor with instant preview of Markdown formatted content:</p>
+<p><img src="./Images/MDTextEditorLight.png" alt="Markdown Text Editor Dark"/></p>
+<h3>Manual Build and Installation (only for Delphi developers)</h3>
+<p>Learn more about the manual within our <a href="https://github.com/EtheaDev/MarkdownShellExtensions/wiki/Manual-Build-and-Installation">wiki</a>. Dive deeper into everything related to this tool, its features, and how to make the most of it.</p>
+<h3>Preview Panel in action</h3>
+<p>In Windows 10 with Dark theme:</p>
+<p><img src="./Images/PreviewPanelDark.png" alt="Preview Panel Dark"/></p>
+<h3>Manual Build and Installation (only for Delphi developers)</h3>
+<p>If you have Delphi 10.4.2 or 11.3 or 12, you can manually build the projects using:</p>
+<p>\Source\MDShellExtensionsGroup.groupproj</p>
+<p>or the command: Build.bat (defining location of your Delphi environment)</p>
+<p><strong><em>Warning: To simplyfy build of the projects, some third parties libraries are located into ext folder</em></strong></p>
+<p>To manually install the SVGShellExtensions.dll follow these steps:</p>
+<ol>
+<li><p>Close all the windows explorer instances which have the preview handler active or the preview handler was used (remember the dll remains in memory until the windows explorer was closed).</p>
+</li>
+<li><p>If you have already used the installer uninstall the components from system.</p>
+</li>
+<li><p>To install manually the dll run the <code>Unregister_Register.cmd</code> (run-as-administrator): notice that you must change the path into cmd file.</p>
+</li>
+</ol>
+<h2>Release Notes</h2>
+<p>09 May 2024: ver. 2.2.1</p>
+<ul>
+<li>Added File Changed notification and reload</li>
+<li>Fixed Preview for Chinese chars</li>
+<li>Added use of StyledComponents and Rounded Buttons</li>
+<li>Built with Delphi 12.1</li>
+<li>Built with Latest Image32 Library</li>
+<li>Built with Latest Skia4Delphi 6.1 Library</li>
+</ul>
+<p>20 Mar 2024: ver. 2.2.0</p>
+<ul>
+<li>Fixed resize content when changing Monitor</li>
+<li>Updated to latest version of HTMLViewer</li>
+</ul>
+<p>13 Jan 2024: ver. 2.1.0</p>
+<ul>
+<li>Built with Delphi 12</li>
+<li>Updated Copyright</li>
+<li>Aligned to MarkDown HelpViewer project</li>
+<li>Added create table wizard</li>
+</ul>
+<p>3 Nov 2023: ver. 2.0.2</p>
+<ul>
+<li>Added &ldquo;mark&rdquo; command in markdown toolbar</li>
+<li>Recognized 1) same as 1. (ordered list)</li>
+<li>Added .text and .txt extensions to editor/shell extensions</li>
+</ul>
+<p>25 Oct 2023: ver. 2.0.1</p>
+<ul>
+<li>Fixed some &ldquo;hints&rdquo;</li>
+<li>Uses System Border and Shadows for Forms</li>
+</ul>
+<p>24 Oct 2023: ver. 2.0.0</p>
+<ul>
+<li>Added use of Skia4Delphi</li>
+<li>Added support for new image format (webp and wbmp)</li>
+<li>Uses AnimatedStyledDialogs for messages</li>
+<li>Added toolbar for markdown commands</li>
+<li>Added dialog for input of hyperlink for Images and Files</li>
+<li>Updated Markdown library with best support for CommonMark transformation</li>
+</ul>
+<ol>
+<li>Subscript <sub>text</sub> and Superscript <sup>text</sup></li>
+<li>Formulas (using <a href="https://developers.google.com/chart/infographics/docs/formulas">Google Chart API</a>)</li>
+<li><mark>Markers</mark></li>
+<li><a href="https://www.markdownguide.org/basic-syntax/#reference-style-links">Reference-style Links</a></li>
+</ol>
+<p>29 Jun 2023: ver. 1.5.2</p>
+<ul>
+<li>Fixed loading images with &ldquo;spaces&rdquo; in the filename</li>
+<li>Fixed immediate-loading of new images when editing the file</li>
+<li>During loading of remote images, user can stop loading pressing &ldquo;Esc&rdquo;</li>
+<li>Updated Copyright for the Editor</li>
+</ul>
+<p>26 Jun 2023: ver. 1.5.1</p>
+<ul>
+<li>Fixed Preview of Markdown files with extensions different from .markdown</li>
+</ul>
+<p>24 Jun 2023: ver. 1.5.0</p>
+<ul>
+<li>Autoload local markdown files when clicked into Preview</li>
+<li>The editor can open all markdown extensions: .md, .mkd, .mdwn, .mdown, .mdtxt, .mdtext, .markdown, .txt, .text'</li>
+<li>Stopped image rendering during editing to speed-up</li>
+<li>Added useful close button on Tabs</li>
+<li>Hint full filename on Tabs</li>
+<li>Save/Discard messaged default response inverted</li>
+<li>Removed Settings &ldquo;Search In Folder&rdquo;</li>
+</ul>
+<p>1 Nov 2022: ver. 1.4.3</p>
+<ul>
+<li>Fixed loading images into Preview</li>
+<li>Fixed the setting for local loading</li>
+</ul>
+<p>11 Set 2022: ver. 1.4.1</p>
+<ul>
+<li>Added Combobox for easy selection Markdown Dialect</li>
+<li>Added Windows 11 light and dark styles</li>
+<li>Fixed load file with blanks in content menu</li>
+<li>Fixed loading ANSI files</li>
+<li>Fixed AV in Settings with opened files</li>
+</ul>
+<p>20 Jan 2022: ver. 1.3.0</p>
+<ul>
+<li>Added Support for Windows 11</li>
+<li>Fixed resize content</li>
+</ul>
+<p>04 Sep 2021: ver. 1.2.0</p>
+<ul>
+<li>Added Support for Delphi 11</li>
+<li>Updated Image32 Lib</li>
+</ul>
+<p>20 Jul 2021: ver. 1.1.0</p>
+<ul>
+<li>Added Image32 Lib to best rendering of SVG Images</li>
+</ul>
+<p>06 Jul 2021</p>
+<ul>
+<li>First public release with setup</li>
+</ul>
+<h2>Credits</h2>
+<p>Many thanks to <strong>Rodrigo Ruz V.</strong> (author of <a href="https://theroadtodelphi.com/">theroadtodelphi.com</a> Blog) for his wonderful work on <a href="https://theroadtodelphi.com/category/previewhandler/">delphi-preview-handler</a> from which this project has used a lot of code and inspiration.</p>
+<h2>License</h2>
+<p>Licensed under the <a href="https://opensource.org/licenses/Apache-2.0">Apache License, Version 2.0</a> (the &ldquo;License&rdquo;);</p>
+<p>Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an &ldquo;AS IS&rdquo; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.</p>
+<h3>Other libraries from Ethea:</h3>
+<p><strong>SVGIconImageList</strong> - https://github.com/EtheaDev/SVGIconImageList/</p>
+<p><strong>StyledComponents</strong> - https://github.com/EtheaDev/StyledComponents</p>
+<p><strong>Delphi MarkdownProcessor</strong> - https://github.com/EtheaDev/MarkdownProcessor</p>
+<h3>Third parties libraries:</h3>
+<p><strong>OpenSLL Library</strong>: Cryptography and SSL/TLS Toolkit</p>
+<p>Copyright © 1998-2018 The OpenSSL Project.  All rights reserved.</p>
+<p><strong>Delphi Markdown</strong> - https://github.com/grahamegrieve/delphi-markdown</p>
+<p>Copyright (c) 2011+, Health Intersections Pty Ltd All rights reserved</p>
+<p><strong>Delphi Preview Handler</strong> - https://github.com/RRUZ/delphi-preview-handler</p>
+<p>The Initial Developer of the Original Code is Rodrigo Ruz V.
+Portions created by Rodrigo Ruz V. are Copyright © 2011-2023 Rodrigo Ruz V.</p>
+<p><strong>SynEdit</strong> - http://synedit.svn.sourceforge.net/viewvc/synedit/</p>
+<p>all rights reserved.</p>
+<p><strong>Synopse/SynPDF</strong> - https://github.com/synopse/SynPDF</p>
+<p>Copyright © Synopse: all right reserved.</p>
+<p><strong>HtmlToPdf</strong> - https://github.com/MuzioValerio/HtmlToPdf</p>
+<p>Copyright © Muzio Valerio.</p>
+<p><strong>Image32 Library</strong> - http://www.angusj.com/delphi/image32/Docs/_Body.htm</p>
+<p>Copyright ©2019-2023 Angus Johnson.</p>
+<p><strong>dzlib</strong> - https://sourceforge.net/projects/dzlib/</p>
+<p>Copyright (c) Thomas Mueller</p>
+<p><strong>HTMLViewer</strong> - https://github.com/BerndGabriel/HtmlViewer</p>
+<p>Copyright (c) 1995 - 2008 by L. David Baldwin</p>
+<p>Copyright (c) 1995 - 2023 by Anders Melander (DitherUnit.pas)</p>
+<p>Copyright (c) 1995 - 2023 by Ron Collins (HtmlGif1.pas)</p>
+<p>Copyright (c) 2008 - 2009 by Sebastian Zierer (Delphi 2009 Port)</p>
+<p>Copyright (c) 2008 - 2010 by Arvid Winkelsdorf (Fixes)</p>
+<p>Copyright (c) 2009 - 2023 by HtmlViewer Team</p>
+<h1>External projects</h1>
+<p><strong><em>To simpilfy compilation of projects they are added into ext folder</em></strong></p>
+<p><a href="https://github.com/EtheaDev/SVGIconImageList">SVGIconImageList</a></p>
+<p><a href="https://github.com/BerndGabriel/HtmlViewer">HtmlViewer</a></p>
+<p><a href="https://github.com/RRUZ/vcl-styles-utils">vcl-styles-utils</a></p>
+<p><a href="https://github.com/EtheaDev/MarkdownProcessor">markdownProcessor</a></p>
+<p><a href="https://github.com/EtheaDev/StyledComponents">StyledComponents</a></p>
+<p><a href="https://sourceforge.net/projects/dzlib/">dzlib</a></p>
+<p><img src="/Setup/SupportingDelphi.jpg" alt="Delphi Support"/></p>
+<p>Related links: <a href="https://www.embarcadero.com/">embarcadero.com</a> - <a href="https://learndelphi.org/">learndelphi.org</a></p>

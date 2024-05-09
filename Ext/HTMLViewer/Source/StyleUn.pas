@@ -1,7 +1,7 @@
 {
-Version   11.7
+Version   11.10
 Copyright (c) 1995-2008 by L. David Baldwin,
-Copyright (c) 2008-2016 by HtmlViewer Team
+Copyright (c) 2008-2022 by HtmlViewer Team
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -37,6 +37,9 @@ uses
   Windows,
 {$endif}
   Classes, Graphics, SysUtils, Math, Forms, Contnrs, Variants,
+{$ifdef UseGenerics}
+  System.Generics.Collections,
+{$endif}
   //
   HtmlBuffer,
   HtmlFonts,
@@ -89,12 +92,13 @@ type
 
     // the below properties are in MarginArrays
     BackgroundColor, BackgroundImage, BackgroundPosition, BackgroundRepeat, BackgroundAttachment,
-    piMinHeight, piMinWidth, piMaxHeight, piMaxWidth, BoxSizing,
+    BoxSizing,
     MarginTop, MarginRight, MarginBottom, MarginLeft,
     PaddingTop, PaddingRight, PaddingBottom, PaddingLeft,
     BorderTopWidth, BorderRightWidth, BorderBottomWidth, BorderLeftWidth,
     BorderTopColor, BorderRightColor, BorderBottomColor, BorderLeftColor,
     BorderTopStyle, BorderRightStyle, BorderBottomStyle, BorderLeftStyle,
+    piMinHeight, piMinWidth, piMaxHeight, piMaxWidth,
     piWidth, piHeight, piTop, piRight, piBottom, piLeft,
     BorderSpacingHorz, BorderSpacingVert,  //These two are internal
     // the above properties are in MarginArrays
@@ -134,12 +138,13 @@ const
 
     // these properties are in MarginArrays
     'background-color', 'background-image', 'background-position', 'background-repeat', 'background-attachment',
-    'min-height', 'min-width', 'max-height', 'max-width', 'box-sizing',
+    'box-sizing',
     'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
     'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
     'border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width',
     'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
     'border-top-style', 'border-right-style', 'border-bottom-style', 'border-left-style',
+    'min-height', 'min-width', 'max-height', 'max-width',
     'width', 'height', 'top', 'right', 'bottom', 'left',
     'thv-border-spacing-horz', 'thv-border-spacing-vert', //These two are for internal use only
 
@@ -164,7 +169,8 @@ type
 
   TProperties = class
   private
-    FDefPointSize : Double;
+    FDefFontSizeInPt: Double;
+    FPixelsPerInch: Integer;
     PropStack: TPropStack; // owner
     TheFont: ThtFont;
     InLink: Boolean;
@@ -190,8 +196,8 @@ type
     ID: Integer;
 
     constructor Create; overload; // for use in style list only
-    constructor Create(const AUseQuirksMode : Boolean); overload; // for use in style list only
-    constructor Create(APropStack: TPropStack; const AUseQuirksMode : Boolean); overload; // for use in property stack
+    constructor Create(const AUseQuirksMode : Boolean; APixelsPerInch: Integer); overload; // for use in style list only
+    constructor Create(APropStack: TPropStack; const AUseQuirksMode : Boolean; APixelsPerInch: Integer); overload; // for use in property stack
     constructor CreateCopy(ASource: TProperties);
     destructor Destroy; override;
     function Clone: TProperties; virtual;
@@ -245,10 +251,11 @@ type
     property Display: ThtDisplayStyle read GetDisplay;
     property CharSet: TFontCharset read FCharSet write FCharSet;
     property CodePage: Integer read FCodePage write AssignCodePage;
-    property DefPointSize : Double read FDefPointSize write FDefPointSize;
+    property DefPointSize : Double read FDefFontSizeInPt write FDefFontSizeInPt;
     property EmSize: Integer read GetEmSize;
     property ExSize: Integer read GetExSize;
     property Font: ThtFont read GetFont;
+    property PixelsPerInch: Integer read FPixelsPerInch write FPixelsPerInch;
     property UseQuirksMode : Boolean read FUseQuirksMode;
   end;
 
@@ -257,7 +264,8 @@ type
     SeqNo: Integer;
     FDefProp: TProperties;
   protected
-    FDefPointSize : Double;
+    FDefFontSizeInPt : Double;
+    FPixelsPerInch: Integer;
     //this must be protected so that the property can be changed in
     //a descendant while being read only.
     FUseQuirksMode : Boolean;
@@ -279,15 +287,23 @@ type
     procedure ModifyLinkColor(Pseudo: ThtString; AColor: TColor);
     property UseQuirksMode : Boolean read FUseQuirksMode write FUseQuirksMode;
     property DefProp: TProperties read FDefProp;
-    property DefPointSize : Double read FDefPointSize write FDefPointSize;
+    property DefPointSize : Double read FDefFontSizeInPt write FDefFontSizeInPt;
+    property PixelsPerInch: Integer read FPixelsPerInch write FPixelsPerInch;
   end;
 
+{$ifdef UseGenerics}
+  TPropStack = class(TObjectList<TProperties>)
+{$else}
   TPropStack = class(TObjectList)
   private
     function GetProp(Index: Integer): TProperties; {$ifdef UseInline} inline; {$endif}
+{$endif}
   public
     function Last: TProperties; {$ifdef UseInline} inline; {$endif}
+{$ifdef UseGenerics}
+{$else}
     property Items[Index: Integer]: TProperties read GetProp; default;
+{$endif}
   end;
 
 type
@@ -319,15 +335,15 @@ function IsAuto(const Value: Variant): Boolean; {$ifdef UseInline} inline; {$end
 function VarIsIntNull(const Value: Variant): Boolean; {$ifdef UseInline} inline; {$endif}
 function VarIsAuto(const Value: Variant): Boolean; {$ifdef UseInline} inline; {$endif}
 
-function VMargToMarg(const Value: Variant; Relative: Boolean; Base, EmSize, ExSize, Default: Integer): Integer;
+function VMargToMarg(const Value: Variant; Relative: Boolean; Base, EmSize, ExSize, Default, PixelsPerInch: Integer): Integer;
 
 function ConvData(BaseWidth, BaseHeight, EmSize, ExSize, BorderWidth: Integer; AutoCount: Integer = 0): ThtConvData;
-procedure ConvMargProp(I: ThtPropIndices; const VM: ThtVMarginArray; var ConvData: ThtConvData; var M: ThtMarginArray);
+procedure ConvMargProp(I: ThtPropIndices; const VM: ThtVMarginArray; var ConvData: ThtConvData; var M: ThtMarginArray; PixelsPerInch: Integer);
 
-procedure ConvInlineMargArray(const VM: ThtVMarginArray; BaseWidth, BaseHeight, EmSize, ExSize, BorderWidth: Integer; {BStyle: ThtBorderStyle;} out M: ThtMarginArray);
-procedure ConvMargArray(const VM: ThtVMarginArray; BaseWidth, BaseHeight, EmSize, ExSize, BorderWidth: Integer; out AutoCount: Integer; var M: ThtMarginArray);
-procedure ConvMargArrayForCellPadding(const VM: ThtVMarginArray; EmSize, ExSize: Integer; var M: ThtMarginArray);
-procedure ConvVertMargins(const VM: ThtVMarginArray; var CD: ThtConvData; var M: ThtMarginArray);
+procedure ConvInlineMargArray(const VM: ThtVMarginArray; BaseWidth, BaseHeight, EmSize, ExSize, BorderWidth: Integer; {BStyle: ThtBorderStyle;} out M: ThtMarginArray; PixelsPerInch: Integer);
+procedure ConvMargArray(const VM: ThtVMarginArray; BaseWidth, BaseHeight, EmSize, ExSize, BorderWidth: Integer; out AutoCount: Integer; var M: ThtMarginArray; PixelsPerInch: Integer);
+procedure ConvMargArrayForCellPadding(const VM: ThtVMarginArray; EmSize, ExSize: Integer; var M: ThtMarginArray; PixelsPerInch: Integer);
+procedure ConvVertMargins(const VM: ThtVMarginArray; var CD: ThtConvData; var M: ThtMarginArray; PixelsPerInch: Integer);
 
 
 function OpacityFromStr(S : ThtString) : Byte;
@@ -355,8 +371,8 @@ procedure ApplyBoxSettings(var AMarg : ThtMarginArray; const AUseQuirksMode : Bo
 
 //here for inlining
 function SkipWhiteSpace(const S: ThtString; I, L: Integer): Integer;
-function FontSizeConv(const Str: ThtString; OldSize, DefPointSize: Double; const AUseQuirksMode : Boolean): Double;
-function LengthConv(const Str: ThtString; Relative: Boolean; Base, EmSize, ExSize, Default: Integer): Integer;
+function FontSizeConv(const Str: ThtString; OldSize, DefFontSizeInPt: Double; PixelsPerInch: Integer; const AUseQuirksMode : Boolean): Double;
+function LengthConv(const Str: ThtString; Relative: Boolean; Base, EmSize, ExSize, Default, PixelsPerInch: Integer): Integer;
 
 procedure CalcAutoMinMaxConstraints(W, H, MinW, MaxW, MinH, MaxH: Integer; out ResW, ResH: Integer);
 
@@ -790,17 +806,19 @@ begin
 end;
 
 //-- BG ---------------------------------------------------------- 12.09.2010 --
-constructor TProperties.Create(APropStack: TPropStack; const AUseQuirksMode : Boolean);
+constructor TProperties.Create(APropStack: TPropStack; const AUseQuirksMode : Boolean; APixelsPerInch: Integer);
 begin
   Create;
   Self.PropStack := APropStack;
   FUseQuirksMode := AUseQuirksMode;
+  FPixelsPerInch := APixelsPerInch;
 end;
 
-constructor TProperties.Create(const AUseQuirksMode : Boolean);
+constructor TProperties.Create(const AUseQuirksMode : Boolean; APixelsPerInch: Integer);
 begin
   Create;
   FUseQuirksMode := AUseQuirksMode;
+  FPixelsPerInch := APixelsPerInch;
 end;
 
 //-- BG ---------------------------------------------------------- 21.10.2016 --
@@ -816,23 +834,24 @@ end;
 //-- BG ---------------------------------------------------------- 20.01.2013 --
 constructor TProperties.CreateCopy(ASource: TProperties);
 begin
-  FDefPointSize   := ASource.DefPointSize;
-  PropStack       := ASource.PropStack     ;
-  InLink          := ASource.InLink        ;
-  DefFontname     := ASource.DefFontname   ;
-  FUseQuirksMode  := ASource.FUseQuirksMode;
-  PropTag         := ASource.PropTag       ;
-  PropClass       := ASource.PropClass     ;
-  PropID          := ASource.PropID        ;
-  PropPseudo      := ASource.PropPseudo    ;
-  PropTitle       := ASource.PropTitle     ;
-  PropStyle       := ASource.PropStyle     ;
-  FontBG          := ASource.FontBG        ;
-  FCharSet        := ASource.FCharSet      ;
-  FCodePage       := ASource.FCodePage     ;
-  Props           := ASource.Props         ;
-  Originals       := ASource.Originals     ;
-  ID              := ASource.ID            ;
+  FDefFontSizeInPt := ASource.FDefFontSizeInPt;
+  FPixelsPerInch   := ASource.FPixelsPerInch  ;
+  PropStack        := ASource.PropStack       ;
+  InLink           := ASource.InLink          ;
+  DefFontname      := ASource.DefFontname     ;
+  FUseQuirksMode   := ASource.FUseQuirksMode  ;
+  PropTag          := ASource.PropTag         ;
+  PropClass        := ASource.PropClass       ;
+  PropID           := ASource.PropID          ;
+  PropPseudo       := ASource.PropPseudo      ;
+  PropTitle        := ASource.PropTitle       ;
+  PropStyle        := ASource.PropStyle       ;
+  FontBG           := ASource.FontBG          ;
+  FCharSet         := ASource.FCharSet        ;
+  FCodePage        := ASource.FCodePage       ;
+  Props            := ASource.Props           ;
+  Originals        := ASource.Originals       ;
+  ID               := ASource.ID              ;
   if ASource.FIArray <> nil then
   begin
     FIArray := TFontInfoArray.Create;
@@ -863,7 +882,7 @@ begin
   CodeSiteLogging.CodeSite.AddSeparator;
   StyleUn.LogProperties(Source,'Source');
   {$ENDIF}
-  FDefPointSize := Source.DefPointSize;
+  FDefFontSizeInPt := Source.FDefFontSizeInPt;
   for I := Low(I) to High(I) do
     Props[I] := Source.Props[I];
   {$IFDEF JPM_DEBUGGING_STYLES}
@@ -888,7 +907,7 @@ begin
     Props[I] := Source.Props[I];
   CodePage := Source.CodePage;
   DefFontname := Source.DefFontname;
-  FDefPointSize := Source.DefPointSize;
+  FDefFontSizeInPt := Source.FDefFontSizeInPt;
   PropTag := 'default';
   {$IFDEF JPM_DEBUGGING_STYLES}
   CodeSiteLogging.CodeSite.AddSeparator;
@@ -1193,7 +1212,7 @@ begin
       end;
       if PXY.PosType in [bpDim, bpPercent] then
       begin
-        PXY.Value := LengthConv(S[I], False, 100, EmSize, ExSize, 0);
+        PXY.Value := LengthConv(S[I], False, 100, EmSize, ExSize, 0, PixelsPerInch);
       end;
       Inc(I);
       Inc(XY);
@@ -1386,7 +1405,7 @@ begin
       Result := Round(V * NewHeight)
     else
     {note: 'normal' yields -1 in the next statement}
-      Result := LengthConv(Props[LineHeight], True, EmSize, EmSize, ExSize, -1);
+      Result := LengthConv(Props[LineHeight], True, EmSize, EmSize, ExSize, -1, PixelsPerInch);
   end
   else
     Result := -1;
@@ -1403,10 +1422,10 @@ begin
     if I > 0 then
     begin
       PC := True; {return value in percent}
-      Result := LengthConv(Props[TextIndent], True, 100, 0, 0, 0);
+      Result := LengthConv(Props[TextIndent], True, 100, 0, 0, 0, PixelsPerInch);
     end
     else
-      Result := LengthConv(Props[TextIndent], False, 0, EmSize, EmSize, 0);
+      Result := LengthConv(Props[TextIndent], False, 0, EmSize, EmSize, 0, PixelsPerInch);
   end
   else
     Result := 0;
@@ -1533,7 +1552,7 @@ begin
       Result := Round(V)
     else
     {note: 'normal' yields -1 in the next statement}
-      Result := LengthConv(Props[BorderSpacingHorz], True, EmSize, EmSize, ExSize, -1);
+      Result := LengthConv(Props[BorderSpacingHorz], True, EmSize, EmSize, ExSize, -1, PixelsPerInch);
   end
   else
     Result := -1;
@@ -1552,7 +1571,7 @@ begin
       Result := Round(V)
     else
     {note: 'normal' yields -1 in the next statement}
-      Result := LengthConv(Props[BorderSpacingVert], True, EmSize, EmSize, ExSize, -1);
+      Result := LengthConv(Props[BorderSpacingVert], True, EmSize, EmSize, ExSize, -1, PixelsPerInch);
   end
   else
     Result := -1;
@@ -1597,7 +1616,7 @@ begin
 {$endif}
 end;
 
-procedure ConvVertMargins(const VM: ThtVMarginArray; var CD: ThtConvData; var M: ThtMarginArray);
+procedure ConvVertMargins(const VM: ThtVMarginArray; var CD: ThtConvData; var M: ThtMarginArray; PixelsPerInch: Integer);
 begin
 {$IFDEF JPM_DEBUGGING_STYLES}
   CodeSiteLogging.CodeSite.EnterMethod('ConvVertMargins');
@@ -1607,15 +1626,15 @@ begin
   StyleUn.LogTVMarginArray(VM,'VM');
 {$ENDIF}
 
-  ConvMargProp(PaddingTop, VM, CD, M);
-  ConvMargProp(BorderTopWidth, VM, CD, M);
-  ConvMargProp(MarginTop, VM, CD, M);
-  ConvMargProp(piHeight, VM, CD, M);
-  ConvMargProp(piMinHeight, VM, CD, M);
-  ConvMargProp(piMaxHeight, VM, CD, M);
-  ConvMargProp(MarginBottom, VM, CD, M);
-  ConvMargProp(BorderBottomWidth, VM, CD, M);
-  ConvMargProp(PaddingBottom, VM, CD, M);
+  ConvMargProp( PaddingTop        , VM, CD, M, PixelsPerInch);
+  ConvMargProp( BorderTopWidth    , VM, CD, M, PixelsPerInch);
+  ConvMargProp( MarginTop         , VM, CD, M, PixelsPerInch);
+  ConvMargProp( piHeight          , VM, CD, M, PixelsPerInch);
+  ConvMargProp( piMinHeight       , VM, CD, M, PixelsPerInch);
+  ConvMargProp( piMaxHeight       , VM, CD, M, PixelsPerInch);
+  ConvMargProp( MarginBottom      , VM, CD, M, PixelsPerInch);
+  ConvMargProp( BorderBottomWidth , VM, CD, M, PixelsPerInch);
+  ConvMargProp( PaddingBottom     , VM, CD, M, PixelsPerInch);
 
 {$IFDEF JPM_DEBUGGING_STYLES}
   CodeSiteLogging.CodeSite.AddSeparator;
@@ -1643,15 +1662,20 @@ end;
 function VarIsAuto(const Value: Variant): Boolean;
  {$ifdef UseInline} inline; {$endif}
 begin
-  Result := (VarType(Value) in varInt) and (Value = Auto);
+  if VarType(Value) in varInt then
+    Result := Value = Auto
+  else if VarIsStr(Value) then
+    Result := Value = 'auto'
+  else
+    Result := False;
 end;
 
 //-- BG ---------------------------------------------------------- 05.10.2010 --
-function VMargToMarg(const Value: Variant; Relative: Boolean; Base, EmSize, ExSize, Default: Integer): Integer;
+function VMargToMarg(const Value: Variant; Relative: Boolean; Base, EmSize, ExSize, Default: Integer; PixelsPerInch: Integer): Integer;
  {$ifdef UseInline} inline; {$endif}
 begin
   if VarIsStr(Value) then
-    Result := LengthConv(Value, Relative, Base, EmSize, ExSize, Default)
+    Result := LengthConv(Value, Relative, Base, EmSize, ExSize, Default, PixelsPerInch)
   else if (VarType(Value) in varInt) and (Value <> IntNull) then
     Result := Value
   else
@@ -1747,7 +1771,7 @@ begin
 end;
 
 //-- BG ---------------------------------------------------------- 16.05.2014 --
-procedure ConvMargProp(I: ThtPropIndices; const VM: ThtVMarginArray; var ConvData: ThtConvData; var M: ThtMarginArray);
+procedure ConvMargProp(I: ThtPropIndices; const VM: ThtVMarginArray; var ConvData: ThtConvData; var M: ThtMarginArray; PixelsPerInch: Integer);
 
   function Base(I: ThtPropIndices): Integer;
   begin
@@ -1799,7 +1823,7 @@ begin
               else if VM[I] = 'thick' then
                 M[I] := 6
               else
-                M[I] := LengthConv(VM[I], False, Base(I), EmSize, ExSize, BorderWidth); {Auto will be 4}
+                M[I] := LengthConv(VM[I], False, Base(I), EmSize, ExSize, BorderWidth, PixelsPerInch); {Auto will be 4}
             end
             else if (VarType(VM[I]) in varInt) then
             begin
@@ -1811,12 +1835,11 @@ begin
           end;
         end;
 
-      piMinHeight, piMaxHeight,
-      piHeight:
+      piMinHeight, piMaxHeight:
         begin
           if VarIsStr(VM[I]) then
           begin
-            M[I] := LengthConv(VM[I], False, Base(I), EmSize, ExSize, 0); {Auto will be 0}
+            M[I] := LengthConv(VM[I], False, Base(I), EmSize, ExSize, 0, PixelsPerInch); {Auto will be 0}
             if Pos('%', VM[I]) > 0 then {include border in % heights}
               M[I] := M[I] - M[BorderTopWidth] - M[BorderBottomWidth] - M[PaddingTop] - M[PaddingBottom];
           end
@@ -1831,11 +1854,30 @@ begin
             M[I] := 0;
         end;
 
+      piHeight:
+        begin
+          if VarIsStr(VM[I]) then
+          begin
+            M[I] := LengthConv(VM[I], False, Base(I), EmSize, ExSize, Auto, PixelsPerInch); {Auto will be Auto}
+            if Pos('%', VM[I]) > 0 then {include border in % heights}
+              M[I] := M[I] - M[BorderTopWidth] - M[BorderBottomWidth] - M[PaddingTop] - M[PaddingBottom];
+          end
+          else if VarType(VM[I]) in varInt then
+          begin
+            if VM[I] = IntNull then
+              M[I] := 0
+            else
+              M[I] := VM[I];
+          end
+          else
+            M[I] := Auto;
+        end;
+
       PaddingTop..PaddingLeft,BorderSpacingHorz,BorderSpacingVert:
         begin
           if VarIsStr(VM[I]) then
           begin
-            M[I] := LengthConv(VM[I], False, Base(I), EmSize, ExSize, 0); {Auto will be 0}
+            M[I] := LengthConv(VM[I], False, Base(I), EmSize, ExSize, 0, PixelsPerInch); {Auto will be 0}
           end
           else if VarType(VM[I]) in varInt then
           begin
@@ -1851,7 +1893,7 @@ begin
       piTop..piLeft:
         begin
           if VarIsStr(VM[I]) then
-            M[I] := LengthConv(VM[I], False, Base(I), EmSize, ExSize, Auto) {Auto will be Auto}
+            M[I] := LengthConv(VM[I], False, Base(I), EmSize, ExSize, Auto, PixelsPerInch) {Auto will be Auto}
           else if VarType(VM[I]) in varInt then
           begin
             if VM[I] = IntNull then
@@ -1881,7 +1923,7 @@ begin
               Inc(AutoCount);
             end
             else
-              M[I] := LengthConv(VM[I], False, BaseWidth, EmSize, ExSize, 0);
+              M[I] := LengthConv(VM[I], False, BaseWidth, EmSize, ExSize, 0, PixelsPerInch);
           end
           else if VarType(VM[I]) in varInt then
           begin
@@ -1897,7 +1939,7 @@ begin
       MarginTop, MarginBottom:
         begin
           if VarIsStr(VM[I]) then
-            M[I] := LengthConv(VM[I], False, BaseHeight, EmSize, ExSize, 0) {Auto will be 0}
+            M[I] := LengthConv(VM[I], False, BaseHeight, EmSize, ExSize, 0, PixelsPerInch) {Auto will be 0}
           else if VarType(VM[I]) in varInt then
           begin
             if VM[I] = IntNull then
@@ -1918,7 +1960,11 @@ begin
       piMaxWidth:
         begin
           if VarIsStr(VM[I]) then
-            M[I] := LengthConv(VM[I], False, BaseWidth, EmSize, ExSize, Auto)
+          begin
+            M[I] := LengthConv(VM[I], False, BaseWidth, EmSize, ExSize, Auto, PixelsPerInch);
+            if Pos('%', VM[I]) > 0 then {include border in % heights}
+              M[I] := M[I] - M[BorderLeftWidth] - M[BorderRightWidth] - M[PaddingLeft] - M[PaddingRight];
+          end
           else if VarType(VM[I]) in varInt then
           begin
             if VM[I] = IntNull then
@@ -1933,7 +1979,16 @@ begin
       piWidth:
         begin
           if VarIsStr(VM[I]) then
-            M[I] := LengthConv(VM[I], False, BaseWidth, EmSize, ExSize, Auto)
+          begin
+            if VM[I] = 'auto' then
+              M[I] := Auto
+            else
+            begin
+              M[I] := LengthConv(VM[I], False, BaseWidth, EmSize, ExSize, Auto, PixelsPerInch);
+              if Pos('%', VM[I]) > 0 then {include border in % heights}
+                M[I] := M[I] - M[BorderLeftWidth] - M[BorderRightWidth] - M[PaddingLeft] - M[PaddingRight];
+            end;
+          end
           else if VarType(VM[I]) in varInt then
           begin
             if VM[I] = IntNull then
@@ -1949,7 +2004,7 @@ begin
     else
       begin
         if VarIsStr(VM[I]) then
-          M[I] := LengthConv(VM[I], False, Base(I), EmSize, ExSize, 0)
+          M[I] := LengthConv(VM[I], False, Base(I), EmSize, ExSize, 0, PixelsPerInch)
         else if VarType(VM[I]) in varInt then
         begin
           if VM[I] = IntNull then
@@ -1965,7 +2020,7 @@ begin
 end;
 
 procedure ConvMargArray(const VM: ThtVMarginArray; BaseWidth, BaseHeight, EmSize, ExSize: Integer;
-  BorderWidth: Integer; out AutoCount: Integer; var M: ThtMarginArray);
+  BorderWidth: Integer; out AutoCount: Integer; var M: ThtMarginArray; PixelsPerInch: Integer);
 {This routine does not do MarginTop and MarginBottom as they are done by ConvVertMargins}
 var
   I: ThtPropIndices;
@@ -1990,7 +2045,7 @@ begin
   CD := ConvData(BaseWidth, BaseHeight, EmSize, ExSize, BorderWidth);
   for I := Low(VM) to High(VM) do
     if not (I in [MarginTop, MarginBottom]) then
-      ConvMargProp(I, VM, CD, M);
+      ConvMargProp(I, VM, CD, M, PixelsPerInch);
   AutoCount := CD.AutoCount; {count of 'auto's in width items}
 
 {$IFDEF JPM_DEBUGGING_CONV}
@@ -2003,7 +2058,7 @@ begin
 end;
 
 procedure ConvMargArrayForCellPadding(const VM: ThtVMarginArray; EmSize,
-  ExSize: Integer; var M: ThtMarginArray);
+  ExSize: Integer; var M: ThtMarginArray; PixelsPerInch: Integer);
 {Return negative for no entry or percent entry}
 var
   I: ThtPropIndices;
@@ -2017,7 +2072,7 @@ begin
 {$ENDIF}
   for I := PaddingTop to PaddingLeft do
     if VarIsStr(VM[I]) then
-      M[I] := LengthConv(VM[I], False, -100, EmSize, ExSize, 0) {Auto will be 0}
+      M[I] := LengthConv(VM[I], False, -100, EmSize, ExSize, 0, PixelsPerInch) {Auto will be 0}
     else if VarType(VM[I]) in varInt then
     begin
       if VM[I] = IntNull then
@@ -2037,7 +2092,7 @@ end;
 {----------------ConvInlineMargArray}
 
 procedure ConvInlineMargArray(const VM: ThtVMarginArray; BaseWidth, BaseHeight, EmSize,
-  ExSize, BorderWidth: Integer; {BStyle: ThtBorderStyle;} out M: ThtMarginArray);
+  ExSize, BorderWidth: Integer; {BStyle: ThtBorderStyle;} out M: ThtMarginArray; PixelsPerInch: Integer);
  {$ifdef UseInline} inline; {$endif}
 {currently for images, form controls.  BaseWidth/Height and BStyle currently not supported}
 var
@@ -2058,7 +2113,7 @@ begin
       piHeight, piWidth:
         begin
           if VarIsStr(VM[I]) then
-            M[I] := LengthConv(VM[I], False, BaseWidth, EmSize, ExSize, Auto) {Auto will be Auto}
+            M[I] := LengthConv(VM[I], False, BaseWidth, EmSize, ExSize, Auto, PixelsPerInch) {Auto will be Auto}
           else if VarType(VM[I]) in varInt then
           begin
             if VM[I] = IntNull then
@@ -2074,7 +2129,7 @@ begin
       MarginLeft, MarginRight, MarginTop, MarginBottom:
         begin
           if VarIsStr(VM[I]) then
-            M[I] := LengthConv(VM[I], False, BaseWidth, EmSize, ExSize, 0) {auto is 0}
+            M[I] := LengthConv(VM[I], False, BaseWidth, EmSize, ExSize, 0, PixelsPerInch) {auto is 0}
           else if VarType(VM[I]) in varInt then
           begin
             if VM[I] = IntNull then
@@ -2101,7 +2156,7 @@ begin
               else if VM[I] = 'thick' then
                 M[I] := 6
               else
-                M[I] := LengthConv(VM[I], False, BaseWidth, EmSize, ExSize, BorderWidth); {Auto will be BorderWidth}
+                M[I] := LengthConv(VM[I], False, BaseWidth, EmSize, ExSize, BorderWidth, PixelsPerInch); {Auto will be BorderWidth}
             end
             else if (VarType(VM[I]) in varInt) then
             begin
@@ -2318,7 +2373,7 @@ procedure TProperties.Combine(Styles: TStyleList; Sym: TElemSymb;
                           end;
 
                         FontSize:
-                          iSize := FontSizeConv(Props[Index], iSize, DefPointSize, FUseQuirksMode);
+                          iSize := FontSizeConv(Props[Index], iSize, DefPointSize, PixelsPerInch, FUseQuirksMode);
 
                         Color:
                           iColor := Props[Index];
@@ -2684,7 +2739,7 @@ procedure TProperties.Combine(Styles: TStyleList; Sym: TElemSymb;
       MergeItems('::' + Pseudo, True); {default Pseudo definition}
 
     if not (VarType(Props[FontSize]) in varNum) then {if still a ThtString, hasn't been converted}
-      Props[FontSize] := FontSizeConv(Props[FontSize], OldSize, FDefPointSize, FUseQuirksMode);
+      Props[FontSize] := FontSizeConv(Props[FontSize], OldSize, FDefFontSizeInPt, PixelsPerInch, FUseQuirksMode);
   end;
 
 var
@@ -2731,7 +2786,7 @@ begin {call only if all things valid}
   if TheFont = nil then
   begin
     GetSingleFontInfo(Font);
-    TheFont := AllMyFonts.GetFontLike(Font);
+    TheFont := AllMyFonts.GetFontLike(Font, PixelsPerInch);
   end;
   Result := TheFont;
 end;
@@ -2919,7 +2974,7 @@ procedure TProperties.CalcLinkFontInfo(Styles: TStyleList; I: Integer);
 
   procedure InsertNewProp(N: Integer; const Pseudo: ThtString);
   begin
-    PropStack.Insert(N, TProperties.Create(PropStack,FUseQuirksMode));
+    PropStack.Insert(N, TProperties.Create(PropStack, FUseQuirksMode, FPixelsPerInch));
     PropStack[N].Inherit('', PropStack[N - 1]);
     PropStack[N].Combine(Styles, PropSym, PropTag, PropClass, PropID, Pseudo, PropTitle, PropStyle, nil {PropAttr}, N - 1);
   end;
@@ -3212,8 +3267,8 @@ begin
     if not Find(Selector, I) then
     begin
       NewProp := True;
-      Propty := TProperties.Create(); {newly created property}
-      Propty.DefPointSize := FDefPointSize;
+      Propty := TProperties.Create(UseQuirksMode, PixelsPerInch); {newly created property}
+      Propty.DefPointSize := FDefFontSizeInPt;
     end
     else
     begin
@@ -3260,12 +3315,12 @@ function TStyleList.AddObject(const S: ThtString; AObject: TObject): Integer;
 begin
   Result := inherited AddObject(S, AObject);
   TProperties(AObject).PropTag := S;
-  TProperties(AObject).FDefPointSize := DefPointSize;
+  TProperties(AObject).FDefFontSizeInPt := DefPointSize;
 end;
 
 function TStyleList.AddDuplicate(const Tag: ThtString; Prop: TProperties): TProperties;
 begin
-  Result := TProperties.Create(Prop.PropStack,FUseQuirksMode);
+  Result := TProperties.Create(Prop.PropStack, FUseQuirksMode, FPixelsPerInch);
   Result.Copy(Prop);
   AddObject(Tag, Result);
 end;
@@ -3292,13 +3347,12 @@ var
   HIndex: Integer;
   Properties: TProperties;
   J: ListTypes;
-  //F: Double;
 
 begin
   Clear;
   DefPointSize := PointSize;
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.DefFontname := FontName;
   Properties.Props[FontFamily] := FontName;
   Properties.Props[FontSize] := PointSize;
@@ -3324,7 +3378,7 @@ begin
   FDefProp := Properties;
 
   if UseQuirksMode then begin
-    Properties := TProperties.Create(UseQuirksMode);
+    Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
     Properties.Props[FontSize] := PointSize * 1.0;
     Properties.Props[FontStyle] := 'none';
     Properties.Props[FontWeight] := 'normal';
@@ -3336,7 +3390,7 @@ begin
     Properties.Props[FontWeight] := 'bold';
   end;
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[Color] := AHotSpot or PalRelative;
   if LinkUnderline then
     Properties.Props[TextDecoration] := 'underline'
@@ -3344,18 +3398,18 @@ begin
     Properties.Props[TextDecoration] := 'none';
   AddObject('::link', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[Color] := AVisitedColor or PalRelative;
   AddObject('::visited', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[Color] := AActiveColor or PalRelative;
   AddObject('::hover', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   AddObject('null', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[FontFamily] := PreFontName;
   Properties.Props[FontSize] := PointSize * 10.0 / 12.0;
   Properties.Props[FontStyle] := 'none';
@@ -3364,18 +3418,18 @@ begin
   Properties.Props[piWhiteSpace] := 'pre';
   AddObject('pre', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[MarginTop] := AutoParagraph;
   Properties.Props[MarginBottom] := AutoParagraph;
   AddObject('p', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[MarginTop] := 0;
   AddObject('p 11pre', Properties);
 
   for J := Low(ListTypes) to High(ListTypes) do
   begin
-    Properties := TProperties.Create(UseQuirksMode);
+    Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
     case J of
       ol, ul, menu, dir:
       begin
@@ -3412,7 +3466,7 @@ begin
     AddObject(ListStr[J], Properties);
   end;
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[FontFamily] := PrefontName;
   Properties.Props[FontSize] := '0.83em'; {10.0 / 12.0;}
   AddObject('code', Properties);
@@ -3420,36 +3474,36 @@ begin
   AddDuplicate('kbd', Properties);
   AddDuplicate('samp', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[FontWeight] := 'bold';
   AddObject('b', Properties);
   AddDuplicate('strong', Properties);
   if UseQuirksMode = False then begin
     AddDuplicate('th', Properties);
-    Properties := TProperties.Create;
+    Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
     Properties.Props[TextAlign] := 'none';
     AddObject('table', Properties);
   end;
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[FontSize] := '0.83em';
   Properties.Props[VerticalAlign] := 'super';
   AddObject('sup', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[FontSize] := '0.83em';
   Properties.Props[VerticalAlign] := 'sub';
   AddObject('sub', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[FontSize] := '1.17em';
   AddObject('big', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[FontSize] := '0.83em';
   AddObject('small', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[FontStyle] := 'italic';
   AddObject('i', Properties);
   AddDuplicate('em', Properties);
@@ -3459,23 +3513,23 @@ begin
 
   AddDuplicate('address', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[TextDecoration] := 'underline';
   AddObject('u', Properties);
   AddDuplicate('ins',Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[TextDecoration] := 'line-through';
   AddObject('s', Properties);
   AddDuplicate('strike', Properties);
   AddDuplicate('del',Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[TextAlign] := 'center';
   AddObject('center', Properties);
   AddDuplicate('caption', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[FontFamily] := 'Arial Unicode MS, Arial';
   Properties.Props[FontSize] := '10pt';
   Properties.Props[FontStyle] := 'none';
@@ -3492,7 +3546,7 @@ begin
   else
     Properties.Props[FontFamily] := PreFontName;
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[MarginLeft] := 0;
   Properties.Props[MarginRight] := 0;
   Properties.Props[MarginTop] := 10;
@@ -3501,34 +3555,35 @@ begin
 
   for HIndex := 1 to 6 do
   begin
-    Properties := TProperties.Create(UseQuirksMode);
-    //F := PointSize / 12.0;
+    Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
     case HIndex of
       1: Properties.Props[FontSize] := '2em';
       2: Properties.Props[FontSize] := '1.5em';
       3: Properties.Props[FontSize] := '1.17em';
-    else
-         Properties.Props[FontSize] := '1em';
+      4: Properties.Props[FontSize] := '1em';
+      5: Properties.Props[FontSize] := '0.83em';
+      6: Properties.Props[FontSize] := '0.75em';
     end;
     case HIndex of
-      4: Properties.Props[MarginTop] := '1.67em';
+      1: Properties.Props[MarginTop] := '0.67em';
+      2: Properties.Props[MarginTop] := '0.75em';
+      3: Properties.Props[MarginTop] := '0.83em';
+      4: Properties.Props[MarginTop] := '1.12em';
       5: Properties.Props[MarginTop] := '1.5em';
-      6: Properties.Props[MarginTop] := '1.12em';
-    else
-      Properties.Props[MarginTop] := 19;
+      6: Properties.Props[MarginTop] := '1.67em';
     end;
     Properties.Props[MarginBottom] := Properties.Props[MarginTop];
     Properties.Props[FontWeight] := 'bolder';
     AddObject( htString('h' + IntToStr(HIndex)), Properties);
   end;
 
-  Properties := TProperties.Create;
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[FontStyle] := 'none';
   Properties.Props[BackgroundColor] := $00FFFF;
   Properties.Props[Color] := $000000;
   AddObject('mark', Properties);
 
-  Properties := TProperties.Create(UseQuirksMode);
+  Properties := TProperties.Create(UseQuirksMode, PixelsPerInch);
   Properties.Props[ StyleUn.BorderBottomStyle ] := 'dotted';
   Properties.Props[ StyleUn.BorderBottomWidth ] := '1px';
   AddObject('abbr', Properties);
@@ -3537,14 +3592,17 @@ end;
 
 { TPropStack }
 
+{$ifdef UseGenerics}
+{$else}
 function TPropStack.GetProp(Index: Integer): TProperties;
 begin
   Result := Get(Index); //TProperties(inherited Items[Index]);
 end;
+{$endif}
 
 function TPropStack.Last: TProperties;
 begin
-  Result := Get(Count - 1);
+  Result := TProperties(inherited Items[Count - 1]);
 end;
 
 const
@@ -3970,8 +4028,7 @@ begin
     Result := OldSize * FontConv[NewIndex] / FontConv[OldIndex];
 end;
 
-function FontSizeConv(const Str: ThtString; OldSize, DefPointSize : Double; const AUseQuirksMode : Boolean): Double;
- {$ifdef UseInline} inline; {$endif}
+function FontSizeConv(const Str: ThtString; OldSize, DefFontSizeInPt: Double; PixelsPerInch: Integer; const AUseQuirksMode : Boolean): Double;
 {given a font-size ThtString, return the point size}
 var
   V: extended;
@@ -3989,7 +4046,7 @@ begin
     else if U = 'pt' then
       Result := V
     else if U = 'px' then
-      Result := V * 72.0 / Screen.PixelsPerInch
+      Result := V * 72.0 / PixelsPerInch
     else if U = 'pc' then
       Result := V * 12.0
     else if U = 'em' then
@@ -3999,18 +4056,19 @@ begin
     else if U = '%' then
       Result := V * OldSize * f_pc
     else if U = '' then
-      Result := V * 72.0 / Screen.PixelsPerInch {pixels by default}
+      Result := V * 72.0 / PixelsPerInch {pixels by default}
     else
-      Result := DefPointSize; {error, return 12pt}
+      Result := DefFontSizeInPt; {error, return 12pt}
   end
   else
   begin
     U := Str;
-    if AUseQuirksMode then begin
-      i := 1;
-    end else begin
+
+    if AUseQuirksMode then
+      i := 1
+    else
       i := 0;
-    end;
+
     if U = 'smaller' then
       Result := IncFontSize(OldSize, -1) // CSS1: 0.75 * OldSize
     else if U = 'larger' then
@@ -4030,13 +4088,13 @@ begin
     else if U = 'xx-large' then
       Result := FontConv[6]
     else
-      Result := DefPointSize;
+      Result := DefFontSizeInPt;
   end;
 end;
 
 {----------------LengthConv}
 
-function LengthConv(const Str: ThtString; Relative: Boolean; Base, EmSize, ExSize, Default: Integer): Integer;
+function LengthConv(const Str: ThtString; Relative: Boolean; Base, EmSize, ExSize, Default, PixelsPerInch: Integer): Integer;
  {$ifdef UseInline} inline; {$endif}
 {given a length ThtString, return the appropriate pixel value.  Base is the
  base value for percentage. EmSize, ExSize for units relative to the font.
@@ -4059,16 +4117,16 @@ begin
     else if U = '%' then
       V := V * Base * f_pc
     else if U = 'in' then
-      V := V * Screen.PixelsPerInch
+      V := V * PixelsPerInch
     else if U = 'cm' then
-      V := V * Screen.PixelsPerInch * f_cm
+      V := V * PixelsPerInch * f_cm
     else if U = 'mm' then
-      V := V * Screen.PixelsPerInch * f_mm
+      V := V * PixelsPerInch * f_mm
     else if U = 'pt' then
-      V := V * Screen.PixelsPerInch * f_pt
+      V := V * PixelsPerInch * f_pt
     else if U = 'px' then
     else if U = 'pc' then
-      V := V * Screen.PixelsPerInch * f_px
+      V := V * PixelsPerInch * f_px
     else if U = 'em' then
       V := V * EmSize
     else if U = 'ex' then

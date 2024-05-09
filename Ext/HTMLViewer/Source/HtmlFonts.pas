@@ -1,7 +1,7 @@
 {
-Version   11.7
+Version   11.10
 Copyright (c) 1995-2008 by L. David Baldwin
-Copyright (c) 2008-2016 by HtmlViewer Team
+Copyright (c) 2008-2023 by HtmlViewer Team
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -45,6 +45,9 @@ uses
 {$endif}
   SysUtils,
   Graphics, Classes, Forms, Contnrs, Variants,
+{$ifdef UseGenerics}
+  System.Generics.Collections,
+{$endif}
   //
   HtmlGlobals,
   StyleTypes;
@@ -88,20 +91,27 @@ type
     EmSize: Integer;
     ExSize: Integer;
     constructor Create; {$ifdef LCL} override; {$endif}
-    procedure Assign(const Info: ThtFontInfo); reintroduce; overload;
+    procedure Assign(const Info: ThtFontInfo; APixelsPerInch: Integer); reintroduce; overload;
     procedure Assign(Source: TPersistent); overload; override;
     procedure AssignToCanvas(Canvas: TCanvas);
   end;
+
+{$ifdef UseGenerics}
+  ThtFontList = class(TObjectList<ThtFont>);
+{$else}
+  ThtFontList = class(TObjectList);
+{$endif}
 
   ThtFontCache = class
   private
     FFontsByName: ThtStringList;
     procedure Add(Font: ThtFont);
-    function Find(const FontInfo: ThtFontInfo): ThtFont;
+    function Find(const FontInfo: ThtFontInfo; PixelsPerInch: Integer): ThtFont;
   public
     constructor Create;
     destructor Destroy; override;
-    function GetFontLike(var Font: ThtFontInfo): ThtFont;
+    procedure Clear;
+    function GetFontLike(var Font: ThtFontInfo; PixelsPerInch: Integer): ThtFont;
   end;
 
 function AllMyFonts: ThtFontCache;
@@ -133,28 +143,34 @@ end;
 {----------------TMyFont.Assign}
 
 procedure ThtFont.Assign(Source: TPersistent);
+var
+  SourceFont: ThtFont absolute Source;
 begin
   if Source is ThtFont then
   begin
-    bgColor := ThtFont(Source).bgColor;
-    tmHeight := ThtFont(Source).tmHeight;
-    tmDescent := ThtFont(Source).tmDescent;
-    tmExternalLeading := ThtFont(Source).tmExternalLeading;
-    tmAveCharWidth := ThtFont(Source).tmAveCharWidth;
-    tmMaxCharWidth := ThtFont(Source).tmMaxCharWidth;
-    tmCharset := ThtFont(Source).tmCharset;
-    CharExtra := ThtFont(Source).CharExtra;
-    EmSize := ThtFont(Source).EmSize;
-    ExSize := ThtFont(Source).ExSize;
+    PixelsPerInch := SourceFont.PixelsPerInch;
+    bgColor := SourceFont.bgColor;
+    tmHeight := SourceFont.tmHeight;
+    tmDescent := SourceFont.tmDescent;
+    tmExternalLeading := SourceFont.tmExternalLeading;
+    tmAveCharWidth := SourceFont.tmAveCharWidth;
+    tmMaxCharWidth := SourceFont.tmMaxCharWidth;
+    tmCharset := SourceFont.tmCharset;
+    CharExtra := SourceFont.CharExtra;
+    EmSize := SourceFont.EmSize;
+    ExSize := SourceFont.ExSize;
   end;
   inherited Assign(Source);
 end;
 
 //-- BG ---------------------------------------------------------- 12.03.2011 --
-procedure ThtFont.Assign(const Info: ThtFontInfo);
+procedure ThtFont.Assign(const Info: ThtFontInfo; APixelsPerInch: Integer);
 begin
   Name := htStringToString(Info.iName);
-  Height := -Round(Info.iSize * Screen.PixelsPerInch / 72);
+  {$ifdef LCL}
+    PixelsPerInch := APixelsPerInch;
+  {$endif}
+  Height := -Round(Info.iSize * (APixelsPerInch / 72.0));
   Style := Info.iStyle;
   bgColor := Info.ibgColor;
   Color := Info.iColor;
@@ -188,9 +204,9 @@ begin
   if not FFontsByName.Find(FontName, I) then
   begin
     I := FFontsByName.Add(FontName);
-    FFontsByName.Objects[I] := TObjectList.Create(True);
+    FFontsByName.Objects[I] := ThtFontList.Create(True);
   end;
-  TObjectList(FFontsByName.Objects[I]).Add(Font);
+  ThtFontList(FFontsByName.Objects[I]).Add(Font);
 end;
 
 //-- BG ---------------------------------------------------------- 30.01.2011 --
@@ -203,17 +219,24 @@ end;
 
 //-- BG ---------------------------------------------------------- 30.01.2011 --
 destructor ThtFontCache.Destroy;
+begin
+  Clear;
+  FFontsByName.Free;
+  inherited;
+end;
+
+//-- BG ---------------------------------------------------------- 19.09.2022 --
+procedure ThtFontCache.Clear;
 var
   I: Integer;
 begin
   for I := 0 to FFontsByName.Count - 1 do
     FFontsByName.Objects[I].Free;
-  FFontsByName.Free;
-  inherited;
+  FFontsByName.Clear;
 end;
 
 //-- BG ---------------------------------------------------------- 30.01.2011 --
-function ThtFontCache.Find(const FontInfo: ThtFontInfo): ThtFont;
+function ThtFontCache.Find(const FontInfo: ThtFontInfo; PixelsPerInch: Integer): ThtFont;
 var
   iHeight: Integer;
 
@@ -231,13 +254,13 @@ var
 
 var
   I: Integer;
-  Fonts: TObjectList;
+  Fonts: ThtFontList;
 begin
   I := -1;
   if FFontsByName.Find(htLowerCase(FontInfo.iName), I) then
   begin
-    iHeight := -Round(FontInfo.iSize * Screen.PixelsPerInch / 72.0);
-    Fonts := TObjectList(FFontsByName.Objects[I]);
+    iHeight := -Round(FontInfo.iSize * PixelsPerInch / 72.0);
+    Fonts := ThtFontList(FFontsByName.Objects[I]);
     for I := 0 to Fonts.Count - 1 do
     begin
       Result := ThtFont(Fonts[I]);
@@ -249,7 +272,7 @@ begin
 end;
 
 //-- BG ---------------------------------------------------------- 30.01.2011 --
-function ThtFontCache.GetFontLike(var Font: ThtFontInfo): ThtFont;
+function ThtFontCache.GetFontLike(var Font: ThtFontInfo; PixelsPerInch: Integer): ThtFont;
 var
   SameFont: ThtFont;
   Save: HFONT;
@@ -259,14 +282,11 @@ var
   V: Variant;
   GotTextMetrics: Boolean;
 begin
-  SameFont := Find(Font);
+  SameFont := Find(Font, PixelsPerInch);
   if SameFont = nil then
   begin
     SameFont := ThtFont.Create;
-    SameFont.Name := htStringToString(Font.iName);
-    SameFont.Height := -Round(Font.iSize * Screen.PixelsPerInch / 72);
-    SameFont.Style := Font.iStyle;
-    SameFont.Charset := Font.iCharSet;
+    SameFont.Assign(Font, PixelsPerInch);
     Add(SameFont);
 
     GotTextMetrics := False;
@@ -324,7 +344,7 @@ begin
   else if VarIsStr(V) then
     if V <> 'normal' then
     begin
-      Result.CharExtra := Round(StrToLength(V, False, Result.EmSize, Result.EmSize, 0));
+      Result.CharExtra := Round(StrToLength(V, False, Result.EmSize, Result.EmSize, 0, PixelsPerInch));
       Font.iCharExtra := Result.CharExtra;
     end;
 end;

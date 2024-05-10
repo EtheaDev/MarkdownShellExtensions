@@ -88,12 +88,18 @@ type
     FHTMLFontName: string;
     FRescalingImage: Boolean;
     FProcessorDialect: TMarkdownProcessorDialect;
+    FButtonDrawRounded: Boolean;
+    FToolbarDrawRounded: Boolean;
+    FMenuDrawRounded: Boolean;
     function GetUseDarkStyle: Boolean;
     function GetThemeSectionName: string;
     function GetButtonTextColor: TColor;
     class function GetSettingsFileName: string; static;
     procedure SetRescalingImage(const Value: Boolean);
     procedure SetProcessorDialect(const Value: TMarkdownProcessorDialect);
+    procedure SetButtonDrawRounded(const Value: Boolean);
+    procedure SetToolbarDrawRounded(const Value: Boolean);
+    procedure SetMenuDrawRounded(const Value: Boolean);
   protected
     FIniFile: TIniFile;
   public
@@ -130,6 +136,9 @@ type
     property ActivePageIndex: Integer read FActivePageIndex write FActivePageIndex;
     property ThemeSelection: TThemeSelection read FThemeSelection write FThemeSelection;
     property ProcessorDialect: TMarkdownProcessorDialect read FProcessorDialect write SetProcessorDialect;
+    property ButtonDrawRounded: Boolean read FButtonDrawRounded write SetButtonDrawRounded;
+    property ToolbarDrawRounded: Boolean read FToolbarDrawRounded write SetToolbarDrawRounded;
+    property MenuDrawRounded: Boolean read FMenuDrawRounded write SetMenuDrawRounded;
   end;
 
   TPreviewSettings = class(TSettings)
@@ -140,17 +149,11 @@ type
   TEditorSettings = class(TSettings)
   private
     FDownloadFromWEB: Boolean;
-    FButtonDrawRounded: Boolean;
-    FToolbarDrawRounded: Boolean;
-    FMenuDrawRounded: Boolean;
     procedure SetDownloadFromWEB(const Value: Boolean);
     procedure WriteSynEditorOptions(
       const ASynEditorOptions: TSynEditorOptionsContainer);
     procedure ReadSynEditorOptions(
       const ASynEditorOptions: TSynEditorOptionsContainer);
-    procedure SetButtonDrawRounded(const Value: Boolean);
-    procedure SetToolbarDrawRounded(const Value: Boolean);
-    procedure SetMenuDrawRounded(const Value: Boolean);
   public
     HistoryFileList: TStrings;
     OpenedFileList: TStrings;
@@ -165,9 +168,6 @@ type
     destructor Destroy; override;
     procedure UpdateOpenedFiles(AFileList: TStrings; const ACurrentFileName: string);
     property DownloadFromWEB: Boolean read FDownloadFromWEB write SetDownloadFromWEB;
-    property ButtonDrawRounded: Boolean read FButtonDrawRounded write SetButtonDrawRounded;
-    property ToolbarDrawRounded: Boolean read FToolbarDrawRounded write SetToolbarDrawRounded;
-    property MenuDrawRounded: Boolean read FMenuDrawRounded write SetMenuDrawRounded;
   end;
 
 implementation
@@ -353,7 +353,10 @@ begin
   FStyleName := FIniFile.ReadString('Global', 'StyleName', DefaultStyleName);
   FThemeSelection := TThemeSelection(FIniFile.ReadInteger('Global', 'ThemeSelection', 0));
   FProcessorDialect := TMarkdownProcessorDialect(FIniFile.ReadInteger('Global', 'ProcessorDialect', 1));
-  //Select Style by default on Actual Windows Theme
+  FToolbarDrawRounded := FIniFile.ReadBool('Global', 'ToolbarDrawRounded', false);
+  FButtonDrawRounded := FIniFile.ReadBool('Global', 'ButtonDrawRounded', false);
+  FMenuDrawRounded := FIniFile.ReadBool('Global', 'MenuDrawRounded', false);
+//Select Style by default on Actual Windows Theme
   if FThemeSelection = tsAsWindows then
   begin
     FUseDarkStyle := not IsWindowsAppThemeLight;
@@ -430,6 +433,9 @@ begin
 
   FIniFile.WriteInteger('Global', 'ThemeSelection', Ord(FThemeSelection));
   FIniFile.WriteInteger('Global', 'ProcessorDialect', Ord(FProcessorDialect));
+  FIniFile.WriteBool('Global', 'ToolbarDrawRounded', ToolbarDrawRounded);
+  FIniFile.WriteBool('Global', 'ButtonDrawRounded', ButtonDrawRounded);
+  FIniFile.WriteBool('Global', 'MenuDrawRounded', MenuDrawRounded);
 
   if (FUseDarkStyle and (LightBackground <> default_darkbackground)) or
     (not FUseDarkStyle and (LightBackground <> default_lightbackground)) then
@@ -456,6 +462,22 @@ begin
   FIniFile.WriteFloat('PDFPageSettins', 'MarginRight', PDFPageSettings.MarginRight);
 end;
 
+procedure TSettings.SetToolbarDrawRounded(
+  const Value: Boolean);
+begin
+  FToolbarDrawRounded := Value;
+end;
+
+procedure TSettings.SetMenuDrawRounded(const Value: Boolean);
+begin
+  FMenuDrawRounded := Value;
+end;
+
+procedure TSettings.SetButtonDrawRounded(const Value: Boolean);
+begin
+  FButtonDrawRounded := Value;
+end;
+
 { TPreviewSettings }
 
 constructor TPreviewSettings.CreateSettings(
@@ -469,20 +491,9 @@ end;
 
 { TEditorSettings }
 
-procedure TEditorSettings.SetToolbarDrawRounded(
-  const Value: Boolean);
-begin
-  FToolbarDrawRounded := Value;
-end;
-
 procedure TEditorSettings.SetDownloadFromWEB(const Value: Boolean);
 begin
   FDownloadFromWEB := Value;
-end;
-
-procedure TEditorSettings.SetMenuDrawRounded(const Value: Boolean);
-begin
-  FMenuDrawRounded := Value;
 end;
 
 constructor TEditorSettings.CreateSettings(const ASynEditHighilighter: TSynCustomHighlighter;
@@ -551,9 +562,6 @@ begin
       end;
     end;
     CurrentFileName := FIniFile.ReadString('Global', 'CurrentFileName', '');
-    ToolbarDrawRounded := FIniFile.ReadBool('Global', 'ToolbarDrawRounded', false);
-    ButtonDrawRounded := FIniFile.ReadBool('Global', 'ButtonDrawRounded', false);
-    MenuDrawRounded := FIniFile.ReadBool('Global', 'MenuDrawRounded', false);
   end;
 end;
 
@@ -663,16 +671,8 @@ begin
       OpenedFileList.strings[i]);
   end;
   FIniFile.WriteString('Global', 'CurrentFileName', CurrentFileName);
-  FIniFile.WriteBool('Global', 'ToolbarDrawRounded', ToolbarDrawRounded);
-  FIniFile.WriteBool('Global', 'ButtonDrawRounded', ButtonDrawRounded);
-  FIniFile.WriteBool('Global', 'MenuDrawRounded', MenuDrawRounded);
 
   WriteSynEditorOptions(ASynEditorOptions);
-end;
-
-procedure TEditorSettings.SetButtonDrawRounded(const Value: Boolean);
-begin
-  FButtonDrawRounded := Value;
 end;
 
 procedure TEditorSettings.WriteSynEditorOptions(

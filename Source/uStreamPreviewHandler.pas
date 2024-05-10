@@ -41,7 +41,8 @@ implementation
 uses
   PropSys,
   SysUtils,
-  uLogExcept;
+  uLogExcept,
+  MDShellEx.Misc;
 
 type
   TComStreamPreviewHandler = class(TComPreviewHandler, IInitializeWithStream)
@@ -72,6 +73,7 @@ end;
 function TComStreamPreviewHandler.IInitializeWithStream_Initialize(const pstream: IStream; grfMode: Cardinal): HRESULT;
 begin
   TLogPreview.Add('TComStreamPreviewHandler.IInitializeWithStream_Initialize Init');
+  Initialize_GDI;
   FIStream := pstream;
   FMode := grfMode;
   Result := S_OK;

@@ -44,7 +44,9 @@ uses
   SVGIconImageList, SVGIconImageListBase, SVGIconImage, Vcl.VirtualImageList,
   Vcl.OleCtrls, SHDocVw,
   MDShellEx.Resources, HTMLUn2, HtmlView,
-  UPreviewContainer;
+  UPreviewContainer,
+  Vcl.ButtonStylesAttributes, Vcl.StyledButton,
+  Vcl.StyledToolbar, Vcl.StyledButtonGroup;
 
 type
   TFrmPreview = class(TPreviewContainer)
@@ -53,18 +55,15 @@ type
     PanelMD: TPanel;
     StatusBar: TStatusBar;
     SVGIconImageList: TVirtualImageList;
-    ToolButtonZoomIn: TToolButton;
-    ToolButtonZoomOut: TToolButton;
-    ToolBar: TToolBar;
-    ToolButtonSettings: TToolButton;
-    ToolButtonAbout: TToolButton;
-    ToolButtonShowText: TToolButton;
+    ToolButtonZoomIn: TStyledToolButton;
+    ToolButtonZoomOut: TStyledToolButton;
+    StyledToolBar: TStyledToolbar;
+    ToolButtonSettings: TStyledToolButton;
+    ToolButtonAbout: TStyledToolButton;
+    ToolButtonShowText: TStyledToolButton;
     Splitter: TSplitter;
-    ToolBarAllegati: TToolBar;
+    ToolBarAllegati: TStyledToolbar;
     HtmlViewer: THtmlViewer;
-    paTop: TPanel;
-    ProcessorDialectLabel: TLabel;
-    ProcessorDialectComboBox: TComboBox;
     procedure FormCreate(Sender: TObject);
     procedure ToolButtonZoomInClick(Sender: TObject);
     procedure ToolButtonZoomOutClick(Sender: TObject);
@@ -79,7 +78,6 @@ type
     procedure SplitterMoved(Sender: TObject);
     procedure FormAfterMonitorDpiChanged(Sender: TObject; OldDPI,
       NewDPI: Integer);
-    procedure ProcessorDialectComboBoxSelect(Sender: TObject);
   private
     FMDFontSize: Integer;
     FHTMLFontSize: Integer;
@@ -183,14 +181,14 @@ begin
   begin
     Splitter.Top := PanelMD.Top + PanelMD.Height;
     Splitter.Visible := True;
-    ToolButtonShowText.Caption := 'Hide Markdown';
+    ToolButtonShowText.Caption := 'Hide Source';
     ToolButtonShowText.Hint := 'Hide Markdown file content';
     ToolButtonShowText.ImageName := 'hide-text';
   end
   else
   begin
     Splitter.Visible := False;
-    ToolButtonShowText.Caption := 'Show Markdown';
+    ToolButtonShowText.Caption := 'Show Source';
     ToolButtonShowText.Hint := 'Show Markdown file content';
     ToolButtonShowText.ImageName := 'show-text';
   end;
@@ -257,10 +255,16 @@ procedure TFrmPreview.FormResize(Sender: TObject);
 begin
   PanelMD.Height := Round(Self.Height * (FPreviewSettings.SplitterPos / 100));
   Splitter.Top := PanelMD.Height;
-  if Self.Width < (500 * Self.ScaleFactor) then
-    ToolBar.ShowCaptions := False
+  if Self.Width < (560 * Self.ScaleFactor) then
+  begin
+    StyledToolBar.ShowCaptions := False;
+    StyledToolBar.ButtonWidth := Round(30 * Self.ScaleFactor);
+  end
   else
-    Toolbar.ShowCaptions := True;
+  begin
+    StyledToolbar.ShowCaptions := True;
+    StyledToolBar.ButtonWidth := Round(110 * Self.ScaleFactor);
+  end;
   UpdateGUI;
   if FPreviewSettings.RescalingImage then
     ShowMarkDownAsHTML(FPreviewSettings, True);
@@ -298,19 +302,6 @@ begin
     LStringStream.Free;
   end;
   TLogPreview.Add('TFrmEditor.LoadFromStream Done');
-end;
-
-procedure TFrmPreview.ProcessorDialectComboBoxSelect(Sender: TObject);
-var
-  LDialect: TMarkdownProcessorDialect;
-begin
-  LDialect := TMarkdownProcessorDialect(ProcessorDialectComboBox.ItemIndex);
-  if FPreviewSettings.ProcessorDialect <> LDialect then
-  begin
-    FPreviewSettings.ProcessorDialect := LDialect;
-    FPreviewSettings.WriteSettings(SynEdit.Highlighter, nil);
-    ShowMarkDownAsHTML(FPreviewSettings, False);
-  end;
 end;
 
 procedure TFrmPreview.SaveSettings;
@@ -374,7 +365,7 @@ begin
     LOldPos := HtmlViewer.VScrollBarPosition;
     HtmlViewer.DefFontSize := ASettings.HTMLFontSize;
     HtmlViewer.DefFontName := ASettings.HTMLFontName;
-    LStream := TStringStream.Create(FMarkDownFile.HTML);
+    LStream := TStringStream.Create(FMarkDownFile.HTML, TEncoding.UTF8);
     try
       HtmlViewer.LoadFromStream(LStream);
       HtmlViewer.VScrollBarPosition := LOldPos;
@@ -410,7 +401,7 @@ end;
 procedure TFrmPreview.SplitterMoved(Sender: TObject);
 begin
   FPreviewSettings.SplitterPos := splitter.Top * 100 div
-    (Self.Height - Toolbar.Height);
+    (Self.Height - StyledToolbar.Height);
   SaveSettings;
 end;
 
@@ -439,6 +430,8 @@ begin
 end;
 
 procedure TFrmPreview.UpdateFromSettings(const Preview: Boolean);
+var
+  LStyle: TStyledButtonDrawType;
 begin
   FPreviewSettings.ReadSettings(SynEdit.Highlighter, nil);
   if FPreviewSettings.MDFontSize >= MinfontSize then
@@ -446,9 +439,29 @@ begin
   else
     MDFontSize := MinfontSize;
 
-  ProcessorDialectComboBox.ItemIndex := ord(FPreviewSettings.ProcessorDialect);
-
   SynEdit.Font.Name := FPreviewSettings.MDFontName;
+
+  //Rounded Buttons for StyledButtons
+  if FPreviewSettings.ButtonDrawRounded then
+    LStyle := btRounded
+  else
+    LStyle := btRoundRect;
+  TStyledButton.RegisterDefaultRenderingStyle(LStyle);
+
+  //Rounded Buttons for StyledToolbars
+  if FPreviewSettings.ToolbarDrawRounded then
+    LStyle := btRounded
+  else
+    LStyle := btRoundRect;
+  TStyledToolbar.RegisterDefaultRenderingStyle(LStyle);
+  StyledToolbar.StyleDrawType := LStyle;
+
+  //Rounded Buttons for menus: StyledCategories and StyledButtonGroup
+  if FPreviewSettings.MenuDrawRounded then
+    LStyle := btRounded
+  else
+    LStyle := btRoundRect;
+  TStyledButtonGroup.RegisterDefaultRenderingStyle(LStyle);
 
   if FPreviewSettings.HTMLFontSize >= MinfontSize then
     HTMLFontSize := FPreviewSettings.HTMLFontSize

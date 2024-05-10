@@ -572,19 +572,9 @@ begin
   HTMLUpDown.Position := ASettings.HTMLFontSize;
 
   ProcessorDialectComboBox.ItemIndex := ord(ASettings.ProcessorDialect);
-  RoundedButtonsGroupBox.Visible := ASettings is TEditorSettings;
-  if ASettings is TEditorSettings then
-  begin
-    ToolbarRoundedCheckBox.Checked := TEditorSettings(ASettings).ToolbarDrawRounded;
-    ButtonsRoundedCheckBox.Checked := TEditorSettings(ASettings).ButtonDrawRounded;
-    MenuRoundedCheckBox.Checked := TEditorSettings(ASettings).MenuDrawRounded;
-  end
-  else
-  begin
-    ToolbarRoundedCheckBox.Checked := False;
-    ButtonsRoundedCheckBox.Checked := False;
-    MenuRoundedCheckBox.Checked := False;
-  end;
+  ToolbarRoundedCheckBox.Checked := TEditorSettings(ASettings).ToolbarDrawRounded;
+  ButtonsRoundedCheckBox.Checked := TEditorSettings(ASettings).ButtonDrawRounded;
+  MenuRoundedCheckBox.Checked := TEditorSettings(ASettings).MenuDrawRounded;
 
   RescalingImageCheckBox.Checked := ASettings.RescalingImage;
   DownloadFromWebCheckBox.Visible := ASettings is TEditorSettings;
@@ -640,12 +630,11 @@ begin
   ASettings.StyleName := SelectedStyleName;
   ASettings.RescalingImage := RescalingImageCheckBox.Checked;
   if ASettings is TEditorSettings then
-  begin
     TEditorSettings(ASettings).DownloadFromWEB := DownloadFromWEBCheckBox.Checked;
-    TEditorSettings(ASettings).ToolbarDrawRounded := ToolbarRoundedCheckBox.Checked;
-    TEditorSettings(ASettings).ButtonDrawRounded := ButtonsRoundedCheckBox.Checked;
-    TEditorSettings(ASettings).MenuDrawRounded := MenuRoundedCheckBox.Checked;
-  end;
+
+  TEditorSettings(ASettings).ToolbarDrawRounded := ToolbarRoundedCheckBox.Checked;
+  TEditorSettings(ASettings).ButtonDrawRounded := ButtonsRoundedCheckBox.Checked;
+  TEditorSettings(ASettings).MenuDrawRounded := MenuRoundedCheckBox.Checked;
 
   ASettings.PDFPageSettings.PrintOrientation := TPrinterOrientation(OrientationRadioGroup.ItemIndex);
   ASettings.PDFPageSettings.PaperSize := PaperSizeRadioGroup.ItemIndex;

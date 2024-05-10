@@ -10,10 +10,8 @@ object FrmMain: TFrmMain
   Font.Height = -11
   Font.Name = 'Tahoma'
   Font.Style = []
-  OldCreateOrder = False
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  PixelsPerInch = 96
   TextHeight = 13
   object Splitter1: TSplitter
     Left = 417
@@ -45,7 +43,7 @@ object FrmMain: TFrmMain
       Width = 415
       Height = 557
       ObjectTypes = [otFolders, otNonFolders]
-      Root = 'D:\ETHEA\GitHub_EtheaDev'
+      Root = 'D:\Users\Carlo\Downloads\Test'
       Sorted = True
       Align = alClient
       ReadOnly = False

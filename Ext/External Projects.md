@@ -2,15 +2,22 @@
 
 ***This project uses some External Projects, located into Ext Path***
 
-- [Ethea SVGIconImageList][1]
+- [Ethea's SVGIconImageList][1]
 
-- [Ethea MarkdownProcessor][2]
+- [Ethea's MarkdownProcessor][2]
 
-- [Synedit][3]
+- [Ethea's StyledComponents][3]
 
-- [VCL-Style-Utils][4]
+- [HTMLViewer][4]
 
-- [dzlib][5]
+- [Synedit][5]
+
+- [SynPDF][6]
+
+- [VCL-Style-Utils][7]
+
+- [dzlib][8]
+
 
 ***For simplify compilation they are added to this folder***
 
@@ -18,8 +25,14 @@
 
 [2]: https://github.com/EtheaDev/MarkdownProcessor
 
-[3]: https://github.com/SynEdit/SynEdit
+[3]: https://github.com/EtheaDev/StyledComponents
 
-[4]: https://github.com/RRUZ/vcl-styles-utils
+[4]: https://github.com/BerndGabriel/HtmlViewer.git
 
-[5]: https://sourceforge.net/projects/dzlib/
+[5]: https://github.com/SynEdit/SynEdit
+
+[6]: https://github.com/synopse/SynPDF.git
+
+[7]: https://github.com/RRUZ/vcl-styles-utils
+
+[8]: https://sourceforge.net/projects/dzlib/

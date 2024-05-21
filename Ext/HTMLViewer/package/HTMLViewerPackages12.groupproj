@@ -1,0 +1,48 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{55ADB20A-4277-4A1B-A5F1-33E9A96F463B}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="FrameViewer12.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="dclFrameViewer12.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="FrameViewer12">
+        <MSBuild Projects="FrameViewer12.dproj"/>
+    </Target>
+    <Target Name="FrameViewer12:Clean">
+        <MSBuild Projects="FrameViewer12.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FrameViewer12:Make">
+        <MSBuild Projects="FrameViewer12.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="dclFrameViewer12">
+        <MSBuild Projects="dclFrameViewer12.dproj"/>
+    </Target>
+    <Target Name="dclFrameViewer12:Clean">
+        <MSBuild Projects="dclFrameViewer12.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="dclFrameViewer12:Make">
+        <MSBuild Projects="dclFrameViewer12.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="FrameViewer12;dclFrameViewer12"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="FrameViewer12:Clean;dclFrameViewer12:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="FrameViewer12:Make;dclFrameViewer12:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

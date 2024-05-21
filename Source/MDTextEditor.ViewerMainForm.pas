@@ -180,7 +180,7 @@ type
     MenuToolButton: TStyledToolButton;
     PageSetupToolButton: TStyledToolButton;
     PrinterSetupToolButton: TStyledToolButton;
-    QuitToolButton: TStyledToolButton;
+    QuiTStyledToolButton: TStyledToolButton;
     ToolButton9: TStyledToolButton;
     OpenRecentAction: TAction;
     RecentPopupMenu: TPopupMenu;
@@ -211,7 +211,7 @@ type
     PanelCloseButton: TPanel;
     SVGIconImageCloseButton: TSVGIconImage;
     LoadTimer: TTimer;
-    VirtualImageListToolbar: TVirtualImageList;
+    VirtualImageLisTStyledToolBar: TVirtualImageList;
     ToolbarActionList: TActionList;
     acHeader1: TAction;
     acHeader2: TAction;
@@ -2001,7 +2001,7 @@ begin
   UpdateApplicationStyle(FEditorSettings.StyleName);
   if AEditor <> nil then
   begin
-  FEditorSettings.ReadSettings(AEditor.Highlighter, self.FEditorOptions);
+    FEditorSettings.ReadSettings(AEditor.Highlighter, self.FEditorOptions);
     AEditor.ReadOnly := False;
   end
   else

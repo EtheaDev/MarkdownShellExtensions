@@ -73,7 +73,7 @@ object frmMain: TfrmMain
         OnClick = SVGIconImageCloseButtonClick
       end
     end
-    object StyledToolbar: TStyledToolbar
+    object StyledToolbar: TStyledToolBar
       AlignWithMargins = True
       Left = 4
       Top = 4
@@ -386,22 +386,18 @@ object frmMain: TfrmMain
       Anchors = [akTop, akRight]
       Caption = 'Transformation:'
     end
-    object SettingsToolBar: TStyledToolbar
+    object SettingsToolBar: TStyledToolBar
       AlignWithMargins = True
       Left = 800
       Top = 3
       Width = 200
-      Height = 32
+      Height = 30
       Align = alRight
       ButtonHeight = 32
       ButtonWidth = 32
       Images = VirtualImageList
       Indent = 3
       TabOrder = 0
-      DrawingStyle = dsGradient
-      GradientEndColor = clBtnFace
-      GradientStartColor = clBtnFace
-      ExplicitHeight = 30
       object ColorSettingsToolButton: TStyledToolButton
         Left = 0
         Top = 0
@@ -425,8 +421,6 @@ object frmMain: TfrmMain
       object ToolButton9: TStyledToolButton
         Left = 128
         Top = 0
-        ImageIndex = 23
-        ImageName = 'about'
         Style = tbsSeparator
       end
       object AbouTStyledToolButton: TStyledToolButton
@@ -434,14 +428,14 @@ object frmMain: TfrmMain
         Top = 0
         Action = acAbout
       end
-      object QuitToolButton: TStyledToolButton
+      object QuiTStyledToolButton: TStyledToolButton
         Left = 166
         Top = 0
         Action = acQuit
         ImageName = 'Exit'
       end
     end
-    object MenuButtonToolbar: TStyledToolbar
+    object MenuButtonToolbar: TStyledToolBar
       AlignWithMargins = True
       Left = 3
       Top = 3
@@ -453,9 +447,6 @@ object frmMain: TfrmMain
       Images = VirtualImageList
       Indent = 3
       TabOrder = 1
-      DrawingStyle = dsGradient
-      GradientEndColor = clBtnFace
-      GradientStartColor = clBtnFace
       ExplicitHeight = 30
       object MenuToolButton: TStyledToolButton
         Left = 0

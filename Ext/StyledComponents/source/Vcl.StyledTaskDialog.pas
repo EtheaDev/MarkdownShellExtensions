@@ -41,6 +41,7 @@ uses
 
 const
   DEFAULT_ALPHABLEND = 255;
+  DEFAULT_MAIN_ICON_SIZE = 64;
 
 type
   TStyledDialogIcons = array[TMsgDlgType] of TIcon;
@@ -55,16 +56,18 @@ type
     FHelpFile: string;
     FParentWnd: HWND;
     FPosition: TPoint;
+    FMainIconSize: Integer;
   strict protected
     function DoExecute(ParentWnd: HWND): Boolean; override;
-    procedure DoOnButtonClicked(AModalResult: Integer; var CanClose: Boolean); override;
     procedure DoOnDialogCreated; override;
     procedure DoOnHelp; override;
-    procedure DoOnHyperlinkClicked(const AURL: string); override;
   public
+    procedure DoOnHyperlinkClicked(const AURL: string); override;
+    constructor Create(AOwner: TComponent); override;
     function Execute(ParentWnd: HWND): Boolean; overload; override;
     property HelpFile: string read FHelpFile write FHelpFile;
     property Position: TPoint read FPosition write FPosition;
+    property MainIconSize: Integer read FMainIconSize write FMainIconSize default DEFAULT_MAIN_ICON_SIZE;
   end;
 
   //  Abstraction of a Dialog Launcher
@@ -134,6 +137,7 @@ uses
   , System.WideStrUtils
   , Winapi.MultiMon
   , System.HelpIntfs
+  , System.UITypes
   , Vcl.Controls
   , Vcl.StdCtrls
   , Vcl.ExtCtrls
@@ -316,9 +320,6 @@ begin
   end;
 end;
 
-const
-  tdbHelp = -1;
-
 procedure InitializeStyledTaskDialogs(AUseTaskDialog: Boolean; AFont: TFont;
   const ADialogButtonsFamily: TStyledButtonFamily = '';
   const AAlphaBlendValue: Byte = DEFAULT_ALPHABLEND);
@@ -392,7 +393,7 @@ const
   IconMap: array[TMsgDlgType] of TTaskDialogIcon = (tdiWarning, tdiError,
     tdiInformation, tdiInformation, tdiNone);
   LModalResults: array[TMsgDlgBtn] of Integer = (mrYes, mrNo, mrOk, mrCancel,
-    mrAbort, mrRetry, mrIgnore, mrAll, mrNoToAll, mrYesToAll, tdbHelp, mrClose);
+    mrAbort, mrRetry, mrIgnore, mrAll, mrNoToAll, mrYesToAll, mrHelp, mrClose);
 var
   DlgBtn: TMsgDlgBtn;
   LTaskDialog: TStyledTaskDialog;
@@ -512,6 +513,12 @@ begin
 end;
 
 { TStyledTaskDialog }
+constructor TStyledTaskDialog.Create(AOwner: TComponent);
+begin
+  inherited;
+  FMainIconSize := DEFAULT_MAIN_ICON_SIZE;
+end;
+
 function TStyledTaskDialog.DoExecute(ParentWnd: HWND): Boolean;
 type
   TTaskDialogIcon = (tdiWarning, tdiError,
@@ -527,16 +534,6 @@ begin
       LTaskDlgType, Self, _DialogButtonsFamily)
   else
     Result := inherited DoExecute(ParentWnd);
-end;
-
-procedure TStyledTaskDialog.DoOnButtonClicked(AModalResult: Integer;
-  var CanClose: Boolean);
-begin
-  if AModalResult = tdbHelp then
-  begin
-    CanClose := False;
-    DoOnHelp;
-  end;
 end;
 
 procedure TStyledTaskDialog.DoOnDialogCreated;
@@ -604,9 +601,7 @@ end;
 
 procedure TStyledTaskDialog.DoOnHyperlinkClicked(const AURL: string);
 begin
-  inherited;
-  ShellExecute( Application.Handle, '' , PChar(AURL), nil,
-    PChar(ExtractFilePath(AURL)), SW_SHOWNORMAL );
+  inherited DoOnHyperlinkClicked(AURL);
 end;
 
 function TStyledTaskDialog.Execute(ParentWnd: HWND): Boolean;

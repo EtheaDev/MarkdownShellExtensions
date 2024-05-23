@@ -1,6 +1,6 @@
 ﻿# Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 2.2.3 - 21 May 2023**
+**Latest Version 2.2.4 - 23 May 2023**
 
 **A collection of tools for markdown files, to edit and view content:**
 
@@ -66,6 +66,10 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+
+23 May 2024: ver. 2.2.4
+- Fixed Registration of dll extension during Setup
+- Updated the latest Image32 library
 
 21 May 2024: ver. 2.2.3
 - Added Packages in External Sources

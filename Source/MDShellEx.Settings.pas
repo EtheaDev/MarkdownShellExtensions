@@ -240,36 +240,23 @@ begin
 {$IFNDEF DISABLE_STYLES}
   if StyleServices.Enabled then
   begin
-    //High-DPI Themes (Delphi 11.0)
-    RegisterThemeAttributes('Windows'               ,ttLight );
-    RegisterThemeAttributes('Aqua Light Slate'      ,ttLight );
-    RegisterThemeAttributes('Copper'                ,ttLight );
-    RegisterThemeAttributes('CopperDark'            ,ttDark  );
-    RegisterThemeAttributes('Coral'                 ,ttLight );
-    RegisterThemeAttributes('Diamond'               ,ttLight );
-    RegisterThemeAttributes('Emerald'               ,ttLight );
-    RegisterThemeAttributes('Flat UI Light'         ,ttLight );
-    RegisterThemeAttributes('Glow'                  ,ttDark  );
-    RegisterThemeAttributes('Iceberg Classico'      ,ttLight );
-    RegisterThemeAttributes('Lavender Classico'     ,ttLight );
-    RegisterThemeAttributes('Sky'                   ,ttLight );
-    RegisterThemeAttributes('Slate Classico'        ,ttLight );
-    RegisterThemeAttributes('Sterling'              ,ttLight );
-    RegisterThemeAttributes('Tablet Dark'           ,ttDark  );
-    RegisterThemeAttributes('Tablet Light'          ,ttLight );
-    RegisterThemeAttributes('Windows10'             ,ttLight );
-    RegisterThemeAttributes('Windows10 Blue'        ,ttDark  );
-    RegisterThemeAttributes('Windows10 Dark'        ,ttDark  );
-    RegisterThemeAttributes('Windows10 Green'       ,ttDark  );
-    RegisterThemeAttributes('Windows10 Purple'      ,ttDark  );
-    RegisterThemeAttributes('Windows10 SlateGray'   ,ttDark  );
-    RegisterThemeAttributes('Glossy'                ,ttDark  );
-    RegisterThemeAttributes('Windows10 BlackPearl'  ,ttDark  );
-    RegisterThemeAttributes('Windows10 Blue Whale'  ,ttDark  );
-    RegisterThemeAttributes('Windows10 Clear Day'   ,ttLight );
-    RegisterThemeAttributes('Windows10 Malibu'      ,ttLight );
-    RegisterThemeAttributes('Windows11 Modern Dark' ,ttDark  );
-    RegisterThemeAttributes('Windows11 Modern Light',ttLight );
+    //High-DPI Themes
+    RegisterThemeAttributes('Sky'                       ,ttLight );
+    RegisterThemeAttributes('Windows10'                 ,ttLight );
+    RegisterThemeAttributes('Windows11 Impressive Light',ttLight );
+    RegisterThemeAttributes('Windows11 Modern Light'    ,ttLight );
+    RegisterThemeAttributes('Windows11 Polar Light'     ,ttLight );
+    RegisterThemeAttributes('Flat UI Light'             ,ttLight );
+    RegisterThemeAttributes('Windows10 Clear Day'       ,ttLight );
+    RegisterThemeAttributes('Windows10 Malibu'          ,ttLight );
+    RegisterThemeAttributes('Glow'                      ,ttDark  );
+    RegisterThemeAttributes('Windows10 Dark'            ,ttDark  );
+    RegisterThemeAttributes('Windows10 SlateGray'       ,ttDark  );
+    RegisterThemeAttributes('Windows11 Impressive Dark' ,ttDark  );
+    RegisterThemeAttributes('Windows11 Modern Dark'     ,ttDark  );
+    RegisterThemeAttributes('Windows11 Polar Dark'      ,ttDark  );
+    RegisterThemeAttributes('Windows10 BlackPearl'      ,ttDark  );
+    RegisterThemeAttributes('Windows10 Blue Whale'      ,ttDark  );
   end;
 {$ELSE}
     RegisterThemeAttributes('Windows'            ,ttLight );

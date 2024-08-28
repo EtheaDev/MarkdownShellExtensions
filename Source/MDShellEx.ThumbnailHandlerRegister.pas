@@ -189,7 +189,7 @@ begin
     begin
       CreateRegKey(sComServerKey, 'ProgID', ProgID, RootKey);
 
-      //Register for supported files ('.md','.mkd','.mdwn','.mdown','.mdtxt','.mdtext','.markdown','.txt','.text')
+      //Register for supported files ('.md','.mkd','.mdwn','.mdown','.mdtxt','.mdtext','.markdown')
       for LExtension in AMarkDownFileExt do
         RegisterExtension(LExtension);
       CreateRegKey(sComServerKey, 'VersionIndependentProgID', ProgID, RootKey);

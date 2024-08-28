@@ -4,7 +4,7 @@ object frmMain: TfrmMain
   Caption = 'MarkDown Text Editor'
   ClientHeight = 585
   ClientWidth = 1003
-  Color = clWindow
+  Color = clAppWorkSpace
   Constraints.MinHeight = 600
   Constraints.MinWidth = 800
   Ctl3D = False
@@ -13,6 +13,7 @@ object frmMain: TfrmMain
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
+  FormStyle = fsMDIForm
   KeyPreview = True
   Position = poScreenCenter
   ShowHint = True
@@ -30,61 +31,30 @@ object frmMain: TfrmMain
     585)
   TextHeight = 15
   object ClientPanel: TPanel
-    Left = 44
+    AlignWithMargins = True
+    Left = 42
     Top = 38
-    Width = 959
-    Height = 528
-    Align = alClient
+    Width = 961
+    Height = 67
+    Margins.Left = 42
+    Margins.Top = 0
+    Margins.Right = 0
+    Margins.Bottom = 0
+    Align = alTop
+    ParentColor = True
     TabOrder = 4
-    object PageControl: TPageControl
-      Left = 1
-      Top = 35
-      Width = 957
-      Height = 492
-      Align = alClient
-      Images = VirtualImageList
-      TabOrder = 0
-      OnChange = PageControlChange
-      OnMouseEnter = PageControlMouseEnter
-      OnMouseLeave = PageControlMouseLeave
-      OnMouseMove = PageControlMouseMove
-    end
-    object PanelCloseButton: TPanel
-      Left = 20
-      Top = 32
-      Width = 22
-      Height = 22
-      Cursor = crHandPoint
-      BevelOuter = bvNone
-      ParentColor = True
-      TabOrder = 1
-      Visible = False
-      StyleElements = [seFont, seBorder]
-      object SVGIconImageCloseButton: TSVGIconImage
-        Left = 0
-        Top = 0
-        Width = 22
-        Height = 22
-        AutoSize = False
-        ImageList = VirtualImageList20
-        ImageIndex = 0
-        ImageName = 'close-circle-outline'
-        Align = alClient
-        OnClick = SVGIconImageCloseButtonClick
-      end
-    end
-    object StyledToolbar: TStyledToolBar
+    object StyledToolbar: TStyledToolbar
       AlignWithMargins = True
       Left = 4
       Top = 4
-      Width = 951
+      Width = 953
       Height = 28
       ButtonHeight = 28
       ButtonWidth = 28
       Caption = 'StyledToolbar'
       Images = VirtualImageListToolbar
       Indent = 3
-      TabOrder = 2
+      TabOrder = 0
       object btHeader1: TStyledToolButton
         Left = 0
         Top = 0
@@ -386,12 +356,12 @@ object frmMain: TfrmMain
       Anchors = [akTop, akRight]
       Caption = 'Transformation:'
     end
-    object SettingsToolBar: TStyledToolBar
+    object SettingsToolBar: TStyledToolbar
       AlignWithMargins = True
       Left = 800
       Top = 3
       Width = 200
-      Height = 30
+      Height = 32
       Align = alRight
       ButtonHeight = 32
       ButtonWidth = 32
@@ -418,24 +388,24 @@ object frmMain: TfrmMain
         Top = 0
         Action = actnPrinterSetup
       end
-      object ToolButton9: TStyledToolButton
+      object SepToolButton: TStyledToolButton
         Left = 128
         Top = 0
         Style = tbsSeparator
       end
-      object AbouTStyledToolButton: TStyledToolButton
+      object AboutToolButton: TStyledToolButton
         Left = 134
         Top = 0
         Action = acAbout
       end
-      object QuiTStyledToolButton: TStyledToolButton
+      object QuitToolButton: TStyledToolButton
         Left = 166
         Top = 0
         Action = acQuit
         ImageName = 'Exit'
       end
     end
-    object MenuButtonToolbar: TStyledToolBar
+    object MenuButtonToolbar: TStyledToolbar
       AlignWithMargins = True
       Left = 3
       Top = 3
@@ -447,7 +417,6 @@ object frmMain: TfrmMain
       Images = VirtualImageList
       Indent = 3
       TabOrder = 1
-      ExplicitHeight = 30
       object MenuToolButton: TStyledToolButton
         Left = 0
         Top = 0
@@ -793,13 +762,6 @@ object frmMain: TfrmMain
     end
     object Sep1MenuItem: TMenuItem
       Caption = '-'
-    end
-    object ReformatTextMenuItem: TMenuItem
-      Caption = 'Reformat text'
-      Hint = 'Reformat text'
-      ImageIndex = 19
-      ImageName = 'Reformat'
-      ShortCut = 16468
     end
     object SelectAllMenuItem: TMenuItem
       Action = acEditSelectAll
@@ -1218,6 +1180,26 @@ object frmMain: TfrmMain
         CollectionIndex = 62
         CollectionName = 'close-circle-outline'
         Name = 'close-circle-outline'
+      end
+      item
+        CollectionIndex = 58
+        CollectionName = 'markdown-black'
+        Name = 'markdown-black'
+      end
+      item
+        CollectionIndex = 59
+        CollectionName = 'markdown-white'
+        Name = 'markdown-white'
+      end
+      item
+        CollectionIndex = 60
+        CollectionName = 'markdown-black-gray'
+        Name = 'markdown-black-gray'
+      end
+      item
+        CollectionIndex = 61
+        CollectionName = 'markdown-white-gray'
+        Name = 'markdown-white-gray'
       end>
     ImageCollection = dmResources.SVGIconImageCollection
     Width = 20
@@ -1227,6 +1209,7 @@ object frmMain: TfrmMain
   end
   object LoadTimer: TTimer
     Enabled = False
+    Interval = 2000
     OnTimer = LoadTimerTimer
     Left = 272
     Top = 352
@@ -1489,8 +1472,8 @@ object frmMain: TfrmMain
     end
     object acHelp: TAction
       Category = 'MarkdownText'
-      Caption = 'Help'
-      Hint = 'Help'
+      Caption = 'Example'
+      Hint = 'Show an example of markdown file'
       ImageIndex = 12
       ImageName = 'help'
       ShortCut = 112

@@ -5,7 +5,6 @@ inherited FrmPreview: TFrmPreview
   ClientWidth = 613
   DoubleBuffered = True
   Font.Name = 'Segoe UI'
-  StyleElements = [seFont, seClient, seBorder]
   OnResize = FormResize
   ExplicitWidth = 629
   ExplicitHeight = 655
@@ -20,8 +19,6 @@ inherited FrmPreview: TFrmPreview
     AutoSnap = False
     MinSize = 100
     OnMoved = SplitterMoved
-    ExplicitTop = 329
-    ExplicitWidth = 888
   end
   object PanelTop: TPanel
     Left = 0

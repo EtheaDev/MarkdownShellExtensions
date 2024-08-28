@@ -378,7 +378,7 @@ type
     UnLoaded: Boolean;
     LocalCharSet: TFontCharset;
     LocalCodePage: TBuffCodePage;
-    function GetPixelsPerInch: Integer; override;
+    function GetPixelsPerInch: Integer; {$ifdef Compiler35_Plus}override;{$endif}
     procedure SetQuirksMode(const AValue: THtQuirksMode); virtual;
     procedure FVMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer); virtual; abstract;
     procedure FVMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer); virtual; abstract;

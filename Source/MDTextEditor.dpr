@@ -40,6 +40,7 @@ uses
   dlgReplaceText in 'dlgReplaceText.pas' {TextReplaceDialog},
   dlgInputUrl in 'dlgInputUrl.pas' {InputUrlDialog},
   MDTextEditor.ViewerMainForm in 'MDTextEditor.ViewerMainForm.pas' {frmMain},
+  ChildForm in 'ChildForm.pas' {MDIChildForm},
   MDShellEx.Resources in 'MDShellEx.Resources.pas' {dmResources: TDataModule},
   DPageSetup in 'DPageSetup.pas' {PageSetupDlg},
   MDShellEx.Splash in 'MDShellEx.Splash.pas' {SplashForm},

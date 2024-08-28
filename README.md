@@ -1,6 +1,6 @@
 ﻿# Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 2.2.4 - 23 May 2023**
+**Latest Version 2.3.0 - 28 Aug 2024**
 
 **A collection of tools for markdown files, to edit and view content:**
 
@@ -49,7 +49,7 @@ In Windows 10 with Dark theme:
 
 ### Manual Build and Installation (only for Delphi developers) ###
 
-If you have Delphi 10.4.2 or 11.3 or 12, you can manually build the projects using:
+If you have Delphi 12, you can manually build the projects using:
 
 \Source\MDShellExtensionsGroup.groupproj
 
@@ -66,6 +66,15 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+
+28 Aug 2024: ver. 2.3.0
+- Use of TFormTabsBar component (Delphi 12) for paging
+- Use of Styled Message Dialogs
+- Updated Setup to show errors registering dlls
+
+28 May 2024: ver. 2.2.5
+- File Changed notification and reload only when App has focus
+- Small icons on Message Dialogs
 
 23 May 2024: ver. 2.2.4
 - Fixed Registration of dll extension during Setup

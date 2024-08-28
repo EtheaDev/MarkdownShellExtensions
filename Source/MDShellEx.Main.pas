@@ -36,13 +36,9 @@ interface
 implementation
 
 uses
-  System.Generics.Collections,
-  System.Classes,
-  SynEditHighlighter,
-  uPreviewHandler,
-  SynHighlighterXML,
   MDShellEx.ThumbnailHandler,
-  MDShellEx.PreviewHandler;
+  MDShellEx.PreviewHandler,
+  Winapi.ShlObj;
 
 initialization
   {$IFDEF WIN64}
@@ -60,6 +56,9 @@ initialization
   TMDThumbnailProvider.RegisterThumbnailProvider(MyMD_ThumbnailProviderGUID,
     'MD.ThumbnailProvider', 'Delphi MarkDown Thumbnail Provider 32bit');
   {$ENDIF}
+
+  //Invalidate the shell's cache for Preview Thumbnails
+  SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
 
 end.
 

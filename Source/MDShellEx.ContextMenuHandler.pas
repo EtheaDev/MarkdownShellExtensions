@@ -210,7 +210,7 @@ begin
     try
       Reg.RootKey := HKEY_CLASSES_ROOT;
       TLogPreview.Add('TMDContextMenuHandler: Open Registry');
-      if Reg.OpenKey('OpenMDEditor\Shell\Open\Command', False) then
+      if Reg.OpenKey('Applications\MDTextEditor.exe\Shell\Open\Command', False) then
       begin
         LCommand := Reg.ReadString('');
         LCommand := StringReplace(LCommand,' "%1"','', []);

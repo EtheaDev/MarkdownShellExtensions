@@ -1,4 +1,4 @@
-package dclFrameViewer10_3;
+package dclFrameViewer;
 
 {$R *.res}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
@@ -25,16 +25,17 @@ package dclFrameViewer10_3;
 {$IMAGEBASE $400000}
 {$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'THtmlViewer, TFrameViewer, and TFrameBrowser for D10.3'}
+{$DESCRIPTION 'THtmlViewer, TFrameViewer, and TFrameBrowser'}
+{$LIBSUFFIX '290'}
 {$DESIGNONLY}
 {$IMPLICITBUILD ON}
 
 requires
   designide,
-  FrameViewer10_3;
+  FrameViewer;
 
 contains
-  FrameViewerReg in '..\source\FrameViewerReg.pas',
-  HTMLCompEdit in '..\source\HTMLCompEdit.pas';
+  FrameViewerReg in '..\..\source\FrameViewerReg.pas',
+  HTMLCompEdit in '..\..\source\HTMLCompEdit.pas';
 
 end.

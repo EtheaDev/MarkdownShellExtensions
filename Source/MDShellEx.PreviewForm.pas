@@ -85,7 +85,7 @@ type
     FFileName: string;
     FPreviewSettings: TPreviewSettings;
     FMarkDownFile: TMarkDownFile;
-    FAllegatiButtons: TObjectList<TToolButton>;
+    FAllegatiButtons: TObjectList<TStyledToolButton>;
 
     class var FExtensions: TDictionary<TSynCustomHighlighterClass, TStrings>;
     class var FAParent: TWinControl;
@@ -159,7 +159,7 @@ begin
   FPreviewSettings := TPreviewSettings.CreateSettings(SynEdit.Highlighter);
   dmResources := TdmResources.Create(nil);
   dmResources.Settings := FPreviewSettings;
-  FAllegatiButtons := TObjectList<TToolButton>.Create(True);
+  FAllegatiButtons := TObjectList<TStyledToolButton>.Create(True);
 end;
 
 destructor TFrmPreview.Destroy;
@@ -421,7 +421,7 @@ end;
 
 procedure TFrmPreview.ToolButtonMouseEnter(Sender: TObject);
 begin
-  StatusBar.SimpleText := (Sender as TToolButton).Hint;
+  StatusBar.SimpleText := (Sender as TStyledToolButton).Hint;
 end;
 
 procedure TFrmPreview.ToolButtonMouseLeave(Sender: TObject);
@@ -491,7 +491,7 @@ end;
 
 procedure TFrmPreview.ToolButtonSelectModeClick(Sender: TObject);
 begin
-  TToolButton(Sender).CheckMenuDropdown;
+  //TStyledToolButton(Sender).CheckMenuDropdown;
 end;
 
 procedure TFrmPreview.ToolButtonZoomOutClick(Sender: TObject);

@@ -1749,7 +1749,7 @@ type
     function GetURL(Canvas: TCanvas; X, Y: Integer; out UrlTarg: TUrlTarget; out FormControl: TIDObject {TImageFormControlObj}; out ATitle: ThtString): ThtguResultType; override;
     procedure CancelActives;
     procedure CheckGIFList(Sender: TObject);
-    procedure Clear; virtual;
+    procedure Clear; {$ifndef Compiler34_Plus}override;{$endif}
     procedure ClearLists;
     procedure GetBackgroundImage;
     procedure HideControls;
@@ -13411,7 +13411,7 @@ var
     NewCP := True;
     CPy := Y + LR.DrawY;  //Todo: Someone needs to find a sensible default value.
     CPx := X + LR.LineIndent;
-    {$IFNDEF Compiler32_Plus}CP1x := CPx;{$ENDIF}
+    {$IFNDEF Compiler31_Plus}CP1x := CPx;{$ENDIF}
     LR.DrawY := Y - LR.LineHt;
     LR.DrawXX := CPx;
     AdjustDrawRect( LR.DrawY, LR.DrawXX, LR.DrawWidth, LR.LineHt ); //>-- DZ 19.09.2012

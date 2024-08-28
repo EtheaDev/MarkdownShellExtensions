@@ -50,9 +50,7 @@ const
   '.mdown',
   '.mdtxt',
   '.mdtext',
-  '.markdown',
-  '.txt',
-  '.text'
+  '.markdown'
   ];
 
   function GetDllPath: String;

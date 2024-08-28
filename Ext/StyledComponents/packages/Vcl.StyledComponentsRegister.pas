@@ -394,6 +394,7 @@ begin
       //Set unique Name to the Button created
       LNewButton.Name := Designer.UniqueName('StyledToolButton');
       LNewButton.Caption := LNewButton.Name;
+      LNewButton.Width := DEFAULT_TOOLBUTTON_SEP_WIDTH;
       //Select the button into Designer
       Designer.SelectComponent(LNewButton);
       Designer.Modified;
@@ -870,6 +871,8 @@ begin
     TStyledCategoryButtons, 'StyleFamily', TStyledFamilyPropertyEditor);
   RegisterPropertyEditor(TypeInfo(TStyledButtonFamily),
     TStyledButtonItem, 'StyleFamily', TStyledFamilyPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(TStyledButtonFamily),
+    TStyledTaskDialog, 'DialogButtonsFamily', TStyledFamilyPropertyEditor);
 
   //Property Editor for StyleClass
   RegisterPropertyEditor(TypeInfo(TStyledButtonClass),

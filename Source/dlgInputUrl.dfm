@@ -26,7 +26,7 @@ object InputUrlDialog: TInputUrlDialog
     TabOrder = 2
     object btConfirm: TStyledButton
       AlignWithMargins = True
-      Left = 446
+      Left = 442
       Top = 10
       Width = 75
       Height = 23
@@ -41,7 +41,7 @@ object InputUrlDialog: TInputUrlDialog
     end
     object btCancel: TStyledButton
       AlignWithMargins = True
-      Left = 527
+      Left = 523
       Top = 10
       Width = 75
       Height = 23
@@ -50,8 +50,8 @@ object InputUrlDialog: TInputUrlDialog
       Margins.Bottom = 10
       Action = acCancel
       Align = alRight
-      Caption = '&Cancel'
       Cancel = True
+      Caption = '&Cancel'
       ModalResult = 2
       TabOrder = 1
     end
@@ -163,8 +163,8 @@ object InputUrlDialog: TInputUrlDialog
       Action = acOpenDlg
       Anchors = [akTop, akRight]
       ImageAlignment = iaTop
-      Images = VirtualImageList
       ImageName = 'Open'
+      Images = VirtualImageList
       TabOrder = 2
     end
     object btPaste: TStyledButton
@@ -175,8 +175,8 @@ object InputUrlDialog: TInputUrlDialog
       Action = acPaste
       Anchors = [akTop, akRight]
       ImageAlignment = iaTop
-      Images = VirtualImageList
       ImageName = 'globe'
+      Images = VirtualImageList
       TabOrder = 1
     end
   end

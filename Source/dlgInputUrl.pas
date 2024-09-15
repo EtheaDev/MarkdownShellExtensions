@@ -29,10 +29,11 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.StyledButton,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   Vcl.ExtCtrls, Vcl.ExtDlgs, System.ImageList, Vcl.ImgList, Vcl.Clipbrd,
   SVGIconImageListBase, SVGIconImageList, System.Actions, Vcl.ActnList,
-  Vcl.VirtualImageList, MDShellEx.Resources, Vcl.StdActns;
+  Vcl.VirtualImageList, MDShellEx.Resources, Vcl.StdActns,
+  Vcl.StyledButton, Vcl.ButtonStylesAttributes;
 
 type
   TInputType = (itImage, itLink);

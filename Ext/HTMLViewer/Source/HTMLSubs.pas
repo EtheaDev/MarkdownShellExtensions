@@ -176,7 +176,7 @@ type
   // BG, 10.02.2013: owns its objects.
   TFontList = class(TFontObjBaseList) {a list of TFontObj's}
   private
-    function GetFont(Index: Integer): TFontObj; {$ifdef UseInline} inline; {$endif}
+    function GetFont(Index: TListSize): TFontObj; {$ifdef UseInline} inline; {$endif}
   public
     constructor CreateCopy(ASection: TSection; T: TFontList);
     function GetFontAt(Posn: Integer; out OHang: Integer): ThtFont;
@@ -184,7 +184,7 @@ type
     function GetFontObjAt(Posn: Integer): TFontObj; overload;
     function GetFontObjAt(Posn, Leng: Integer; out Obj: TFontObj): Integer; overload;
     procedure Decrement(N: Integer; Document: ThtDocument);
-    property Items[Index: Integer]: TFontObj read GetFont; default;
+    property Items[Index: TListSize]: TFontObj read GetFont; default;
   end;
 
   // BG, 10.02.2013: does not own its font objects.
@@ -1093,11 +1093,11 @@ type
   //BG, 15.01.2011:
   TFormControlObjList = class(TFloatingObjList)
   private
-    function GetItem(Index: Integer): TFormControlObj; {$ifdef UseInline} inline; {$endif}
+    function GetItem(Index: TListSize): TFormControlObj; {$ifdef UseInline} inline; {$endif}
   public
     procedure ActivateTabbing;
     procedure DeactivateTabbing;
-    property Items[Index: Integer]: TFormControlObj read GetItem; default;
+    property Items[Index: TListSize]: TFormControlObj read GetItem; default;
   end;
 
   TImageFormControlObj = class(TFormControlObj)
@@ -2696,7 +2696,7 @@ begin
 end;
 
 //-- BG ---------------------------------------------------------- 10.02.2013 --
-function TFontList.GetFont(Index: Integer): TFontObj;
+function TFontList.GetFont(Index: TListSize): TFontObj;
 begin
   Result := TFontObj(inherited Items[Index]);
 end;
@@ -15593,7 +15593,7 @@ begin
 end;
 
 //-- BG ---------------------------------------------------------- 15.01.2011 --
-function TFormControlObjList.GetItem(Index: Integer): TFormControlObj;
+function TFormControlObjList.GetItem(Index: TListSize): TFormControlObj;
 begin
 {$ifdef UseGenerics}
   Result := inherited Items[Index] as TFormControlObj;

@@ -199,7 +199,7 @@ type
   TBuffConvInfoList = class(TList)
   private
     FSorted: Boolean;
-    function GetItem(Index: Integer): TBuffConvInfo;
+    function GetItem(Index: TListSize): TBuffConvInfo;
   protected
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
@@ -207,7 +207,7 @@ type
     procedure Add(Item: TBuffConvInfo);
     function Find(CodePage: TBuffCodePage): Integer;
     procedure Sort;
-    property Items[Index: Integer]: TBuffConvInfo read GetItem; default;
+    property Items[Index: TListSize]: TBuffConvInfo read GetItem; default;
     property Sorted: Boolean read FSorted;
   end;
 
@@ -640,7 +640,7 @@ begin
 end;
 
 //-- BG ---------------------------------------------------------- 12.10.2012 --
-function TBuffConvInfoList.GetItem(Index: Integer): TBuffConvInfo;
+function TBuffConvInfoList.GetItem(Index: TListSize): TBuffConvInfo;
 begin
   Result := Get(Index);
 end;

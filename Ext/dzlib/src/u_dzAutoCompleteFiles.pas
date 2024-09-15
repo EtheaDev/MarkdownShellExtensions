@@ -144,7 +144,7 @@ begin
   FreeAndNil(FDirEnum);
   FreeAndNil(FFileEnum);
   FDirEnum := TSimpleDirEnumerator.CreateForDirsOnly(FBase + '*');
-  FFileEnum := TSimpleDirEnumerator.CreateForFilesOnly(FBase + FFilter);
+  FFileEnum := TSimpleDirEnumerator.Create(FBase + FFilter, [dfaArchive]);
   Result := S_OK;
 end;
 

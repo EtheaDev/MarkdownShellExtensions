@@ -116,6 +116,8 @@ const
 
 
 type
+{$IF (CompilerVersion >= 36)}TListSize = NativeInt;{$ELSE}TListSize = Integer;{$IFEND}
+
 {$IFNDEF DOTNET}
   {$IFNDEF FPC}
     {$ifndef PtrInt_defined}

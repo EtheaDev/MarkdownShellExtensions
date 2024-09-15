@@ -276,9 +276,9 @@ type
 
   TIndentRecList = class(TObjectList)
   private
-    function Get(Index: Integer): TIndentRec; {$ifdef UseInline} inline; {$endif}
+    function Get(Index: TListSize): TIndentRec; {$ifdef UseInline} inline; {$endif}
   public
-    property Items[Index: Integer]: TIndentRec read Get; default;
+    property Items[Index: TListSize]: TIndentRec read Get; default;
   end;
 
   TIndentManager = class
@@ -3779,7 +3779,7 @@ end;
 { TIndentRecList }
 
 //-- BG ---------------------------------------------------------- 06.10.2016 --
-function TIndentRecList.Get(Index: Integer): TIndentRec;
+function TIndentRecList.Get(Index: TListSize): TIndentRec;
 begin
   Result := inherited Get(Index);
 end;

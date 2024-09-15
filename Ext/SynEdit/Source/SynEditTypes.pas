@@ -56,6 +56,7 @@ const
   SynSpaceGlyph = WideChar($2219);     //'·'
 
 type
+  {$IF (CompilerVersion >= 36)}TListSize = NativeInt;{$ELSE}TListSize = Integer;{$IFEND}
   ESynError = class(Exception);
 
   TSynSearchOption = (ssoMatchCase, ssoWholeWord, ssoBackwards,

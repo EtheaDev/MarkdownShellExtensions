@@ -46,8 +46,13 @@ Unit MarkdownDaringFireball;
 interface
 
 uses
-  SysUtils, Classes, TypInfo,
-  MarkdownProcessor, MarkdownUtils, MarkdownTables;
+  System.SysUtils
+  , System.Classes
+  , System.TypInfo
+  , MarkdownProcessor
+  , MarkdownUtils
+  , MarkdownTables
+  ;
 
 type
 

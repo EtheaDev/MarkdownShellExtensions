@@ -1,8 +1,11 @@
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{FE6E3ACD-5D4D-4493-B2D4-B1AC95FC4CCA}</ProjectGuid>
     </PropertyGroup>
     <ItemGroup>
+        <Projects Include="SVGIconImageListRestClient.dproj">
+            <Dependencies/>
+        </Projects>
         <Projects Include="SVGImage32Package.dproj">
             <Dependencies/>
         </Projects>
@@ -26,6 +29,15 @@
             <Default.Personality/>
         </BorlandProject>
     </ProjectExtensions>
+    <Target Name="SVGIconImageListRestClient">
+        <MSBuild Projects="SVGIconImageListRestClient.dproj"/>
+    </Target>
+    <Target Name="SVGIconImageListRestClient:Clean">
+        <MSBuild Projects="SVGIconImageListRestClient.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SVGIconImageListRestClient:Make">
+        <MSBuild Projects="SVGIconImageListRestClient.dproj" Targets="Make"/>
+    </Target>
     <Target Name="SVGImage32Package">
         <MSBuild Projects="SVGImage32Package.dproj"/>
     </Target>
@@ -72,13 +84,51 @@
         <MSBuild Projects="dclSVGIconImageListFMX.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="SVGImage32Package;SVGIconImageList;dclSVGIconImageList;SVGIconImageListFMX;dclSVGIconImageListFMX"/>
+        <CallTarget Targets="SVGIconImageListRestClient;SVGImage32Package;SVGIconImageList;dclSVGIconImageList;SVGIconImageListFMX;dclSVGIconImageListFMX"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="SVGImage32Package:Clean;SVGIconImageList:Clean;dclSVGIconImageList:Clean;SVGIconImageListFMX:Clean;dclSVGIconImageListFMX:Clean"/>
+        <CallTarget Targets="SVGIconImageListRestClient:Clean;SVGImage32Package:Clean;SVGIconImageList:Clean;dclSVGIconImageList:Clean;SVGIconImageListFMX:Clean;dclSVGIconImageListFMX:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="SVGImage32Package:Make;SVGIconImageList:Make;dclSVGIconImageList:Make;SVGIconImageListFMX:Make;dclSVGIconImageListFMX:Make"/>
+        <CallTarget Targets="SVGIconImageListRestClient:Make;SVGImage32Package:Make;SVGIconImageList:Make;dclSVGIconImageList:Make;SVGIconImageListFMX:Make;dclSVGIconImageListFMX:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+    <ItemGroup Condition="'$(BuildGroup)'=='ALL'">
+        <BuildGroupProject Include="SVGIconImageListRestClient.dproj">
+            <ProjectGuid>{6B429884-4359-4314-9D3C-AF318FF8D6C2}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="SVGImage32Package.dproj">
+            <ProjectGuid>{D0A69637-2974-4401-9226-4F66893CB5CE}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="SVGIconImageList.dproj">
+            <ProjectGuid>{B5E8B9F1-C42D-4AFC-AE08-193731C6515B}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="dclSVGIconImageList.dproj">
+            <ProjectGuid>{265E39DA-3CDF-4D32-A71B-DE971C864350}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="SVGIconImageListFMX.dproj">
+            <ProjectGuid>{45F75DEA-42F2-4C8C-AA3A-0C8FF47BEE1F}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32;Win64</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+        <BuildGroupProject Include="dclSVGIconImageListFMX.dproj">
+            <ProjectGuid>{D45ECCFB-40F6-46F7-8BC3-DBFAA3C12B32}</ProjectGuid>
+            <Configurations>Release</Configurations>
+            <Platforms>Win32</Platforms>
+            <Enabled>True</Enabled>
+        </BuildGroupProject>
+    </ItemGroup>
 </Project>

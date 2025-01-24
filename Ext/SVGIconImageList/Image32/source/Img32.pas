@@ -2,10 +2,10 @@ unit Img32;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  4.5                                                             *
-* Date      :  26 July 2024                                                    *
+* Version   :  4.8                                                             *
+* Date      :  10 January 2025                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2019-2024                                         *
+* Copyright :  Angus Johnson 2019-2025                                         *
 * Purpose   :  The core module of the Image32 library                          *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************)
@@ -28,8 +28,14 @@ uses
   {$IFDEF UITYPES} UITypes,{$ENDIF} Math;
 
 type
-  {$IF not declared(NativeInt)}
-  NativeInt = Integer;
+  {$IF not declared(SizeInt)} // FPC has SizeInt
+    {$IF CompilerVersion < 20.0}
+  SizeInt = Integer; // Delphi 7-2007 can't use NativeInt with "FOR"
+  SizeUInt = Cardinal; // Delphi 7-2007 can't use NativeUInt with "FOR"
+    {$ELSE}
+  SizeInt = NativeInt;
+  SizeUInt = NativeUInt;
+    {$IFEND}
   {$IFEND}
 
   TRect = Types.TRect;
@@ -46,7 +52,6 @@ type
       true : (Color: TColor32);
   end;
   TArrayOfARGB = array of TARGB;
-  PArgbArray = ^TArrayOfARGB;
 
 const
   clNone32     = TColor32($00000000);
@@ -82,6 +87,8 @@ const
   clBtnFace32  = TColor32($FFF0F0F0);
   clLiteBtn32  = TColor32($FFF8F8F8);
 
+  defaultCompression = -1;
+
 {$IFDEF ZEROBASEDSTR}
   {$ZEROBASEDSTRINGS OFF}
 {$ENDIF}
@@ -89,15 +96,47 @@ const
 RT_BITMAP = PChar(2);
 
 type
-  TClipboardPriority = (cpLow, cpMedium, cpHigh);
+  {$IFDEF SUPPORTS_POINTERMATH}
+  // Works for Delphi 2009 and newer. For FPC, POINTERMATH is
+  // a requirement for negative indices. Otherwise 32bit and 64bit
+  // code would behave differently since FPC doesn't otherwise
+  // sign-extend the index variable of type Integer when it's used
+  // as an array-index into an array with an unsigned index range.
+  // i32:=-1; i64:=-1 => i32=i64 but @arr[i32] <> @arr[i64]
+
+  PByteArray = PByte; // PByte already has PointerMath
+  {$POINTERMATH ON}
+  PDoubleArray = ^Double;
+  PInt64Array = ^Int64;
+  PColor32Array = ^TColor32;
+  PARGBArray = ^TARGB;
+  {$POINTERMATH OFF}
+
+  {$ELSE} // Delphi 7-2007
+  PByteArray = ^TStaticByteArray;
+  TStaticByteArray = array[0..MaxInt div SizeOf(byte) - 1] of byte;
+  PDoubleArray = ^TStaticDoubleArray;
+  TStaticDoubleArray = array[0..MaxInt div SizeOf(double) - 1] of double;
+  PInt64Array = ^TStaticInt64Array;
+  TStaticInt64Array = array[0..MaxInt div SizeOf(int64) - 1] of int64;
+  PColor32Array = ^TStaticColor32Array;
+  TStaticColor32Array = array[0..MaxInt div SizeOf(TColor32) - 1] of TColor32;
+  PARGBArray = ^TStaticARGBArray;
+  TStaticARGBArray = array[0..MaxInt div SizeOf(TARGB) - 1] of TARGB;
+  {$ENDIF}
+
+  TArrayOfByte            = array of Byte;
+  TArrayOfWord            = array of WORD;
+  TArrayOfInteger         = array of Integer;
+  TArrayOfDouble          = array of double;
 
   PColor32 = ^TColor32;
-  TArrayOfColor32 = array of TColor32;
-  TArrayOfArrayOfColor32 = array of TArrayOfColor32;
-  TArrayOfInteger = array of Integer;
-  TArrayOfWord = array of WORD;
-  TArrayOfByte = array of Byte;
+  TArrayOfColor32         = array of TColor32;
+  TArrayOfArrayOfColor32  = array of TArrayOfColor32;
 
+  TArrayOfString          = array of string;
+
+  TClipboardPriority = (cpLow, cpMedium, cpHigh);
   TImg32Notification = (inStateChange, inDestroy);
 
   //A INotifyRecipient receives change notifications though a property
@@ -171,6 +210,8 @@ type
 
   TResamplerFunction = function(img: TImage32; x, y: double): TColor32;
 
+  TGrayscaleMode = (gsmSaturation, gsmLinear, gsmColorimetric);
+
   TImage32 = class(TObject)
   private
     fWidth: integer;
@@ -206,7 +247,7 @@ type
       const srcRec, dstRec: TRect; blendFunc: TBlendFunction);
     procedure CopyInternalLine(src: TImage32;
       const srcRec, dstRec: TRect; blendLineFunc: TBlendLineFunction);
-    function CopyBlendInternal(src: TImage32; srcRec, dstRec: TRect;
+    function CopyBlendInternal(src: TImage32; const srcRec: TRect; dstRec: TRect;
       blendFunc: TBlendFunction = nil; blendLineFunc: TBlendLineFunction = nil): Boolean; overload;
     procedure  Changed; virtual;
     procedure  Resized; virtual;
@@ -304,7 +345,8 @@ type
     procedure SetRGB(rgbColor: TColor32); overload;
     procedure SetRGB(rgbColor: TColor32; rec: TRect); overload;
     //Grayscale: Only changes color channels. The alpha channel is untouched.
-    procedure Grayscale;
+    procedure Grayscale(mode: TGrayscaleMode = gsmSaturation;
+      linearAmountPercentage: double = 1.0);
     procedure InvertColors;
     procedure InvertAlphas;
     procedure AdjustHue(percent: Integer);         //ie +/- 100%
@@ -330,8 +372,10 @@ type
     class function GetImageFormatClass(const ext: string): TImageFormatClass; overload;
     class function GetImageFormatClass(stream: TStream): TImageFormatClass; overload;
     class function IsRegisteredFormat(const ext: string): Boolean;
-    function SaveToFile(filename: string; quality: integer = 0): Boolean;
-    function SaveToStream(stream: TStream; const FmtExt: string): Boolean;
+    function SaveToFile(filename: string;
+      compressionQuality: integer = defaultCompression): Boolean;
+    function SaveToStream(stream: TStream; const FmtExt: string;
+      compressionQuality: integer = defaultCompression): Boolean;
     function LoadFromFile(const filename: string): Boolean;
     function LoadFromStream(stream: TStream; imgIdx: integer = 0): Boolean;
     function LoadFromResource(const resName: string; resType: PChar): Boolean;
@@ -401,9 +445,6 @@ type
   TPathsD = array of TPathD;       //nb: watch for ambiguity with Clipper.pas
   TArrayOfPathsD = array of TPathsD;
 
-  TArrayOfDouble = array of double;
-  TArrayOfString = array of string;
-
   TRectD = {$IFDEF RECORD_METHODS} record {$ELSE} object {$ENDIF}
     {$IFNDEF RECORD_METHODS}
     Left, Top, Right, Bottom: Double;
@@ -435,6 +476,7 @@ type
   function BlendToOpaque(bgColor, fgColor: TColor32): TColor32;
   //BlendToAlpha: Blends two semi-transparent images (slower than BlendToOpaque)
   function BlendToAlpha(bgColor, fgColor: TColor32): TColor32;
+  function BlendToAlpha3(bgColor, fgColor: TColor32; blendOpacity: Byte): TColor32;
   procedure BlendToAlphaLine(bgColor, fgColor: PColor32; width: nativeint);
   //BlendMask: Whereever the mask is, preserves the background
   function BlendMask(bgColor, alphaMask: TColor32): TColor32;
@@ -473,15 +515,15 @@ type
 
   {$IFDEF MSWINDOWS}
   //Color32: Converts a Graphics.TColor value into a TColor32 value.
-  function Color32(rgbColor: Integer): TColor32; overload;
+  function Color32(rgbColor: Integer): TColor32; overload; {$IFDEF INLINE} inline; {$ENDIF}
 
   procedure FixPalette(p: PARGB; count: integer);
   {$ENDIF}
-  function Color32(a, r, g, b: Byte): TColor32; overload;
+  function Color32(a, r, g, b: Byte): TColor32; overload; {$IFDEF INLINE} inline; {$ENDIF}
 
   //RGBColor: Converts a TColor32 value into a COLORREF value
-  function RGBColor(color: TColor32): Cardinal;
-  function InvertColor(color: TColor32): TColor32;
+  function RGBColor(color: TColor32): Cardinal; {$IFDEF INLINE} inline; {$ENDIF}
+  function InvertColor(color: TColor32): TColor32; {$IFDEF INLINE} inline; {$ENDIF}
 
   //RgbToHsl: See https://en.wikipedia.org/wiki/HSL_and_HSV
   function RgbToHsl(color: TColor32): THsl;
@@ -493,8 +535,8 @@ type
 
   function GetAlpha(color: TColor32): Byte;  {$IFDEF INLINE} inline; {$ENDIF}
 
-  function PointD(const X, Y: Double): TPointD; overload;
-  function PointD(const pt: TPoint): TPointD; overload;
+  function PointD(const X, Y: Double): TPointD; overload; {$IFDEF INLINE} inline; {$ENDIF}
+  function PointD(const pt: TPoint): TPointD; overload; {$IFDEF INLINE} inline; {$ENDIF}
 
   function RectD(left, top, right, bottom: double): TRectD; overload;
   function RectD(const rec: TRect): TRectD; overload;
@@ -505,10 +547,10 @@ type
     {$IFDEF INLINE} inline; {$ENDIF}
   function ClampRange(val, min, max: double): double; overload;
     {$IFDEF INLINE} inline; {$ENDIF}
-  function IncPColor32(pc: Pointer; cnt: Integer): PColor32;
+  function IncPColor32(pc: Pointer; cnt: Integer): PColor32; {$IFDEF INLINE} inline; {$ENDIF}
 
   procedure NormalizeAngle(var angle: double; tolerance: double = Pi/360);
-  function GrayScale(color: TColor32): TColor32;
+  function GrayScale(color: TColor32): TColor32; {$IFDEF INLINE} inline; {$ENDIF}
 
   //DPIAware: Useful for DPIAware sizing of images and their container controls.
   //It scales values relative to the display's resolution (PixelsPerInch).
@@ -565,6 +607,8 @@ const
   angle345 = TwoPi - angle15;
   angle360 = TwoPi;
 
+  div255: Double = 1 / 255;
+
 var
   //Resampling function identifiers (initialized in Img32.Resamplers)
   rNearestResampler : integer;
@@ -587,7 +631,9 @@ var
 
   //AND BECAUSE OLDER DELPHI COMPILERS (OLDER THAN D2006)
   //DON'T SUPPORT RECORD METHODS
-  procedure RectWidthHeight(const rec: TRect; out width, height: Integer);
+  procedure RectWidthHeight(const rec: TRect; out width, height: Integer); overload;
+  {$IFDEF INLINE} inline; {$ENDIF}
+  procedure RectWidthHeight(const rec: TRectD; out width, height: double); overload;
   {$IFDEF INLINE} inline; {$ENDIF}
   function RectWidth(const rec: TRect): Integer;
   {$IFDEF INLINE} inline; {$ENDIF}
@@ -644,24 +690,7 @@ const
   Trunc: function(Value: Double): Integer = __Trunc;
 {$ENDIF CPUX86}
 
-const
-  div255 : Double = 1 / 255;
 type
-  TByteArray = array[0..MaxInt -1] of Byte;
-  PByteArray = ^TByteArray;
-
-  {$IFDEF SUPPORTS_POINTERMATH}
-    {$POINTERMATH ON}
-  PStaticColor32Array = ^TColor32;
-  PStaticARGBArray = ^TARGB;
-    {$POINTERMATH OFF}
-  {$ELSE} // Delphi 7-2007
-  PStaticColor32Array = ^TStaticColor32Array;
-  TStaticColor32Array = array[0..MaxInt div SizeOf(TColor32) - 1] of TColor32;
-  PStaticARGBArray = ^TStaticARGBArray;
-  TStaticARGBArray = array[0..MaxInt div SizeOf(TARGB) - 1] of TARGB;
-  {$ENDIF}
-
   TImgFmtRec = record
     Fmt: string;
     SortOrder: TClipboardPriority;
@@ -732,7 +761,7 @@ end;
 function InternSetSimpleDynArrayLengthUninit(a: Pointer; count: nativeint; elemSize: integer): Pointer;
 var
   p: PDynArrayRec;
-  oldCount: integer;
+  oldCount: nativeint;
 begin
   if a = nil then
     Result := NewSimpleDynArray(count, elemSize)
@@ -761,7 +790,8 @@ begin
       // SetLength makes a copy of the dyn array to get RefCnt=1
       GetMem(Pointer(p), SizeOf(TDynArrayRec) + count * elemSize);
       if oldCount < 0 then oldCount := 0; // data corruption detected
-      Move(a^, p.Data, Min(oldCount, count) * elemSize);
+      if oldCount > count then oldCount := count;
+      Move(a^, p.Data, oldCount * elemSize);
       TArrayOfByte(a) := nil; // use a non-managed dyn.array type
     end;
 
@@ -800,18 +830,24 @@ end;
 
 procedure NewColor32Array(var a: TArrayOfColor32; count: nativeint; uninitialized: boolean);
 begin
+{$IF COMPILERVERSION < 16}
+  SetLength(a, count);
+{$ELSE}
   if a <> nil then
   begin
-    if uninitialized and CanReuseDynArray(a, count) then
-      Exit;
+    if uninitialized and CanReuseDynArray(a, count) then Exit;
     a := nil;
   end;
   Pointer(a) := NewSimpleDynArray(count, SizeOf(TColor32), uninitialized);
+{$IFEND}
 end;
 //------------------------------------------------------------------------------
 
 procedure NewIntegerArray(var a: TArrayOfInteger; count: nativeint; uninitialized: boolean);
 begin
+{$IF COMPILERVERSION < 16}
+  SetLength(a, count);
+{$ELSE}
   if a <> nil then
   begin
     if uninitialized and CanReuseDynArray(a, count) then
@@ -819,11 +855,15 @@ begin
     a := nil;
   end;
   Pointer(a) := NewSimpleDynArray(count, SizeOf(Integer), uninitialized);
+{$IFEND}
 end;
 //------------------------------------------------------------------------------
 
 procedure NewByteArray(var a: TArrayOfByte; count: nativeint; uninitialized: boolean);
 begin
+{$IF COMPILERVERSION < 16}
+  SetLength(a, count);
+{$ELSE}
   if a <> nil then
   begin
     if uninitialized and CanReuseDynArray(a, count) then
@@ -831,11 +871,15 @@ begin
     a := nil;
   end;
   Pointer(a) := NewSimpleDynArray(count, SizeOf(Byte), uninitialized);
+{$IFEND}
 end;
 //------------------------------------------------------------------------------
 
 procedure NewPointDArray(var a: TPathD; count: nativeint; uninitialized: boolean);
 begin
+{$IF COMPILERVERSION < 16}
+  SetLength(a, count);
+{$ELSE}
   if a <> nil then
   begin
     if uninitialized and CanReuseDynArray(a, count) then
@@ -843,30 +887,44 @@ begin
     a := nil;
   end;
   Pointer(a) := NewSimpleDynArray(count, SizeOf(TPointD), uninitialized);
+{$IFEND}
 end;
 //------------------------------------------------------------------------------
 
 procedure SetLengthUninit(var a: TArrayOfColor32; count: nativeint);
 begin
-  Pointer(a) := InternSetSimpleDynArrayLengthUninit(Pointer(a), count, SizeOf(TColor32));
+  SetLength(a, count);
+//  Pointer(a) := InternSetSimpleDynArrayLengthUninit(Pointer(a), count, SizeOf(TColor32));
 end;
 //------------------------------------------------------------------------------
 
 procedure SetLengthUninit(var a: TArrayOfInteger; count: nativeint);
 begin
+{$IF COMPILERVERSION < 16}
+  SetLength(a, count);
+{$ELSE}
   Pointer(a) := InternSetSimpleDynArrayLengthUninit(Pointer(a), count, SizeOf(Integer));
+{$IFEND}
 end;
 //------------------------------------------------------------------------------
 
 procedure SetLengthUninit(var a: TArrayOfByte; count: nativeint);
 begin
+{$IF COMPILERVERSION < 16}
+  SetLength(a, count);
+{$ELSE}
   Pointer(a) := InternSetSimpleDynArrayLengthUninit(Pointer(a), count, SizeOf(Byte));
+{$IFEND}
 end;
 //------------------------------------------------------------------------------
 
 procedure SetLengthUninit(var a: TPathD; count: nativeint);
 begin
+{$IF COMPILERVERSION < 16}
+  SetLength(a, count);
+{$ELSE}
   Pointer(a) := InternSetSimpleDynArrayLengthUninit(Pointer(a), count, SizeOf(TPointD));
+{$IFEND}
 end;
 //------------------------------------------------------------------------------
 
@@ -1033,19 +1091,49 @@ begin
   //(see https://en.wikipedia.org/wiki/Alpha_compositing)
   fgA := fgColor shr 24;
   bgA := bgColor shr 24;
-  if (bgA = 0) or (fgA = 255) then Result := fgColor
-  else if fgA = 0 then Result := bgColor
+  if fgA = 0 then Result := bgColor
+  else if (bgA = 0) or (fgA = 255) then Result := fgColor
   else
   begin
     //combine alphas ...
-    Result := not MulTable[not fgA, not bgA];
-    fgWeight := DivTable[fgA, Result]; //fgWeight = amount foreground color
-                                       //contibutes to total (result) color
+    bgA := not MulTable[not fgA, not bgA];
+    fgWeight := DivTable[fgA, bgA];     // fgWeight = amount foreground color
+                                        // contibutes to the result color
 
-    R     := PByteArray(@MulTable[fgWeight]);      //ie weight of foreground
-    InvR  := PByteArray(@MulTable[not fgWeight]);  //ie weight of background
+    R     := PByteArray(@MulTable[fgWeight]);      // ie weight of foreground
+    InvR  := PByteArray(@MulTable[not fgWeight]);  // ie weight of background
 
-    Result := Result shl 24
+    Result := bgA shl 24
+              or (TColor32(R[Byte(fgColor shr 16)] + InvR[Byte(bgColor shr 16)]) shl 16)
+              or (TColor32(R[Byte(fgColor shr 8 )] + InvR[Byte(bgColor shr  8)]) shl  8)
+              or (TColor32(R[Byte(fgColor)       ] + InvR[Byte(bgColor)       ])       );
+  end;
+end;
+//------------------------------------------------------------------------------
+
+function BlendToAlpha3(bgColor, fgColor: TColor32; blendOpacity: Byte): TColor32;
+var
+  fgWeight: byte;
+  R, InvR: PByteArray;
+  bgA, fgA: byte;
+begin
+  fgA := MulTable[blendOpacity, fgColor shr 24];
+  bgA := bgColor shr 24;
+  if fgA = 0 then
+    Result := bgColor // must do first
+  else if (bgA = 0) or (fgA = 255) then
+    Result := (fgA shl 24) or (fgColor and $FFFFFF)
+  else
+  begin
+    //combine alphas ...
+    bgA := not MulTable[not fgA, not bgA];
+    fgWeight := DivTable[fgA, bgA];     // fgWeight = amount foreground color
+                                        // contibutes to the result color
+
+    R     := PByteArray(@MulTable[fgWeight]);      // ie weight of foreground
+    InvR  := PByteArray(@MulTable[not fgWeight]);  // ie weight of background
+
+    Result := bgA shl 24
               or (TColor32(R[Byte(fgColor shr 16)] + InvR[Byte(bgColor shr 16)]) shl 16)
               or (TColor32(R[Byte(fgColor shr 8 )] + InvR[Byte(bgColor shr  8)]) shl  8)
               or (TColor32(R[Byte(fgColor)       ] + InvR[Byte(bgColor)       ])       );
@@ -1056,7 +1144,7 @@ end;
 {$RANGECHECKS OFF} // negative array index is used
 
 {$IFNDEF CPUX64}
-function BlendToAlphaLineX86(bgColorArr, fgColorArr: PStaticColor32Array;
+function BlendToAlphaLineX86(bgColorArr, fgColorArr: PColor32Array;
   idx: nativeint): nativeint;
 // Helper function for x86 code, reduces the CPU register pressure in
 // BlendToAlphaLine().
@@ -1110,7 +1198,7 @@ procedure BlendToAlphaLine(bgColor, fgColor: PColor32; width: nativeint);
 label
   LabelBgAlphaIsZero;
 var
-  bgColorArr, fgColorArr: PStaticColor32Array;
+  bgColorArr, fgColorArr: PColor32Array;
   bgCol, fgCol: TColor32;
   {$IFDEF CPUX64}
   fgWeight, fgA, bgA: byte;
@@ -1126,8 +1214,8 @@ begin
   inc(fgColor, width);
   width := -width;
 
-  bgColorArr := PStaticColor32Array(bgColor);
-  fgColorArr := PStaticColor32Array(fgColor);
+  bgColorArr := PColor32Array(bgColor);
+  fgColorArr := PColor32Array(fgColor);
 
   while width < 0 do
   begin
@@ -1203,7 +1291,7 @@ var
   fgWeight: byte;
   R, InvR: PByteArray;
   bgA, fgA: Byte;
-  bgColorArr, fgColorArr: PStaticColor32Array;
+  bgColorArr, fgColorArr: PColor32Array;
   bgCol, fgCol: TColor32;
 begin
   //(see https://en.wikipedia.org/wiki/Alpha_compositing)
@@ -1215,8 +1303,8 @@ begin
   inc(fgColor, width);
   width := -width;
 
-  bgColorArr := PStaticColor32Array(bgColor);
-  fgColorArr := PStaticColor32Array(fgColor);
+  bgColorArr := PColor32Array(bgColor);
+  fgColorArr := PColor32Array(fgColor);
 
   while width < 0 do
   begin
@@ -1286,52 +1374,52 @@ begin
   while width < 0 do
   begin
     // MulTable[0, fgA] -> 0, if bgColor is already 0 => skip
-    while PStaticARGBArray(bgColor)[width].Color = 0 do
+    while PARGBArray(bgColor)[width].Color = 0 do
     begin
 SkipNone32:
       inc(width);
       if width = 0 then exit;
     end;
-    a := PStaticARGBArray(bgColor)[width].A;
+    a := PARGBArray(bgColor)[width].A;
     // MulTable[0, fgA] -> 0 => replace color with 0
     while a = 0 do
     begin
-      PStaticColor32Array(bgColor)[width] := 0;
+      PColor32Array(bgColor)[width] := 0;
       inc(width);
       if width = 0 then exit;
-      if PStaticARGBArray(bgColor)[width].Color = 0 then
+      if PARGBArray(bgColor)[width].Color = 0 then
         goto SkipNone32;
-      a := PStaticARGBArray(bgColor)[width].A;
+      a := PARGBArray(bgColor)[width].A;
     end;
     // MulTable[255, fgA] -> fgA => replace alpha with fgA
     while a = 255 do
     begin
-      PStaticARGBArray(bgColor)[width].A := PStaticARGBArray(alphaMask)[width].A;
+      PARGBArray(bgColor)[width].A := PARGBArray(alphaMask)[width].A;
       inc(width);
       if width = 0 then exit;
-      a := PStaticARGBArray(bgColor)[width].A;
+      a := PARGBArray(bgColor)[width].A;
     end;
 
-    a := PStaticARGBArray(alphaMask)[width].A;
+    a := PARGBArray(alphaMask)[width].A;
     // MulTable[bgA, 0] -> 0 => replace color with 0
     while a = 0 do
     begin
-      PStaticColor32Array(bgColor)[width] := 0;
+      PColor32Array(bgColor)[width] := 0;
       inc(width);
       if width = 0 then exit;
-      a := PStaticARGBArray(alphaMask)[width].A;
+      a := PARGBArray(alphaMask)[width].A;
     end;
     // MulTable[bgA, 255] -> bgA => nothing to do
     while a = 255 do
     begin
       inc(width);
       if width = 0 then exit;
-      a := PStaticARGBArray(alphaMask)[width].A;
+      a := PARGBArray(alphaMask)[width].A;
     end;
 
-    a := MulTable[PStaticARGBArray(bgColor)[width].A, a];
-    if a <> 0 then PStaticARGBArray(bgColor)[width].A := a
-    else PStaticColor32Array(bgColor)[width] := 0;
+    a := MulTable[PARGBArray(bgColor)[width].A, a];
+    if a <> 0 then PARGBArray(bgColor)[width].A := a
+    else PColor32Array(bgColor)[width] := 0;
 
     inc(width);
   end;
@@ -1353,10 +1441,10 @@ begin
 
   while width < 0 do
   begin
-    a := MulTable[PStaticARGBArray(bgColor)[width].A,
-                  PStaticARGBArray(alphaMask)[width].A];
-    if a = 0 then PStaticColor32Array(bgColor)[width] := 0
-    else PStaticARGBArray(bgColor)[width].A := a;
+    a := MulTable[PARGBArray(bgColor)[width].A,
+                  PARGBArray(alphaMask)[width].A];
+    if a = 0 then PColor32Array(bgColor)[width] := 0
+    else PARGBArray(bgColor)[width].A := a;
 
     inc(width);
   end;
@@ -1451,19 +1539,7 @@ end;
 function BlendBlueChannel(bgColor, blueMask: TColor32): TColor32;
 begin
   Result := (bgColor and $00FFFFFF) or
-            (TColor32(MulTable[bgColor shr 24, blueMask shr 24]) shl 24);
-end;
-//------------------------------------------------------------------------------
-
-procedure BlendBlueChannelLine(bgColor, blueMask: PColor32; width: nativeint);
-begin
-  while width > 0 do
-  begin
-    PARGB(bgColor).A := MulTable[PARGB(bgColor).A, PARGB(blueMask).A];
-    inc(bgColor);
-    inc(blueMask);
-    dec(width);
-  end;
+            (TColor32(MulTable[bgColor shr 24, Byte(blueMask)]) shl 24);
 end;
 //------------------------------------------------------------------------------
 
@@ -1479,6 +1555,21 @@ end;
 
 {$RANGECHECKS OFF} // negative array index is used
 
+procedure BlendBlueChannelLine(bgColor, blueMask: PColor32; width: nativeint);
+begin
+  inc(bgColor, width);
+  inc(blueMask, width);
+  width := -width;
+  while width < 0 do
+  begin
+    PARGBArray(bgColor)[width].A :=
+      MulTable[PARGBArray(bgColor)[width].A,
+               PARGBArray(blueMask)[width].B];
+    inc(width);
+  end;
+end;
+//------------------------------------------------------------------------------
+
 procedure BlendInvertedMaskLine(bgColor, alphaMask: PColor32; width: nativeint);
 var
   a: byte;
@@ -1492,10 +1583,10 @@ begin
 
   while width < 0 do
   begin
-    a := MulTable[PStaticARGBArray(bgColor)[width].A,
-                  PStaticARGBArray(alphaMask)[width].A xor 255];
-    if a < 2 then PStaticColor32Array(bgColor)[width] := 0
-    else PStaticARGBArray(bgColor)[width].A := a;
+    a := MulTable[PARGBArray(bgColor)[width].A,
+                  PARGBArray(alphaMask)[width].A xor 255];
+    if a < 2 then PColor32Array(bgColor)[width] := 0
+    else PARGBArray(bgColor)[width].A := a;
 
     inc(width);
   end;
@@ -1596,6 +1687,13 @@ end;
 //------------------------------------------------------------------------------
 
 procedure RectWidthHeight(const rec: TRect; out width, height: Integer);
+begin
+  width := rec.Right - rec.Left;
+  height := rec.Bottom - rec.Top;
+end;
+//------------------------------------------------------------------------------
+
+procedure RectWidthHeight(const rec: TRectD; out width, height: double);
 begin
   width := rec.Right - rec.Left;
   height := rec.Bottom - rec.Top;
@@ -1943,7 +2041,7 @@ begin
   c := ((255 - abs(2 * hsl.lum - 255)) * hsl.sat) shr 8;
   a := 252 - (hsl.hue mod 85) * 6;
   x := (c * (255 - abs(a))) shr 8;
-  m := hsl.lum - c div 2;
+  m := hsl.lum - c shr 1{div 2}; // Delphi's 64bit compiler can't optimize this
   rgba.A := hsl.alpha;
   case (hsl.hue * 6) shr 8 of
     0: begin rgba.R := c + m; rgba.G := x + m; rgba.B := 0 + m; end;
@@ -1995,9 +2093,9 @@ end;
 
 function NameToId(Name: PChar): Longint;
 begin
-  if Cardinal(PWord(Name)) < 30 then
+  if Name < Pointer(30) then
   begin
-    Result := Cardinal(PWord(Name))
+    Result := Longint(Name)
   end else
   begin
     if Name^ = '#' then inc(Name);
@@ -2525,7 +2623,7 @@ begin
     i := -i;
     while i < 0 do
     begin
-      if PStaticARGBArray(c)[i].A < 254 then Exit;
+      if PARGBArray(c)[i].A < 254 then Exit;
       inc(i);
     end;
   end
@@ -2945,7 +3043,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TImage32.SaveToFile(filename: string; quality: integer = 0): Boolean;
+function TImage32.SaveToFile(filename: string; compressionQuality: integer): Boolean;
 var
   fileFormatClass: TImageFormatClass;
 begin
@@ -2958,14 +3056,15 @@ begin
   if assigned(fileFormatClass) then
     with fileFormatClass.Create do
     try
-      result := SaveToFile(filename, self, quality);
+      result := SaveToFile(filename, self, compressionQuality);
     finally
       free;
     end;
 end;
 //------------------------------------------------------------------------------
 
-function TImage32.SaveToStream(stream: TStream; const FmtExt: string): Boolean;
+function TImage32.SaveToStream(stream: TStream;
+  const FmtExt: string; compressionQuality: integer): Boolean;
 var
   fileFormatClass: TImageFormatClass;
 begin
@@ -2974,7 +3073,7 @@ begin
   if assigned(fileFormatClass) then
     with fileFormatClass.Create do
     try
-      SaveToStream(stream, self);
+      SaveToStream(stream, self, compressionQuality);
       result := true;
     finally
       free;
@@ -3184,7 +3283,7 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function TImage32.CopyBlendInternal(src: TImage32; srcRec, dstRec: TRect;
+function TImage32.CopyBlendInternal(src: TImage32; const srcRec: TRect; dstRec: TRect;
   blendFunc: TBlendFunction; blendLineFunc: TBlendLineFunction): Boolean;
 var
   tmp: TImage32;
@@ -3760,47 +3859,115 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TImage32.Grayscale;
+procedure TImage32.Grayscale(mode: TGrayscaleMode;
+  linearAmountPercentage: double);
+var
+  i: SizeInt;
+  cLinear: double;
+  c, lastC, grayC: TColor32;
+  p: PColor32Array;
+  amountCalc: Boolean;
+  oneMinusAmount: double;
 begin
-  AdjustSaturation(-100);
+  if mode = gsmSaturation then
+  begin
+    // linearAmountPercentage has no effect here
+    AdjustSaturation(-100);
+    Exit;
+  end;
+
+  // Colorimetric (perceptual luminance-preserving) conversion to grayscale
+  // See https://en.wikipedia.org/wiki/Grayscale#Converting_color_to_grayscale
+  if IsEmpty then Exit;
+
+  if linearAmountPercentage <= 0.0 then Exit;
+  amountCalc := linearAmountPercentage < 1.0;
+  oneMinusAmount := 1.0 - linearAmountPercentage;
+
+  p := PColor32Array(PixelBase);
+  lastC := 0;
+  grayC := 0;
+  for i := 0 to high(fPixels) do
+  begin
+    c := p[i] and $00FFFFFF;
+    if c <> 0 then
+    begin
+      if c <> lastC then // only do the calculation if the color channels changed
+      begin
+        lastC := c;
+        {$IF DEFINED(ANDROID)}
+        c := SwapRedBlue(c);
+        {$IFEND}
+
+        // We don't divide by 255 here, so can skip some division and multiplications.
+        // That means cLinear is actually "cLinear * 255"
+        cLinear := (0.2126 * Byte(c shr 16)) + (0.7152 * Byte(c shr 8)) + (0.0722 * Byte(c));
+        //cLinear := (0.2126 * TARGB(c).R) + (0.7152 * TARGB(c).G) + (0.0722 * TARGB(c).B);
+
+        if mode = gsmLinear then
+          c := ClampByte(cLinear)
+        else //if mode = gsmColorimetric then
+        begin
+          if cLinear <= (0.0031308 * 255) then // adjust for cLinear being "cLiniear * 255"
+            c := ClampByte(Integer(Round(12.92 * cLinear)))
+          else // for Power we must divide by 255 and then later multipy by 255
+            //c := ClampByte(Integer(Round((1.055 * 255) * Power(cLinear / 255, 1/2.4) - (0.055 * 255))));
+        end;
+
+
+        if not amountCalc then
+          grayC := (c shl 16) or (c shl 8) or c
+        else
+        begin
+          cLinear := c * linearAmountPercentage;
+          grayC := ClampByte(Integer(Round(Byte(lastC shr 16) * oneMinusAmount + cLinear))) shl 16 or
+                   ClampByte(Integer(Round(Byte(lastC shr  8) * oneMinusAmount + cLinear))) shl  8 or
+                   ClampByte(Integer(Round(Byte(lastC       ) * oneMinusAmount + cLinear)));
+        end;
+
+        {$IF DEFINED(ANDROID)}
+        grayC := SwapRedBlue(grayC);
+        {$IFEND}
+      end;
+      p[i] := (p[i] and $FF000000) or grayC;
+    end;
+  end;
+
+  Changed;
 end;
 //------------------------------------------------------------------------------
 
 procedure TImage32.InvertColors;
 var
-  pc: PARGB;
-  i: Integer;
+  pc: PColor32Array;
+  i: SizeInt;
 begin
-  pc := PARGB(PixelBase);
+  pc := PColor32Array(PixelBase);
   for i := 0 to Width * Height -1 do
-  begin
-    pc.Color := pc.Color xor $00FFFFFF; // keep the alpha channel untouched
-    inc(pc);
-  end;
+    pc[i] := pc[i] xor $00FFFFFF; // keep the alpha channel untouched
   Changed;
 end;
 //------------------------------------------------------------------------------
 
 procedure TImage32.InvertAlphas;
 var
-  pc: PARGB;
-  i: Integer;
+  pc: PColor32Array;
+  i: SizeInt;
 begin
-  pc := PARGB(PixelBase);
+  pc := PColor32Array(PixelBase);
   for i := 0 to Width * Height -1 do
-  begin
-    pc.A := 255 - pc.A;
-    inc(pc);
-  end;
+    pc[i] := pc[i] xor $FF000000; // keep the color channels untouched
   Changed;
 end;
 //------------------------------------------------------------------------------
 
 procedure TImage32.AdjustHue(percent: Integer);
 var
-  i: Integer;
+  i: SizeInt;
   hsl: THsl;
   lut: array [byte] of byte;
+  c, lastC, newC: TColor32;
+  p: PColor32Array;
 begin
   percent := percent mod 100;
   if percent < 0 then inc(percent, 100);
@@ -3808,11 +3975,24 @@ begin
   if (percent = 0) or IsEmpty then Exit;
   for i := 0 to 255 do lut[i] := (i + percent) mod 255;
 
+  lastC := 0;
+  newC := 0;
+  p := PColor32Array(fPixels);
   for i := 0 to high(fPixels) do
   begin
-    hsl := RgbToHsl(fPixels[i]);
-    hsl.hue := lut[ hsl.hue ];
-    fPixels[i] := HslToRgb(hsl);
+    c := p[i];
+    c := c and $00FFFFFF;
+    if c <> 0 then
+    begin
+      if c <> lastC then // only do the calculation if the color channels changed
+      begin
+        lastC := C;
+        hsl := RgbToHsl(c);
+        hsl.hue := lut[hsl.hue];
+        newC := HslToRgb(hsl);
+      end;
+      p[i] := (p[i] and $FF000000) or newC; // keep the alpha channel
+    end;
   end;
 
   Changed;
@@ -3821,10 +4001,12 @@ end;
 
 procedure TImage32.AdjustLuminance(percent: Integer);
 var
-  i: Integer;
+  i: SizeInt;
   hsl: THsl;
   pc: double;
   lut: array [byte] of byte;
+  c, lastC, newC: TColor32;
+  p: PColor32Array;
 begin
   if (percent = 0) or IsEmpty then Exit;
   percent := percent mod 101;
@@ -3834,11 +4016,24 @@ begin
   else
     for i := 0 to 255 do lut[i] := Round(i + (i * pc));
 
+  lastC := 0;
+  newC := 0;
+  p := PColor32Array(fPixels);
   for i := 0 to high(fPixels) do
   begin
-    hsl := RgbToHsl(fPixels[i]);
-    hsl.lum := lut[ hsl.lum ];
-    fPixels[i] := HslToRgb(hsl);
+    c := p[i];
+    c := c and $00FFFFFF;
+    if c <> 0 then
+    begin
+      if c <> lastC then // only do the calculation if the color channels changed
+      begin
+        lastC := C;
+        hsl := RgbToHsl(c);
+        hsl.lum := lut[hsl.lum];
+        newC := HslToRgb(hsl);
+      end;
+      p[i] := (p[i] and $FF000000) or newC; // keep the alpha channel
+    end;
   end;
 
   Changed;
@@ -3847,10 +4042,12 @@ end;
 
 procedure TImage32.AdjustSaturation(percent: Integer);
 var
-  i: Integer;
+  i: SizeInt;
   hsl: THsl;
   lut: array [byte] of byte;
   pc: double;
+  c, lastC, newC: TColor32;
+  p: PColor32Array;
 begin
   if (percent = 0) or IsEmpty then Exit;
   percent := percent mod 101;
@@ -3860,12 +4057,24 @@ begin
   else
     for i := 0 to 255 do lut[i] := Round(i + (i * pc));
 
-  // Do the conversion inline without creating new pixel/hsl arrays
+  lastC := 0;
+  newC := 0;
+  p := PColor32Array(fPixels);
   for i := 0 to high(fPixels) do
   begin
-    hsl := RgbToHsl(fPixels[i]);
-    hsl.sat := lut[ hsl.sat ];
-    fPixels[i] := HslToRgb(hsl);
+    c := p[i];
+    c := c and $00FFFFFF;
+    if c <> 0 then
+    begin
+      if c <> lastC then // only do the calculation if the color channels changed
+      begin
+        lastC := C;
+        hsl := RgbToHsl(c);
+        hsl.sat := lut[hsl.sat];
+        newC := HslToRgb(hsl);
+      end;
+      p[i] := (p[i] and $FF000000) or newC; // keep the alpha channel
+    end;
   end;
 
   Changed;
@@ -4018,7 +4227,7 @@ begin
   pb := PARGB(PixelBase);
   for i := 0 to Width * Height - 1 do
   begin
-    pb.A := ClampByte(Round(pb.A * scale));
+    pb.A := ClampByte(Integer(Round(pb.A * scale)));
     inc(pb);
   end;
   Changed;

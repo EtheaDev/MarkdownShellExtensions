@@ -1,6 +1,6 @@
 ﻿# Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 2.3.1 - 15 Sep 2024**
+**Latest Version 2.3.2 - 22 Jan 2025**
 
 **A collection of tools for markdown files, to edit and view content:**
 
@@ -66,6 +66,11 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+
+22 Jan 2025: ver. 2.3.2
+- Added auto-create file linked, if not exists
+- Fixed Splitter View Opening a File
+- Fixed Refresh content after load
 
 15 Sep 2024: ver. 2.3.1
 - Built with Delphi 12.2

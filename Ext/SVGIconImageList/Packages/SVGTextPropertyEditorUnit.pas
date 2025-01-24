@@ -3,7 +3,7 @@
 {       SVGTextPropertyEditorUnit: A property editor for SVGText               }
 {       to simplify use of setting SVGText value                               }
 {                                                                              }
-{       Copyright (c) 2019-2024 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2019-2025 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/SVGIconImageList                           }
@@ -27,14 +27,12 @@ unit SVGTextPropertyEditorUnit;
 
 interface
 
-{$INCLUDE SVGIconImageList.inc}
+{$INCLUDE ..\Source\SVGIconImageList.inc}
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics,
-  Controls, Forms, Dialogs, ImgList,
-  StdCtrls, Buttons, StdActns,
-  ActnList, ExtCtrls, ComCtrls, ToolWin,
-  Spin, SVGIconImage, Vcl.ExtDlgs;
+  System.SysUtils, Vcl.ExtDlgs, SVGIconImage,
+  Vcl.Dialogs, Vcl.StdCtrls, Vcl.Controls,
+  Vcl.Forms, Vcl.ExtCtrls, System.Classes;
 
 type
   TSVGTextPropertyEditorForm = class(TForm)
@@ -83,8 +81,8 @@ implementation
 {$R *.dfm}
 
 uses
-  Themes
-  , Math
+  Vcl.Themes
+  , System.Math
   {$IFDEF DXE3+}
   , System.UITypes
   {$ENDIF}
@@ -95,10 +93,15 @@ uses
   //WARNING: you must define this directive to use this unit outside the IDE
 {$IFNDEF UseSVGEditorsAtRunTime}
   , ToolsAPI
-  , BrandingAPI
+  {$IF (CompilerVersion >= 27.0)}, BrandingAPI{$IFEND}
   {$IF (CompilerVersion >= 32.0)}, IDETheme.Utils{$IFEND}
 {$ENDIF}
-  , ShellAPI;
+  , WinApi.ShellAPI
+  , System.Types
+  , System.UIConsts
+  , Vcl.Graphics
+  , WinApi.Windows
+  ;
 
 var
   SavedBounds: TRect = (Left: 0; Top: 0; Right: 0; Bottom: 0);
@@ -188,7 +191,7 @@ end;
 procedure TSVGTextPropertyEditorForm.HelpButtonClick(Sender: TObject);
 begin
   ShellExecute(handle, 'open',
-    PChar('https://github.com/EtheaDev/SVGIconImageList/wiki/SVGText-Editor'), nil, nil,
+    PChar('https://ethea.it/docs/svgiconimagelist/SVGText-Editor.html'), nil, nil,
     SW_SHOWNORMAL)
 end;
 

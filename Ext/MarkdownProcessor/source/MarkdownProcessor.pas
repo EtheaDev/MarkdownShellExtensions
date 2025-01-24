@@ -55,7 +55,10 @@ Unit MarkdownProcessor;
 interface
 
 uses
-  Classes, SysUtils, MarkdownUtils;
+  System.Classes
+  , System.SysUtils
+  , MarkdownUtils
+  ;
 
 Type
 
@@ -79,9 +82,10 @@ Type
 implementation
 
 uses
-  MarkdownDaringFireball,
-  MarkdownCommonMark,
-  MarkdownTxtMark;
+  MarkdownDaringFireball
+  , MarkdownCommonMark
+  , MarkdownTxtMark
+  ;
 
 { TMarkdownProcessor }
 

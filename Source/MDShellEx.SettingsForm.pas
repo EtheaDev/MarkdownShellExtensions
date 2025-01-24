@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2024 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2025 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -115,6 +115,8 @@ type
     ToolbarRoundedCheckBox: TCheckBox;
     ButtonsRoundedCheckBox: TCheckBox;
     MenuRoundedCheckBox: TCheckBox;
+    EditingOptionsGroupBox: TGroupBox;
+    AutoRefreshCheckBox: TCheckBox;
     procedure BoxElementsClick(Sender: TObject);
     procedure cbForegroundClick(Sender: TObject);
     procedure cbBackgroundClick(Sender: TObject);
@@ -578,10 +580,16 @@ begin
 
   RescalingImageCheckBox.Checked := ASettings.RescalingImage;
   DownloadFromWebCheckBox.Visible := ASettings is TEditorSettings;
+  AutoRefreshCheckBox.Visible := ASettings is TEditorSettings;
   if DownloadFromWebCheckBox.Visible then
     DownloadFromWebCheckBox.Checked := TEditorSettings(ASettings).DownloadFromWeb
   else
     DownloadFromWebCheckBox.Checked := False;
+
+  if AutoRefreshCheckBox.Visible then
+    AutoRefreshCheckBox.Checked := TEditorSettings(ASettings).AutoRefreshWhenEditing
+  else
+    AutoRefreshCheckBox.Checked := False;
 
   OrientationRadioGroup.ItemIndex := Ord(ASettings.PDFPageSettings.PrintOrientation);
   OrientationRadioGroupClick(OrientationRadioGroup);
@@ -630,7 +638,10 @@ begin
   ASettings.StyleName := SelectedStyleName;
   ASettings.RescalingImage := RescalingImageCheckBox.Checked;
   if ASettings is TEditorSettings then
+  begin
     TEditorSettings(ASettings).DownloadFromWEB := DownloadFromWEBCheckBox.Checked;
+    TEditorSettings(ASettings).AutoRefreshWhenEditing := AutoRefreshCheckBox.Checked;
+  end;
 
   TEditorSettings(ASettings).ToolbarDrawRounded := ToolbarRoundedCheckBox.Checked;
   TEditorSettings(ASettings).ButtonDrawRounded := ButtonsRoundedCheckBox.Checked;

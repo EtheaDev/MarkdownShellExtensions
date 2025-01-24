@@ -55,8 +55,13 @@ POSSIBILITY OF SUCH DAMAGE.
 interface
 
 uses
-  SysUtils, Classes, TypInfo,
-  MarkdownProcessor, MarkdownDaringFireball, MarkdownUtils;
+  System.SysUtils
+  , System.Classes
+  , System.TypInfo
+  , MarkdownProcessor
+  , MarkdownDaringFireball
+  , MarkdownUtils
+  ;
 
 Type
 

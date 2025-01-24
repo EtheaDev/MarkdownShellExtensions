@@ -35,7 +35,7 @@ object SVGSettingsForm: TSVGSettingsForm
     Images = SettingsImageList
     TabOrder = 0
     object stGeneral: TTabSheet
-      Caption = 'Anteprima'
+      Caption = 'Preview'
       ImageIndex = 4
       ImageName = 'eye-settings'
       object RenderingGroupBox: TGroupBox
@@ -120,6 +120,23 @@ object SVGSettingsForm: TSVGSettingsForm
           Height = 17
           Caption = 'Apply to Menu Buttons'
           TabOrder = 2
+        end
+      end
+      object EditingOptionsGroupBox: TGroupBox
+        AlignWithMargins = True
+        Left = 10
+        Top = 311
+        Width = 238
+        Height = 61
+        Caption = 'Editing Options'
+        TabOrder = 3
+        object AutoRefreshCheckBox: TCheckBox
+          Left = 15
+          Top = 24
+          Width = 185
+          Height = 17
+          Caption = 'Autorefresh Preview'
+          TabOrder = 0
         end
       end
     end

@@ -3,7 +3,7 @@
 {       SVGTextPropertyEditorUnit: A property editor for SVGText               }
 {       to simplify use of setting SVGText value                               }
 {                                                                              }
-{       Copyright (c) 2019-2024 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2019-2025 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {       Contributors:                                                          }
 {                                                                              }
@@ -154,7 +154,7 @@ end;
 procedure TSVGTextPropertyEditorFormFMX.HelpButtonClick(Sender: TObject);
 begin
   ShellExecute(0, 'open',
-    PChar('https://github.com/EtheaDev/SVGIconImageList/wiki/SVG-TextEditor-FMX'), nil, nil,
+    PChar('https://ethea.it/docs/svgiconimagelist/SVGText-Editor-FMX.html'), nil, nil,
     SW_SHOWNORMAL)
 end;
 

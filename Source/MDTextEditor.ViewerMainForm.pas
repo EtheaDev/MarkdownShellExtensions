@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2024 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2025 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {       Contributors: Ariel Montes                                             }
 {                                                                              }
@@ -89,6 +89,8 @@ resourcestring
   STR_UNEXPECTED_ERROR = 'UNEXPECTED ERROR!';
   CONFIRM_CHANGES = 'ATTENTION: the content of file "%s" is changed: do you want to save the file?';
   FILE_CHANGED_RELOAD = 'File "%s" Date/Time changed! Do you want to reload it?';
+  CREATE_NEW_FILE = 'Create new file';
+  CONFIRM_CREATE_NEW_FILE = 'The file "%s" doesn''t exists! Do you want to create it now?';
 
 type
   TEditingFile = class
@@ -209,8 +211,6 @@ type
     Close_MenuItem: TMenuItem;
     Close_AllMenuItem: TMenuItem;
     PopHTMLSep: TMenuItem;
-    ProcessorDialectLabel: TLabel;
-    ProcessorDialectComboBox: TComboBox;
     VirtualImageList20: TVirtualImageList;
     LoadTimer: TTimer;
     VirtualImageListToolBar: TVirtualImageList;
@@ -333,7 +333,6 @@ type
     procedure acEditCopyUpdate(Sender: TObject);
     procedure acSaveHTMLFileExecute(Sender: TObject);
     procedure acSavePDFFileExecute(Sender: TObject);
-    procedure ProcessorDialectComboBoxSelect(Sender: TObject);
     procedure CheckFileChangedTimerTimer(Sender: TObject);
     procedure FormKeyPress(Sender: TObject; var Key: Char);
     procedure LoadTimerTimer(Sender: TObject);
@@ -396,7 +395,7 @@ type
     procedure UpdateFromSettings(AEditor: TSynEdit);
     function DialogPosRect: TRect;
     procedure AdjustCompactWidth;
-    procedure AdjustViewerWidth;
+    procedure AdjustViewerWidth(const ACenter: Boolean = False);
     function OpenFile(const FileName: string;
       const ARaiseError: Boolean = True): Boolean;
     function AddEditingFile(const EditingFile: TEditingFile): Integer;
@@ -452,6 +451,7 @@ uses
   , System.StrUtils
   , System.UITypes
   , Winapi.ShellAPI
+  , Winapi.ShLwApi
   , MDShellEx.Misc
   , Xml.XMLDoc
   , dlgReplaceText
@@ -1057,18 +1057,21 @@ begin
   if LIndex <> -1 then
   begin
     EditingFile := TEditingFile(EditFileList.Items[LIndex]);
-    EditingFile.ChildForm.Show;
+    UpdateMDViewer(True);
   end;
-  UpdateMDViewer(True);
 end;
 
 procedure TfrmMain.LoadTimerTimer(Sender: TObject);
 begin
   if FEditingInProgress then
   begin
-    FEditingInProgress := False;
-    dmResources.StopLoadingImages(False);
-    UpdateMDViewer(True);
+    LoadTimer.Enabled := False;
+    if FEditorSettings.AutoRefreshWhenEditing then
+    begin
+      FEditingInProgress := False;
+      dmResources.StopLoadingImages(False);
+      UpdateMDViewer(True);
+    end;
   end;
 end;
 
@@ -1181,7 +1184,7 @@ var
   LAction: TAction;
 begin
   LAction := Sender as TAction;
-  LAction.Enabled := (CurrentEditFile <> nil) and
+  LAction.Enabled := (CurrentEditFile <> nil) and (CurrentEditFile.SynEditor <> nil) and
     (CurrentEditFile.SynEditor.Focused) and
     not (CurrentEditFile.SynEditor.SelectionMode = TSynSelectionMode.smColumn);
 end;
@@ -1470,7 +1473,8 @@ begin
     FEditingInProgress := True;
     LoadTimer.Enabled := False;
     dmResources.StopLoadingImages(True);
-    UpdateMDViewer(False);
+    //UpdateMDViewer(False);
+    LoadTimer.Enabled := True;
   end;
 end;
 
@@ -1545,6 +1549,7 @@ begin
     //Make the ChildForm the current page
     //and call "change" method passing EditingChild
     ChildFormActivate(LChildForm);
+    AdjustViewerWidth(True);
   Except
     LChildForm.Free;
     LEditor.Free;
@@ -1559,6 +1564,7 @@ begin
     Exit;
   if (CurrentEditor <> nil) and (CurrentEditFile <> nil) then
   begin
+    LoadTimer.Enabled := False;
     Screen.Cursor := crHourGlass;
     try
       UpdateChildFormImage(CurrentChildForm, CurrentEditor.Modified,
@@ -1589,26 +1595,13 @@ begin
   CurrentChildForm := Sender as TMDIChildForm;
   CloseSplitViewMenu;
   //Setting the Editor caption as the actual file opened
-  if CurrentEditFile <> nil then
+  if (CurrentEditFile <> nil) and (CurrentEditFile.SynEditor <> nil) then
   begin
     if (CurrentEditFile.SynEditor.CanFocus) then
       CurrentEditFile.SynEditor.SetFocus;
   end;
   UpdateMDViewer(False);
   AdjustViewerWidth;
-end;
-
-procedure TfrmMain.ProcessorDialectComboBoxSelect(Sender: TObject);
-var
-  LDialect: TMarkdownProcessorDialect;
-begin
-  LDialect := TMarkdownProcessorDialect(ProcessorDialectComboBox.ItemIndex);
-  if FEditorSettings.ProcessorDialect <> LDialect then
-  begin
-    FEditorSettings.ProcessorDialect := LDialect;
-    WriteSettingsToIni;
-    UpdateMDViewer(False);
-  end;
 end;
 
 procedure TfrmMain.acSaveUpdate(Sender: TObject);
@@ -1844,17 +1837,10 @@ begin
 end;
 
 procedure TfrmMain.SetMDFontSize(const Value: Integer);
-var
-  LScaleFactor: Single;
 begin
   if (CurrentEditor <> nil) and (Value >= MinfontSize) and (Value <= MaxfontSize) then
   begin
-    if FMDFontSize <> 0 then
-      LScaleFactor := CurrentEditor.Font.Height / FMDFontSize
-    else
-      LScaleFactor := 1;
-    CurrentEditor.Font.PixelsPerInch := Self.PixelsPerInch;
-    CurrentEditor.Font.Height := Round(Value * LScaleFactor * Self.ScaleFactor);
+    CurrentEditor.Font.Height := Round(Value * Self.ScaleFactor);
     FEditorSettings.MDFontSize := Value;
   end;
   FMDFontSize := Value;
@@ -2002,8 +1988,6 @@ begin
   TStyledButtonGroup.RegisterDefaultRenderingStyle(LStyle);
   catMenuItems.StyleDrawType := LStyle;
   MenuButtonToolbar.StyleDrawType := LStyle;
-
-  ProcessorDialectComboBox.ItemIndex := ord(FEditorSettings.ProcessorDialect);
 
   if FEditorSettings.MDFontSize >= MinfontSize then
     MDFontSize := FEditorSettings.MDFontSize
@@ -2285,22 +2269,31 @@ begin
   FEditorSettings.HistoryFileList.Insert(0, AFileName);
 end;
 
-procedure TfrmMain.AdjustViewerWidth;
+procedure TfrmMain.AdjustViewerWidth(const ACenter: Boolean = False);
 begin
-  if CurrentEditFile <> nil then
+  if (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil) then
   begin
-    var LViewerWidth := CurrentEditFile.HTMLViewer.Width;
-    var LMinWidth := Self.Width div 6;
-    if LViewerWidth < LMinWidth then
-      CurrentEditFile.HTMLViewer.Width := LMinWidth
-    else if LViewerWidth > Self.Width - LMinWidth then
-      CurrentEditFile.HTMLViewer.Width := Self.Width - LMinWidth;
+    if ACenter then
+    begin
+      CurrentEditFile.HTMLViewer.Width :=
+        (Self.Width - catMenuItems.Width) div 2;
+    end
+    else
+    begin
+      var LViewerWidth := CurrentEditFile.HTMLViewer.Width;
+      var LMinWidth := Self.Width div 6;
+      var LMaxWidth := Self.Width - LMinWidth;
+      if LViewerWidth < LMinWidth then
+        CurrentEditFile.HTMLViewer.Width := LMinWidth
+      else if LViewerWidth > LMaxWidth then
+        CurrentEditFile.HTMLViewer.Width := LMaxWidth;
+    end;
   end;
 end;
 
 procedure TfrmMain.AdjustCompactWidth;
 begin
-  //Change size of compact because Scrollbars appears
+  //Change size of compact view because Scrollbars appears
   if (Height / ScaleFactor) > 900 then
     SV.CompactWidth := Round(44 * ScaleFactor)
   else
@@ -2455,8 +2448,27 @@ begin
     UpdateMDViewer(True);
     Handled := True;
   end
-  else
+  else if not PathIsURL(PChar(LFileName)) then
   begin
+    //Try to create Local File
+    if StyledTaskMessageDlg(CREATE_NEW_FILE,
+      Format(CONFIRM_CREATE_NEW_FILE, [LFileName]),
+      TMsgDlgType.mtConfirmation,
+      [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo, TMsgDlgBtn.mbCancel],
+      0, TMsgDlgBtn.mbYes) = mrYes then
+    begin
+      var LStreamWriter := TFile.CreateText(LFileName);
+      LStreamWriter.Write(Format('# %s', [ExtractFileName(LFileName)]));
+      LStreamWriter.Flush;
+      LStreamWriter.Close;
+      OpenFile(LFileName, True);
+      UpdateMDViewer(True);
+      Handled := True;
+    end;
+  end;
+  if not Handled then
+  begin
+    //Try to Open an URL
     dmResources.HtmlViewerHotSpotClick(Sender,
       ASource, Handled);
   end;

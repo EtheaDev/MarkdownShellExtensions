@@ -2,10 +2,10 @@ unit Img32.Layers;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  4.5                                                             *
-* Date      :  26 July 2024                                                    *
+* Version   :  4.7                                                             *
+* Date      :  6 January 2025                                                  *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2019-2024                                         *
+* Copyright :  Angus Johnson 2019-2025                                         *
 * Purpose   :  Layered images support                                          *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************)
@@ -139,7 +139,6 @@ type
     procedure  SetSize(width, height: double);
 
     procedure  Invalidate; virtual;
-    //procedure  Invalidate(const rec: TRectD); overload; virtual;
 
     function   AddChild(layerClass: TLayer32Class;
       const name: string = ''): TLayer32; reintroduce; virtual;
@@ -675,29 +674,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-//procedure TLayer32.Invalidate(const rec: TRectD);
-//var
-//  layer : TLayer32;
-//begin
-//  if (UpdateInfo.updateMethod = umAll) or
-//    not Assigned(fLayeredImage) or (self = Root) then Exit;
-//
-//  with UpdateInfo do
-//  begin
-//    updateMethod := umRegion;
-//    updateRegion := UnionRect(updateRegion, rec);
-//  end;
-//
-//  layer := Parent;
-//  while Assigned(layer) do
-//  begin
-//    if layer.UpdateInfo.childUpdating then Break;
-//    layer.UpdateInfo.childUpdating := true;
-//    layer := layer.Parent;
-//  end;
-//end;
-//------------------------------------------------------------------------------
-
 function TLayer32.GetNextLayerInGroup: TLayer32;
 begin
   if not Assigned(Parent) or (Index = Parent.ChildCount -1) then
@@ -1156,7 +1132,7 @@ begin
           fInvalidRect := UnionRect(fInvalidRect, rec);
       end;
 
-      // premerge children (recursion)
+      // premerge children
       DoBeforeMerge;
       PreMerge(hideDesigners);
     end;
@@ -1223,7 +1199,7 @@ begin
         //independently of the group layer's positioning
         if (self is TGroupLayer32) then
           TranslateRect(dstRect, Floor(-self.Left), Floor(-self.Top));
-          Types.IntersectRect(dstRect, dstRect, self.Image.Bounds);
+        Types.IntersectRect(dstRect, dstRect, self.Image.Bounds);
       end;
 
       if IsEmptyRect(dstRect) then Continue;

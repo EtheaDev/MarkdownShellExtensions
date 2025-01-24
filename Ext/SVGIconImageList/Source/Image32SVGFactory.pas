@@ -166,7 +166,7 @@ begin
   //nb: default widths should be the target image's dimensions
   //since these values will be used for SVG images that simply
   //specify their widths and heights as percentages
-  vbox := fSvgReader.RootElement.GetViewbox;
+  vbox := fSvgReader.RootElement.viewboxWH;
   FWidth := vbox.Width;
   FHeight := vbox.Height;
 end;
@@ -343,7 +343,9 @@ begin
 end;
 
 initialization
-  FontManager.Load('Arial');
-  FontManager.Load('Times New Roman');
+  FontManager.LoadFontReaderFamily('Arial');
+  FontManager.LoadFontReaderFamily('Times New Roman');
+  FontManager.LoadFontReaderFamily('Segoe UI');
+  FontManager.LoadFontReaderFamily('Segoe UI Emoji');
 
 end.

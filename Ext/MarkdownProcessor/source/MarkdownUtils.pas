@@ -28,7 +28,13 @@ Unit MarkdownUtils;
 interface
 
 uses
-  SysUtils, StrUtils, Classes, Character, TypInfo, Math;
+  System.SysUtils
+  , System.StrUtils
+  , System.Classes
+  , System.Character
+  , System.TypInfo
+  , System.Math
+  ;
 
 Type
   TMarkdownProcessorDialect = (mdDaringFireball, mdCommonMark, mdTxtMark);
@@ -2984,7 +2990,7 @@ begin
           line.value := Copy(line.value, pos(')', line.value) + 2);
       else
 //        line.value := line.value.substring(Math.min(line.leading, 4)); pstfix
-        line.value := Copy(line.value, Math.Min(line.leading + 1, 5));
+        line.value := Copy(line.value, System.Math.Min(line.leading + 1, 5));
       end;
       line.InitLeading();
     end;
@@ -3079,60 +3085,7 @@ begin
     line.leading := 0;
     line.trailing := 0;
   end;
-  self.hlDepth := Math.min(level, 6);
+  self.hlDepth := System.Math.min(level, 6);
 end;
-
-{$IFDEF FPC}
-{ TStringBuilder }
-
-constructor TStringBuilder.Create;
-begin
-  Inherited;
-  FBufferSize := BUFFER_INCREMENT_SIZE;
-end;
-
-procedure TStringBuilder.Append(value: TStringBuilder);
-begin
-  append(value.ToString);
-end;
-
-procedure TStringBuilder.Append(value: integer);
-begin
-  append(inttostr(value));
-end;
-
-procedure TStringBuilder.Append(value: String);
-begin
-  If (value <> '') Then
-  Begin
-    If FLength + System.Length(value) > System.Length(FContent) Then
-      SetLength(FContent, System.Length(FContent) + Math.Max(FBufferSize, System.Length(value)));
-
-    Move(value[1], FContent[FLength + 1], System.Length(value) * SizeOf(Char));
-
-    Inc(FLength, System.Length(value));
-  End;
-end;
-
-procedure TStringBuilder.Clear;
-begin
-  FContent := '';
-  FLength := 0;
-end;
-
-function TStringBuilder.GetChar(index: integer): char;
-begin
-  if (index < 0) or (index >= Length) then
-    raise Exception.Create('Out of bounds');
-  result := FContent[index+1];
-end;
-
-
-function TStringBuilder.toString: String;
-begin
-  Result := Copy(FContent, 1, FLength);
-end;
-
-{$ENDIF}
 
 end.

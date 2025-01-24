@@ -243,7 +243,7 @@ object FrmAbout: TFrmAbout
       'Author:'
       'Carlo Barazzetta'
       'https://github.com/EtheaDev/MarkdownShellExtensions'
-      'Copyright '#169' 2021-2024 all rights reserved.'
+      'Copyright '#169' 2021-2025 all rights reserved.'
       'Contributors:'
       'Ariel Montes'
       ''
@@ -286,7 +286,7 @@ object FrmAbout: TFrmAbout
       
         'Image32 Library - http://www.angusj.com/delphi/image32/Docs/_Bod' +
         'y.htm'
-      'Copyright '#169'2019-2023 Angus Johnson.'
+      'Copyright '#169'2019-2025 Angus Johnson.'
       ''
       'dzlib - https://sourceforge.net/projects/dzlib/'
       'Copyright (c) Thomas Mueller'

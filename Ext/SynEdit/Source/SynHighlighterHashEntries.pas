@@ -103,11 +103,11 @@ type
   TSynHashEntryList = class(TList)
   protected
     { Returns the first keyword entry for a given hashcalue, or nil. }
-    function Get(HashKey: Integer): TSynHashEntry;
+    function Get(HashKey: TListSize): TSynHashEntry;
     { Adds a keyword entry under its hashvalue. Will grow the list count when
       necessary, so the maximum hashvalue should be limited outside. The correct
       order of keyword entries is maintained. }
-    procedure Put(HashKey: Integer; Entry: TSynHashEntry);
+    procedure Put(HashKey: TListSize; Entry: TSynHashEntry);
   public
 {$IFDEF LIST_CLEAR_NOT_VIRTUAL}
     { Overridden destructor clears the list and frees all contained keyword
@@ -121,7 +121,7 @@ type
 {$ENDIF}
   public
     { Type-safe access to the first keyword entry for a hashvalue. }
-    property Items[Index: Integer]: TSynHashEntry read Get write Put; default;
+    property Items[Index: TListSize]: TSynHashEntry read Get write Put; default;
   end;
 
   { Procedural type for adding keyword entries to a TSynHashEntryList when
@@ -225,7 +225,7 @@ begin
   inherited Clear;
 end;
 
-function TSynHashEntryList.Get(HashKey: Integer): TSynHashEntry;
+function TSynHashEntryList.Get(HashKey: TListSize): TSynHashEntry;
 begin
   if (HashKey >= 0) and (HashKey < Count) then
     Result := inherited Items[HashKey]
@@ -233,7 +233,7 @@ begin
     Result := nil;
 end;
 
-procedure TSynHashEntryList.Put(HashKey: Integer; Entry: TSynHashEntry);
+procedure TSynHashEntryList.Put(HashKey: TListSize; Entry: TSynHashEntry);
 var
   ListEntry: TSynHashEntry;
 begin

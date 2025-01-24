@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2024 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2025 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -149,11 +149,13 @@ type
   TEditorSettings = class(TSettings)
   private
     FDownloadFromWEB: Boolean;
+    FAutoRefreshWhenEditing: Boolean;
     procedure SetDownloadFromWEB(const Value: Boolean);
     procedure WriteSynEditorOptions(
       const ASynEditorOptions: TSynEditorOptionsContainer);
     procedure ReadSynEditorOptions(
       const ASynEditorOptions: TSynEditorOptionsContainer);
+    procedure SetAutoRefreshWhenEditing(const Value: Boolean);
   public
     HistoryFileList: TStrings;
     OpenedFileList: TStrings;
@@ -168,6 +170,7 @@ type
     destructor Destroy; override;
     procedure UpdateOpenedFiles(AFileList: TStrings; const ACurrentFileName: string);
     property DownloadFromWEB: Boolean read FDownloadFromWEB write SetDownloadFromWEB;
+    property AutoRefreshWhenEditing: Boolean read FAutoRefreshWhenEditing write SetAutoRefreshWhenEditing;
   end;
 
 implementation
@@ -478,6 +481,11 @@ end;
 
 { TEditorSettings }
 
+procedure TEditorSettings.SetAutoRefreshWhenEditing(const Value: Boolean);
+begin
+  FAutoRefreshWhenEditing := Value;
+end;
+
 procedure TEditorSettings.SetDownloadFromWEB(const Value: Boolean);
 begin
   FDownloadFromWEB := Value;
@@ -516,6 +524,7 @@ begin
   if ASynEditHighilighter = nil then
   begin
     DownloadFromWEB := Boolean(FIniFile.ReadInteger('Global', 'DownloadFromWEB', 0));
+    AutoRefreshWhenEditing := Boolean(FIniFile.ReadInteger('Global', 'AutoRefreshWhenEditing', 1));
 
     if LoadFileList then
     begin
@@ -644,6 +653,7 @@ var
 begin
   inherited;
   FIniFile.WriteInteger('Global', 'DownloadFromWEB', Ord(FDownloadFromWEB));
+  FIniFile.WriteInteger('Global', 'AutoRefreshWhenEditing', Ord(FAutoRefreshWhenEditing));
 
   FIniFile.EraseSection(LAST_OPENED_SECTION);
   for I := 0 to HistoryFileList.Count -1 do

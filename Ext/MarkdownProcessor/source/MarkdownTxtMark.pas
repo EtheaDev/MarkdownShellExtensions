@@ -28,8 +28,11 @@ Unit MarkdownTxtMark;
 interface
 
 uses
-  SysUtils, Classes, TypInfo,
-  MarkdownDaringFireball, MarkdownUtils;
+  System.SysUtils
+  , System.Classes
+  , System.TypInfo
+  , MarkdownDaringFireball
+  , MarkdownUtils;
 
 Type
 

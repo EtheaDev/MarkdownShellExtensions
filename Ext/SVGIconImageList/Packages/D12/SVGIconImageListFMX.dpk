@@ -32,7 +32,8 @@ package SVGIconImageListFMX;
 {$IMPLICITBUILD OFF}
 
 requires
-  fmx
+  rtl
+  , fmx
   {$IFDEF Image32_SVGEngine}
   , SVGImage32Package
   {$ENDIF}
@@ -52,6 +53,7 @@ contains
   FMX.ImageSkiaSVG in '..\..\Source\FMX.ImageSkiaSVG.pas',
   {$ENDIF}
   FMX.SVGIconImageList in '..\..\Source\FMX.SVGIconImageList.pas',
-  FMX.SVGIconImage in '..\..\Source\FMX.SVGIconImage.pas';
+  FMX.SVGIconImage in '..\..\Source\FMX.SVGIconImage.pas',
+  FMX.SVGIconsUtils in '..\..\Source\FMX.SVGIconsUtils.pas';
 
 end.

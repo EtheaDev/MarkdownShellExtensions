@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2024 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2025 (Ethea S.r.l.)                                 }
 {       Author: Ariel Montes                                                   }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownShellExtensions                    }
@@ -171,7 +171,9 @@ begin
   begin
     LText := CalcText(APrefix, ']', ASelectedText);
     LUrl := CalcText('](', ')', ASelectedText);
-  end;
+  end
+  else
+    LText := ASelectedText;
   try
     //Create and initialize the InputUrlDialog form
     LInputUrl := TInputUrlDialog.CreateUrl(AOwner, ARootFolder, LText, LUrl, AType);

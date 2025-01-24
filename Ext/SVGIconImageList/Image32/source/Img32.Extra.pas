@@ -2,10 +2,10 @@ unit Img32.Extra;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  4.4                                                             *
-* Date      :  18 August 2024                                                  *
+* Version   :  4.8                                                             *
+* Date      :  10 January 2025                                                 *
 * Website   :  http://www.angusj.com                                           *
-* Copyright :  Angus Johnson 2019-2024                                         *
+* Copyright :  Angus Johnson 2019-2025                                         *
 * Purpose   :  Miscellaneous routines that don't belong in other modules.      *
 * License   :  http://www.boost.org/LICENSE_1_0.txt                            *
 *******************************************************************************)
@@ -150,8 +150,8 @@ function SimplifyPaths(const paths: TPathsD;
   shapeTolerance: double = 0.1; isClosedPath: Boolean = true): TPathsD;
 {$ENDIF}
 
-// SimplifyPathEx: this is mainly useful following Vectorize()
-// Also removes very short segments that zig-zag (rather than curve)
+// SimplifyPathEx: this is particularly useful following Vectorize()
+// because it also removes very short zig-zag segments
 function SimplifyPathEx(const path: TPathD; shapeTolerance: double): TPathD;
 function SimplifyPathsEx(const paths: TPathsD; shapeTolerance: double): TPathsD;
 
@@ -216,6 +216,23 @@ type
 
 //------------------------------------------------------------------------------
 // Miscellaneous functions
+//------------------------------------------------------------------------------
+
+function Clamp(val, endVal: integer): integer;
+  {$IFDEF INLINE} inline; {$ENDIF}
+begin
+  if val < 0 then Result := 0
+  else if val >= endVal then Result := endVal -1
+  else Result := val;
+end;
+//------------------------------------------------------------------------------
+
+function ModEx(val, endVal: integer): integer;
+  {$IFDEF INLINE} inline; {$ENDIF}
+begin
+  Result := val mod endVal;
+  if Result < 0 then Result := endVal + Result;
+end;
 //------------------------------------------------------------------------------
 
 function GetSymmetricCropTransparentRect(img: TImage32): TRect;
@@ -634,30 +651,52 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure HatchBackground(img: TImage32; const rec: TRect;
-  color1: TColor32 = clWhite32; color2: TColor32= $FFE8E8E8;
-  hatchSize: Integer = 10); overload;
+procedure InternalHatchBackground(img: TImage32; const rec: TRect;
+  color1, color2: TColor32; hatchSize: Integer = 10);
 var
-  i,j: Integer;
+  i, j, imgWidth: Integer;
   pc: PColor32;
   colors: array[boolean] of TColor32;
   hatch: Boolean;
+  x: integer;
 begin
   colors[false] := color1;
   colors[true] := color2;
-  img.BeginUpdate;
-  try
-    for i := rec.Top to rec.Bottom -1 do
+  imgWidth := img.Width;
+
+  for i := rec.Top to rec.Bottom -1 do
+  begin
+    pc := @img.Pixels[i * imgWidth + rec.Left];
+    hatch := Odd(i div hatchSize);
+
+    x := (rec.Left + 1) mod hatchSize;
+    if x = 0 then hatch := not hatch;
+    for j := rec.Left to rec.Right -1 do
     begin
-      pc := @img.Pixels[i * img.Width + rec.Left];
-      hatch := Odd(i div hatchSize);
-      for j := rec.Left to rec.Right -1 do
-      begin
-        if (j + 1) mod hatchSize = 0 then hatch := not hatch;
+      if pc^ = 0 then
+        pc^ := colors[hatch]
+      else if GetAlpha(pc^) < 255 then
         pc^ := BlendToOpaque(colors[hatch], pc^);
-       inc(pc);
+      inc(pc);
+      inc(x);
+      if x >= hatchSize then
+      begin
+        x := 0;
+        hatch := not hatch;
       end;
     end;
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure HatchBackground(img: TImage32; const rec: TRect;
+  color1: TColor32 = clWhite32; color2: TColor32= $FFE8E8E8;
+  hatchSize: Integer = 10); overload;
+begin
+  if (rec.Right <= rec.Left) or (rec.Bottom - rec.Top <= 0) then Exit;
+  img.BeginUpdate;
+  try
+    InternalHatchBackground(img, rec, color1, color2, hatchSize);
   finally
     img.EndUpdate;
   end;
@@ -1726,97 +1765,64 @@ type
     pdSqrd  : double;
     prev    : PSimplifyRec;
     next    : PSimplifyRec;
-    isEnd   : Boolean;
+    isEndPt   : Boolean;
   end;
 
 function SimplifyPath(const path: TPathD;
   shapeTolerance: double; isClosedPath: Boolean): TPathD;
 var
-  i, highI, minLen: integer;
+  i, iPrev, iNext, len, minLen: integer;
   tolSqrd: double;
   srArray: array of TSimplifyRec;
-  first, last: PSimplifyRec;
+  current, last: PSimplifyRec;
 begin
   Result := nil;
-  highI := High(path);
+  len := Length(path);
   if not isClosedPath then minLen := 2 else minLen := 3;
+  if len < minLen then Exit;
 
-  if highI +1 < minLen then Exit;
-
-  SetLength(srArray, highI +1);
-  with srArray[0] do
-  begin
-    pt      := path[0];
-    prev    := @srArray[highI];
-    next    := @srArray[1];
-    if isClosedPath then
-    begin
-      pdSqrd  := PerpendicularDistSqrd(path[0], path[highI], path[1]);
-      isEnd   := false;
-    end else
-    begin
-      pdSqrd  := MaxDouble;
-      isEnd   := true;
-    end;
-  end;
-
-  with srArray[highI] do
-  begin
-    pt      := path[highI];
-    prev    := @srArray[highI-1];
-    next    := @srArray[0];
-    if isClosedPath then
-    begin
-      pdSqrd  := PerpendicularDistSqrd(path[highI], path[highI-1], path[0]);
-      isEnd   := false;
-    end else
-    begin
-      pdSqrd  := MaxDouble;
-      isEnd   := true;
-    end;
-  end;
-
-  for i := 1 to highI -1 do
+  SetLength(srArray, len);
+  for i := 0 to len -1 do
     with srArray[i] do
     begin
+      iPrev := ModEx(i-1, len);
+      iNext := ModEx(i+1, len);
       pt      := path[i];
-      prev    := @srArray[i-1];
-      next    := @srArray[i+1];
-      pdSqrd  := PerpendicularDistSqrd(path[i], path[i-1], path[i+1]);
-      isEnd   := false;
+      prev    := @srArray[iPrev];
+      next    := @srArray[iNext];
+      pdSqrd  := PerpendicularDistSqrd(path[i], path[iPrev], path[iNext]);
+      isEndPt   := not isClosedPath and ((i = 0) or (i = len -1));
     end;
 
-  first := @srArray[0];
-  last := first.prev;
+  current := @srArray[0];
+  last := current.prev;
 
   tolSqrd := Sqr(shapeTolerance);
-  while first <> last do
+  while current <> last do
   begin
-    if first.isEnd or (first.pdSqrd > tolSqrd) or
-      (first.next.pdSqrd < first.pdSqrd) then
+    if not current.isEndPt and
+      ((current.pdSqrd < tolSqrd) and (current.next.pdSqrd > current.pdSqrd)) then
     begin
-      first := first.next;
-    end else
-    begin
-      first.prev.next := first.next;
-      first.next.prev := first.prev;
-      last := first.prev;
-      dec(highI);
+      current.prev.next := current.next;
+      current.next.prev := current.prev;
+      last := current.prev;
+      dec(len);
       if last.next = last.prev then break;
-      last.pdSqrd :=
-        PerpendicularDistSqrd(last.pt, last.prev.pt, last.next.pt);
-      first := last.next;
-      first.pdSqrd :=
-        PerpendicularDistSqrd(first.pt, first.prev.pt, first.next.pt);
-    end;
+      last.pdSqrd := PerpendicularDistSqrd(last.pt, last.prev.pt, last.next.pt);
+      current := last.next;
+      current.pdSqrd := PerpendicularDistSqrd(current.pt, current.prev.pt, current.next.pt);
+    end
+    else
+      current := current.next;
   end;
-  if highI +1 < minLen then Exit;
-  if not isClosedPath then first := @srArray[0];
-  NewPointDArray(Result, highI +1, True);
-  for i := 0 to HighI do
+
+  if len < minLen then Exit;
+  if not isClosedPath then current := @srArray[0];
+  NewPointDArray(Result, len, True);
+  for i := 0 to len -1 do
   begin
-    Result[i] := first.pt;
-    first := first.next;
+    Result[i] := current.pt;
+    current := current.next;
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1843,11 +1849,11 @@ end;
 type
   PSimplifyExRec = ^TSimplifyExRec;
   TSimplifyExRec = record
-    pt      : TPointD;
-    pdSqrd  : double;
-    segLenSq: double;
-    prev    : PSimplifyExRec;
-    next    : PSimplifyExRec;
+    pt        : TPointD;
+    pdSqrd    : double;
+    segLenSq  : double;
+    prev      : PSimplifyExRec;
+    next      : PSimplifyExRec;
   end;
 
 function DeleteCurrent(var current: PSimplifyExRec): Boolean;
@@ -1861,37 +1867,36 @@ begin
   Result := next <> current.prev;
   if not Result then Exit;
   next.pdSqrd := PerpendicularDistSqrd(next.pt, next.prev.pt, next.next.pt);
-  next.segLenSq := DistanceSqrd(next.prev.pt, next.pt);
+  current.segLenSq := DistanceSqrd(current.pt, current.next.pt);
   current.pdSqrd := PerpendicularDistSqrd(current.pt, current.prev.pt, current.next.pt);
 end;
 //---------------------------------------------------------------------------
 
 function SimplifyPathEx(const path: TPathD; shapeTolerance: double): TPathD;
 var
-  i, prevI, nextI, highI: integer;
-  cp, cp2, shapeTolSqr, shapeTolSqrEx: double;
+  i, prevI, nextI, len: integer;
+  shapeTolSqr: double;
   srArray: array of TSimplifyExRec;
   current, start: PSimplifyExRec;
 begin
   Result := nil;
-  highI := High(path);
-  if highI < 2 then Exit;
+  len := Length(path);
+  if len < 3 then Exit;
 
   shapeTolSqr := Sqr(shapeTolerance);
-  shapeTolSqrEx := shapeTolerance * 4 +1; // may need adjusting
-  SetLength(srArray, highI +1);
+  SetLength(srArray, len);
 
-  for i := 0 to highI do
+  for i := 0 to len -1 do
   begin
     prevI := i -1;
     nextI := i +1;
-    if i = 0 then prevI := highI
-    else if i = highI then nextI := 0;
+    if i = 0 then prevI := len -1
+    else if i = len -1 then nextI := 0;
 
     with srArray[i] do
     begin
       pt      := path[i];
-      segLenSq:= DistanceSqrd(path[prevI], path[i]);
+      segLenSq:= DistanceSqrd(path[i], path[nextI]);
       pdSqrd  := PerpendicularDistSqrd(path[i], path[prevI], path[nextI]);
       prev    := @srArray[prevI];
       next    := @srArray[nextI];
@@ -1903,40 +1908,33 @@ begin
 
   while current <> start do
   begin
+    // Irrespective of segment length, remove vertices that deviate very little
+    // from imaginary lines that pass through their adjacent vertices.
+    // However, if the following vertex has an even sorter distance from its
+    // respective imaginary line, its important to remove that vertex first.
     if ((current.pdSqrd < shapeTolSqr) and
       (current.pdSqrd < current.next.pdSqrd)) then
     begin
-      // nb: always remove the shorter segment first
-      // irrespective of segment length remove vertices that
-      // deviate insignificantly from their adjacent vertices.
-      dec(highI);
+      dec(len);
       if not DeleteCurrent(current) then Break;
       start := current.prev;
-    end else if
-      (current.segLenSq * shapeTolSqrEx < current.prev.segLenSq) and
-      (current.segLenSq * shapeTolSqrEx < current.next.segLenSq) then
+    end
+    // also remove insignificant path zig-zags
+    else if (current.prev.segLenSq < shapeTolSqr) and
+      (current.segLenSq < shapeTolSqr) and
+      ((CrossProduct(current.prev.pt, current.pt, current.next.pt) > 0) <>
+      (CrossProduct(current.pt, current.next.pt, current.next.next.pt) > 0)) then
     begin
-      cp := CrossProduct(current.prev.prev.pt, current.prev.pt, current.pt);
-      cp2 := CrossProduct(current.prev.pt, current.pt, current.next.pt);
-      if ((cp > 0) = (cp2 > 0)) then
-      begin
-        // not a zig-zag (ie avoids truncating tightly rounded corners)
-        current := current.next;
-      end else
-      begin
-        // remove insignificant zigzags
-        current.prev.pt := MidPoint(current.pt, current.prev.pt);
-        if not DeleteCurrent(current) then Break;
-        start := current.prev;
-        dec(highI);
-      end;
+      dec(len);
+      if not DeleteCurrent(current) then Break;
+      start := current.prev;
     end else
       current := current.next;
   end;
 
-  if highI < 2 then Exit;
-  NewPointDArray(Result, highI +1, True);
-  for i := 0 to HighI do
+  if len < 3 then Exit;
+  NewPointDArray(Result, len, True);
+  for i := 0 to len -1 do
   begin
     Result[i] := current.pt;
     current := current.next;
@@ -2113,23 +2111,6 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-function Clamp(val, endVal: integer): integer;
-  {$IFDEF INLINE} inline; {$ENDIF}
-begin
-  if val < 0 then Result := 0
-  else if val >= endVal then Result := endVal -1
-  else Result := val;
-end;
-//------------------------------------------------------------------------------
-
-function ModEx(val, endVal: integer): integer;
-  {$IFDEF INLINE} inline; {$ENDIF}
-begin
-  Result := val mod endVal;
-  if Result < 0 then Result := endVal + Result;
-end;
-//------------------------------------------------------------------------------
-
 function CubicInterpolate(v1, v2, v3, v4: double;
   t: double; tension: double = 0): double;
 var
@@ -2248,43 +2229,68 @@ end;
 
 procedure GaussianBlur(img: TImage32; rec: TRect; radius: Integer);
 var
-  i, w,h, x,y,yy,z: Integer;
-  gaussTable: array [-MaxBlur .. MaxBlur] of Cardinal;
+  i, w,h, highX, x,y,yy,z,startz: Integer;
+  expConst: double;
+  gaussTable: array [-MaxBlur .. MaxBlur] of integer;
   wc: TWeightedColor;
   wca: TArrayOfWeightedColor;
+  wcaColor: TArrayOfColor32;
   row: PColor32Array;
   wcRow: PWeightedColorArray;
+  imgWidth: Integer;
+  dst, pc: PColor32;
+const
+  tableConst = 1024;
+  sigma = 3;
 begin
   Types.IntersectRect(rec, rec, img.Bounds);
   if IsEmptyRect(rec) or (radius < 1) then Exit
   else if radius > MaxBlur then radius := MaxBlur;
-  for i := 0 to radius do
+
+  expConst := - 1 / (Sqr(radius) * 2 * Sqr(sigma));
+  gaussTable[0] := Round(tableConst * Exp(expConst));
+  for i := 1 to radius do
   begin
-    gaussTable[i] := Sqr(Radius - i +1);
+    gaussTable[i] := Round(tableConst * Exp(expConst * Sqr(i)));
     gaussTable[-i] := gaussTable[i];
   end;
+
   RectWidthHeight(rec, w, h);
   setLength(wca, w * h);
+  NewColor32Array(wcaColor, w * h, True);
+  imgWidth := img.Width;
+  highX := imgWidth -1;
   for y := 0 to h -1 do
   begin
-    row := PColor32Array(@img.Pixels[(y + rec.Top) * img.Width + rec.Left]);
+    row := PColor32Array(@img.Pixels[(y + rec.Top) * imgWidth + rec.Left]);
     wcRow := PWeightedColorArray(@wca[y * w]);
     for x := 0 to w -1 do
-      for z := max(0, x - radius) to min(img.Width -1, x + radius) do
+      for z := max(0, x - radius) to min(highX, x + radius) do
         wcRow[x].Add(row[z], gaussTable[x-z]);
   end;
+
+  // calculate colors
+  for x := 0 to w * h - 1 do
+    wcaColor[x] := wca[x].Color;
+
+  dst := @img.Pixels[rec.Left + rec.Top * imgWidth];
+  imgWidth := imgWidth * SizeOf(TColor32); // convert to byte size
   for x := 0 to w -1 do
   begin
+    pc := dst;
+    inc(pc, x);
     for y := 0 to h -1 do
     begin
       wc.Reset;
-      yy := max(0, y - radius) * w;
-      for z := max(0, y - radius) to min(h -1, y + radius) do
+      startz := max(0, y - radius);
+      yy := startz * w;
+      for z := startz to min(h -1, y + radius) do
       begin
-        wc.Add(wca[x + yy].Color, gaussTable[y-z]);
+        wc.Add(wcaColor[x + yy], gaussTable[y-z]);
         inc(yy, w);
       end;
-      img.Pixels[x + rec.Left + (y + rec.Top) * img.Width] := wc.Color;
+      pc^ := wc.Color;
+      inc(PByte(pc), imgWidth); // increment by byte size
     end;
   end;
 end;
@@ -2323,11 +2329,64 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure BoxBlurH(var src, dst: TArrayOfColor32; w,h, stdDev: integer);
+procedure BoxBlurHLine(src, dst: PColor32; srcRiOffset: nativeint;
+  count, w: integer; dstLast: PColor32; var v: TWeightedColor);
+var
+  lastColor: TColor32;
+  val: PWeightedColor;
+  s, d: PColor32;
+begin
+  lastColor := v.Color;
+  if count > w then
+    count := w;
+  w := w - count;
+
+  // The Delphi compiler sometimes is really stupid with
+  // the CPU register allocation. With this, even if no actual
+  // code is produced, the compiler happens to make better
+  // decisions.
+  val := @v;
+  s := src;
+  d := dst;
+
+  if count > 0 then
+  begin
+    while count > 0 do
+    begin
+      if val.AddSubtract(PColor32Array(s)[srcRiOffset], s^) then
+        lastColor := val.Color;
+      inc(s);
+      d^ := lastColor;
+      inc(d);
+      dec(count);
+    end;
+
+    count := w;
+    while count > 0 do
+    begin
+      d^ := lastColor;
+      inc(d);
+      dec(count);
+    end;
+  end;
+
+  while PByte(d) <= PByte(dstLast) do
+  begin
+    if val.AddNoneSubtract(s^) then
+      lastColor := val.Color;
+    inc(s);
+    d^ := lastColor;
+    inc(d);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure BoxBlurH(const src, dst: TArrayOfColor32; w,h, stdDev: integer);
 var
   i,j, ti, li, ri, re, ovr: integer;
   fv, val: TWeightedColor;
   lastColor: TColor32;
+  stdDevW: integer;
 begin
   ovr := Max(0, stdDev - w);
   for i := 0 to h -1 do
@@ -2336,7 +2395,6 @@ begin
     li := ti;
     ri := ti +stdDev;
     re := ti +w -1; // idx of last pixel in row
-    lastColor := src[re];  // color of last pixel in row
     fv.Reset(src[ti]);
     val.Reset(src[ti], stdDev +1);
     for j := 0 to stdDev -1 - ovr do
@@ -2344,9 +2402,9 @@ begin
     if ovr > 0 then val.Add(clNone32, ovr);
     for j := 0 to stdDev do
     begin
-      if ri > re then
-        val.Add(lastColor) else
-        val.Add(src[ri]);
+      if ri <= re then
+        val.Add(src[ri]) else
+        val.Add(src[re]); // color of last pixel in row
       inc(ri);
       val.Subtract(fv);
       if ti <= re then
@@ -2355,38 +2413,98 @@ begin
     end;
 
     // Skip "val.Color" calculation if both for-loops are skipped anyway
-    if (ti <= re) or (w > stdDev*2 + 1) then
+    stdDevW := w - stdDev*2 - 1;
+    if (ti <= re) or (stdDevW > 0) then
     begin
-      lastColor := val.Color;
-      for j := stdDev +1 to w - stdDev -1 do
+      if w > 4 then // prevent the call-overhead if it would be slower than the inline version
+        BoxBlurHLine(@src[li], @dst[ti], ri - li, re - ri + 1, stdDevW, @dst[re], val)
+      else
       begin
-        if ri <= re then
+        lastColor := val.Color;
+        for j := stdDevW downto 1 do
         begin
-          if val.AddSubtract(src[ri], src[li]) then
-            lastColor := val.Color;
-          inc(ri);
-          inc(li);
+          if ri <= re then
+          begin
+            if val.AddSubtract(src[ri], src[li]) then
+              lastColor := val.Color;
+            inc(ri);
+            inc(li);
+          end;
+          dst[ti] := lastColor;
+          inc(ti);
         end;
-        dst[ti] := lastColor; inc(ti);
-      end;
-      while ti <= re do
-      begin
-        if val.AddNoneSubtract(src[li]) then
-          lastColor := val.Color;
-        inc(li);
-        dst[ti] := lastColor;
-        inc(ti);
+        while ti <= re do
+        begin
+          if val.AddNoneSubtract(src[li]) then
+            lastColor := val.Color;
+          inc(li);
+          dst[ti] := lastColor;
+          inc(ti);
+        end;
       end;
     end;
   end;
 end;
 //------------------------------------------------------------------------------
 
-procedure BoxBlurV(var src, dst: TArrayOfColor32; w, h, stdDev: integer);
+procedure BoxBlurVLine(src, dst: PColor32; srcRiOffset: nativeint;
+  widthBytes, count, h: integer; dstLast: PColor32; var v: TWeightedColor);
+var
+  lastColor: TColor32;
+  val: PWeightedColor;
+  s, d: PColor32;
+begin
+  lastColor := v.Color;
+  if count > h then
+    count := h;
+  h := h - count;
+
+  // The Delphi compiler sometimes is really stupid with
+  // the CPU register allocation. With this, even if no actual
+  // code is produced, the compiler happens to make better
+  // decisions.
+  val := @v;
+  s := src;
+  d := dst;
+
+  if count > 0 then
+  begin
+    while count > 0 do
+    begin
+      if val.AddSubtract(PColor32Array(s)[srcRiOffset], s^) then
+        lastColor := val.Color;
+      inc(PByte(s), widthBytes);
+      d^ := lastColor;
+      inc(PByte(d), widthBytes);
+      dec(count);
+    end;
+
+    count := h;
+    while count > 0 do
+    begin
+      d^ := lastColor;
+      inc(PByte(d), widthBytes);
+      dec(count);
+    end;
+  end;
+
+  while PByte(d) <= PByte(dstLast) do
+  begin
+    if val.AddNoneSubtract(s^) then
+      lastColor := val.Color;
+    inc(PByte(s), widthBytes);
+    d^ := lastColor;
+    inc(PByte(d), widthBytes);
+  end;
+end;
+//------------------------------------------------------------------------------
+
+procedure BoxBlurV(const src, dst: TArrayOfColor32; w, h, stdDev: integer);
 var
   i,j, ti, li, ri, re, ovr: integer;
   fv, val: TWeightedColor;
   lastColor: TColor32;
+  stdDevH: integer;
 begin
   ovr := Max(0, stdDev - h);
   for i := 0 to w -1 do
@@ -2395,7 +2513,6 @@ begin
     li := ti;
     ri := ti + stdDev * w;
     re := ti +w *(h-1); // idx of last pixel in column
-    lastColor := src[re];      // color of last pixel in column
     fv.Reset(src[ti]);
     val.Reset(src[ti], stdDev +1);
     for j := 0 to stdDev -1 -ovr do
@@ -2403,9 +2520,9 @@ begin
     if ovr > 0 then val.Add(clNone32, ovr);
     for j := 0 to stdDev do
     begin
-      if ri > re then
-        val.Add(lastColor) else
-        val.Add(src[ri]);
+      if ri <= re then
+        val.Add(src[ri]) else
+        val.Add(src[re]); // color of last pixel in column
       inc(ri, w);
       val.Subtract(fv);
       if ti <= re then
@@ -2414,27 +2531,35 @@ begin
     end;
 
     // Skip "val.Color" calculation if both for-loops are skipped anyway
-    if (ti <= re) or (h > stdDev*2 + 1) then
+    stdDevH := h - stdDev*2 - 1;
+    if (ti <= re) or (stdDevH > 0) then
     begin
-      lastColor := val.Color;
-      for j := stdDev +1 to h - stdDev -1 do
+      if stdDevH > 4 then // prevent the call-overhead if it would be slower than the inline version
+        BoxBlurVLine(@src[li], @dst[ti], ri - li, w * SizeOf(TColor32), re - ri + 1, stdDevH, @dst[re], val)
+      else
       begin
-        if ri <= re then
+        lastColor := val.Color;
+        for j := stdDevH downto 1 do
         begin
-          if val.AddSubtract(src[ri], src[li]) then
-            lastColor := val.Color;
-          inc(ri, w);
-          inc(li, w);
+          if ri <= re then
+          begin
+            if val.AddSubtract(src[ri], src[li]) then
+              lastColor := val.Color;
+            inc(ri, w);
+            inc(li, w);
+          end;
+
+          dst[ti] := lastColor;
+          inc(ti, w);
         end;
-        dst[ti] := lastColor; inc(ti, w);
-      end;
-      while ti <= re do
-      begin
-        if val.AddNoneSubtract(src[li]) then
-          lastColor := val.Color;
-        inc(li, w);
-        dst[ti] := lastColor;
-        inc(ti, w);
+        while ti <= re do
+        begin
+          if val.AddNoneSubtract(src[li]) then
+            lastColor := val.Color;
+          inc(li, w);
+          dst[ti] := lastColor;
+          inc(ti, w);
+        end;
       end;
     end;
   end;
@@ -2460,14 +2585,16 @@ begin
   if (Min(w, h) < 2) or ((stdDevX < 1) and (stdDevY < 1)) then Exit;
   len := w * h;
   NewColor32Array(src, len, True); // content is overwritten in BoxBlurH
-  NewColor32Array(dst, len, True);
   if blurFullImage then
   begin
-    // copy the entire image into 'dst'
-    Move(img.PixelBase^, dst[0], len * SizeOf(TColor32));
-  end else
+    // Use the img.Pixels directly instead of copying the entire image into 'dst'.
+    // The first thing the code does is BoxBlurH({source:=}dst, {dest:=}src, ...).
+    dst := img.Pixels;
+  end
+  else
   begin
     // copy a rectangular region into 'dst'
+    NewColor32Array(dst, len, True);
     pSrc := img.PixelRow[rec2.Top];
     inc(pSrc, rec2.Left);
     pDst := @dst[0];
@@ -2478,25 +2605,25 @@ begin
       inc(pDst, w);
     end;
   end;
+
   // do the blur
   inc(repeats); // now represents total iterations
   boxesH := BoxesForGauss(stdDevX, repeats);
   if stdDevY = stdDevX then
     boxesV := boxesH else
     boxesV := BoxesForGauss(stdDevY, repeats);
-  for j := 0 to repeats -1 do
+
+  img.BeginUpdate;
+  try
+    for j := 0 to repeats -1 do
     begin
       BoxBlurH(dst, src, w, h, boxesH[j]);
       BoxBlurV(src, dst, w, h, boxesV[j]);
     end;
-  // copy dst array back to image rect
-  img.BeginUpdate;
-  try
-    if blurFullImage then
+
+    if not blurFullImage then
     begin
-      Move(dst[0], img.PixelBase^, len * SizeOf(TColor32));
-    end else
-    begin
+      // copy dst array back to image rect
       pDst := img.PixelRow[rec2.Top];
       inc(pDst, rec2.Left);
       pSrc := @dst[0];

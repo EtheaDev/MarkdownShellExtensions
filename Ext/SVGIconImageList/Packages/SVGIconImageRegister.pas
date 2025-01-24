@@ -2,7 +2,7 @@
 {                                                                              }
 {       SVGIconImage Registration for Components and Editors                   }
 {                                                                              }
-{       Copyright (c) 2019-2024 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2019-2025 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {       Contributors: Vincent Parrett, Kiriakos Vlahos                         }
 {                                                                              }
@@ -28,15 +28,17 @@ unit SVGIconImageRegister;
 interface
 
 {$INCLUDE ..\Source\SVGIconImageList.inc}
+{$R ..\SvgIconImageListSplash.res}
 
 uses
-  Classes
+  System.Classes
   , DesignIntf
   , DesignEditors
   , VCLEditors
   , Vcl.ImgList
+  , System.Types
   , Vcl.Graphics
-  , System.Types;
+  ;
 
 type
   TSVGIconImageListCompEditor = class(TComponentEditor)
@@ -110,15 +112,15 @@ procedure Register;
 implementation
 
 uses
-  SysUtils
-  , ToolsAPI
-  , BrandingAPI
+  System.SysUtils
+  {$IF (CompilerVersion >= 27.0)}, BrandingAPI{$IFEND}
   , Vcl.Themes
   , Vcl.Forms
   , Vcl.Controls
   , System.UITypes
   , Winapi.ShellApi
   , Winapi.Windows
+  , ToolsAPI
   , SVGIconImage
   , SVGIconImageListBase
   , SVGIconImageList
@@ -129,8 +131,117 @@ uses
   , SVGIconVirtualImageList
   , SVGIconImageCollection
   , SVGIconImageListEditorUnit
-  , SVGTextPropertyEditorUnit;
+  , SVGTextPropertyEditorUnit
+  , Vcl.Imaging.PngImage
+  ;
 
+const
+  Component_Docs_URL = 'https://ethea.it/docs/svgiconimagelist/Overview-(VCL).html';
+  {$IFDEF D11+}
+  ABOUT_RES_NAME = 'SVGICONSPLASH48PNG';
+  SPLASH_RES_NAME = 'SVGICONSPLASH48PNG';
+  {$ELSE}
+  ABOUT_RES_NAME = 'SVGICONSPLASH24BMP';
+  SPLASH_RES_NAME = 'SVGICONSPLASH24BMP';
+  {$ENDIF}
+  RsAboutTitle = 'Ethea SvgIconImageList';
+  RsAboutDescription = 'Ethea - SvgIconImageList Components - https://ethea.it/docs/svgiconimagelist/' + sLineBreak +
+    'Three engines to render SVG Icons and four components to simplify use of SVG images (resize, fixedcolor, grayscale...)';
+  RsAboutLicense = 'Apache 2.0 (Free/Opensource)';
+var
+  AboutBoxServices: IOTAAboutBoxServices = nil;
+  AboutBoxIndex: Integer;
+
+{$IFDEF D11+}
+function CreateBitmapFromPngRes(const AResName: string): Vcl.Graphics.TBitmap;
+var
+  LPngImage: TPngImage;
+  LResStream: TResourceStream;
+begin
+  LPngImage := nil;
+  try
+    Result := Vcl.Graphics.TBitmap.Create;
+    LPngImage := TPngImage.Create;
+    LResStream := TResourceStream.Create(HInstance, AResName, RT_RCDATA);
+    try
+      LPngImage.LoadFromStream(LResStream);
+      Result.Assign(LPngImage);
+    finally
+      LResStream.Free;
+    end;
+  finally
+    LPngImage.Free;
+  end;
+end;
+
+procedure RegisterAboutBox;
+var
+  LBitmap: Vcl.Graphics.TBitmap;
+begin
+  Supports(BorlandIDEServices,IOTAAboutBoxServices, AboutBoxServices);
+  LBitmap := CreateBitmapFromPngRes(ABOUT_RES_NAME);
+  try
+    AboutBoxIndex := AboutBoxServices.AddPluginInfo(
+      RsAboutTitle+' '+SVGIconImageListVersion,
+      RsAboutDescription, LBitmap.Handle, False, RsAboutLicense);
+  finally
+    LBitmap.Free;
+  end;
+end;
+
+procedure UnregisterAboutBox;
+begin
+  if (AboutBoxIndex <> 0) and Assigned(AboutBoxServices) then
+  begin
+    AboutBoxServices.RemovePluginInfo(AboutBoxIndex);
+    AboutBoxIndex := 0;
+    AboutBoxServices := nil;
+  end;
+end;
+
+procedure RegisterWithSplashScreen;
+var
+  LBitmap: Vcl.Graphics.TBitmap;
+begin
+  LBitmap := CreateBitmapFromPngRes(SPLASH_RES_NAME);
+  try
+    SplashScreenServices.AddPluginBitmap(
+      RsAboutTitle+' '+SVGIconImageListVersion,
+      LBitmap.Handle, False, RsAboutLicense, '');
+  finally
+    LBitmap.Free;
+  end;
+end;
+{$ELSE}
+procedure RegisterAboutBox;
+var
+  ProductImage: HBITMAP;
+begin
+  Supports(BorlandIDEServices,IOTAAboutBoxServices, AboutBoxServices);
+  ProductImage := LoadBitmap(FindResourceHInstance(HInstance), ABOUT_RES_NAME);
+  AboutBoxIndex := AboutBoxServices.AddPluginInfo(RsAboutTitle+' '+SVGIconImageListVersion, 
+    RsAboutDescription, ProductImage, False, RsAboutLicense);
+end;
+
+procedure UnregisterAboutBox;
+begin
+  if (AboutBoxIndex <> 0) and Assigned(AboutBoxServices) then
+  begin
+    AboutBoxServices.RemovePluginInfo(AboutBoxIndex);
+    AboutBoxIndex := 0;
+    AboutBoxServices := nil;
+  end;
+end;
+
+procedure RegisterWithSplashScreen;
+var
+  ProductImage: HBITMAP;
+begin
+  ProductImage := LoadBitmap(FindResourceHInstance(HInstance), SPLASH_RES_NAME);
+  SplashScreenServices.AddPluginBitmap(RsAboutTitle, ProductImage,
+    False, RsAboutLicense);
+end;
+{$ENDIF}
 
 { TSVGIconImageListCompEditor }
 
@@ -144,9 +255,7 @@ begin
   end
   else if Index = 1 then
   begin
-    ShellExecute(0, 'open',
-      PChar('https://github.com/EtheaDev/SVGIconImageList/wiki/Overview-(VCL)'), nil, nil,
-      SW_SHOWNORMAL)
+    ShellExecute(0, 'open',PChar(Component_Docs_URL), nil, nil, SW_SHOWNORMAL)
   end;
 end;
 
@@ -243,6 +352,8 @@ end;
 
 procedure Register;
 begin
+  RegisterWithSplashScreen;
+
   RegisterComponents('Ethea',
     [TSVGIconImage,
      TSVGIconImageList,
@@ -275,9 +386,7 @@ begin
   end
   else if Index = 1 then
   begin
-    ShellExecute(0, 'open',
-      PChar('https://github.com/EtheaDev/SVGIconImageList/wiki/Overview-(VCL)'), nil, nil,
-      SW_SHOWNORMAL)
+    ShellExecute(0, 'open',PChar(Component_Docs_URL), nil, nil, SW_SHOWNORMAL)
   end;
 
 end;
@@ -309,9 +418,7 @@ begin
   end
   else if Index = 1 then
   begin
-    ShellExecute(0, 'open',
-      PChar('https://github.com/EtheaDev/SVGIconImageList/wiki/Overview-(VCL)'), nil, nil,
-      SW_SHOWNORMAL)
+    ShellExecute(0, 'open',PChar(Component_Docs_URL), nil, nil, SW_SHOWNORMAL)
   end;
 end;
 
@@ -349,9 +456,7 @@ begin
   end
   else if Index = 1 then
   begin
-    ShellExecute(0, 'open',
-      PChar('https://github.com/EtheaDev/SVGIconImageList/wiki/Overview-(VCL)'), nil, nil,
-      SW_SHOWNORMAL)
+    ShellExecute(0, 'open',PChar(Component_Docs_URL), nil, nil, SW_SHOWNORMAL)
   end;
 end;
 
@@ -435,5 +540,11 @@ begin
   if Assigned(ImgList) then
     Inc(AWidth, ImgList.Width);
 end;
+
+initialization
+  RegisterAboutBox;
+
+finalization
+  UnRegisterAboutBox;
 
 end.

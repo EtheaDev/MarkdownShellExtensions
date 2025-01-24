@@ -333,9 +333,6 @@ object frmMain: TfrmMain
     BevelOuter = bvNone
     ParentBackground = False
     TabOrder = 1
-    DesignSize = (
-      1003
-      38)
     object lblTitle: TLabel
       AlignWithMargins = True
       Left = 40
@@ -346,15 +343,6 @@ object frmMain: TfrmMain
       Caption = 'MarkDown Text Editor'
       Layout = tlCenter
       ExplicitHeight = 15
-    end
-    object ProcessorDialectLabel: TLabel
-      Left = 518
-      Top = 10
-      Width = 83
-      Height = 15
-      Alignment = taRightJustify
-      Anchors = [akTop, akRight]
-      Caption = 'Transformation:'
     end
     object SettingsToolBar: TStyledToolbar
       AlignWithMargins = True
@@ -422,20 +410,6 @@ object frmMain: TfrmMain
         Top = 0
         Action = actMenu
       end
-    end
-    object ProcessorDialectComboBox: TComboBox
-      Left = 604
-      Top = 7
-      Width = 170
-      Height = 23
-      Style = csDropDownList
-      Anchors = [akTop, akRight]
-      TabOrder = 2
-      OnSelect = ProcessorDialectComboBoxSelect
-      Items.Strings = (
-        'DaringFireball'
-        'CommonMark'
-        'TxtMark')
     end
   end
   object OpenDialog: TOpenDialog
@@ -1209,7 +1183,6 @@ object frmMain: TfrmMain
   end
   object LoadTimer: TTimer
     Enabled = False
-    Interval = 2000
     OnTimer = LoadTimerTimer
     Left = 272
     Top = 352

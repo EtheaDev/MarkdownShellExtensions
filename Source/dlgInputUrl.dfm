@@ -68,14 +68,13 @@ object InputUrlDialog: TInputUrlDialog
       AlignWithMargins = True
       Left = 10
       Top = 10
-      Width = 300
+      Width = 81
       Height = 15
       Margins.Left = 10
       Margins.Top = 10
       Margins.Right = 10
       Align = alTop
       Caption = 'Alternative Text'
-      ExplicitWidth = 81
     end
     object edText: TEdit
       AlignWithMargins = True

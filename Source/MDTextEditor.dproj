@@ -115,6 +115,8 @@
         <DCC_DebugInformation>2</DCC_DebugInformation>
         <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
         <DCC_RangeChecking>true</DCC_RangeChecking>
+        <VerInfo_Release>3</VerInfo_Release>
+        <VerInfo_Keys>CompanyName=Ethea S.r.l.;FileDescription=Markdown files Editor;FileVersion=2.3.3.0;InternalName=;LegalCopyright=Copyright © 2021-2025 - Ethea S.r.l.;LegalTrademarks=;OriginalFilename=;ProductName=Markdown files Editor;ProductVersion=2.3;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <DCC_MapFile>3</DCC_MapFile>

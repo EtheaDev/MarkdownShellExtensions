@@ -302,24 +302,24 @@ end;
 function TdmResources.getStreamData(const AFileName : String;
   const AMaxWidth: Integer; const ABackgroundColor: TColor): TStream;
 var
-  sl        : TStringList;
+  LFileStream: TStringStream;
   bFail     : Boolean;
   bTryAgain : Boolean;
   LIdHTTP   : TIdHTTP;
   LIdSSLIOHandler: TIdSSLIOHandlerSocketOpenSSL;
-  LFileName: string;
+  LFileName: TFileName;
+  LFileContent: string;
 Begin
   Result := nil;
   FStream.Clear;
   LIdHTTP := nil;
-  sl := nil;
+  LFileStream := nil;
   LFileName := AFileName;
   LIdSSLIOHandler := nil;
   try
     LIdHTTP := TIdHTTP.Create;
     LIdHTTP.AllowCookies := True;
     LIdHTTP.HandleRedirects := True;
-    sl := TStringList.Create;
     LIdSSLIOHandler := TIdSSLIOHandlerSocketOpenSSL.Create(LIdHTTP);
     LIdSSLIOHandler.DefaultPort := 0;
     LIdSSLIOHandler.SSLOptions.SSLVersions := [sslvTLSv1_2];
@@ -336,28 +336,38 @@ Begin
       else
         raise;
     end;
-    // Need To check For Failed Retrieval...
-    FStream.Position:= 0;
-    sl.LoadFromStream(FStream);
-    bTryAgain := False;
-    bFail     := False;
-    if Length(sl.Text) = 0 then
-      bFail:= True;
-    if FStream.Size = 0 then
-      bFail:= True;
 
-    if FStream.Size < 1024 then
-    Begin
-      if Pos('Not Found', sl.Text) > 0 then bFail:= True;
-      if (Pos(LowerCase('<title>301 Moved Permanently</title>'), LowerCase(sl.Text)) > 0) or
-         (Pos(LowerCase('<html><body>'), LowerCase(sl.Text)) > 0) then
+    if FStream.Size = 0 then
+    begin
+      bFail:= True;
+      bTryAgain := False;
+    end
+    else
+    begin
+      // Need To check For Failed Retrieval...
+      FStream.Position:= 0;
+      LFileStream := TStringStream.Create('', TEncoding.UTF8);
+      LFileStream.LoadFromStream(FStream);
+      LFileContent := LFileStream.DataString;
+      // Save string to local File
+      LFileName := ChangeFileExt(TPath.GetTempFileName,'.svg');
+      LFileStream.SaveToFile(LFileName);
+      bTryAgain := False;
+      bFail     := False;
+
+      if FStream.Size < 1024 then
       Begin
-        if Pos(LowerCase('<a href="'), LowerCase(sl.Text)) > 0 then
+        if Pos('Not Found', LFileContent) > 0 then bFail:= True;
+        if (Pos(LowerCase('<title>301 Moved Permanently</title>'), LowerCase(LFileContent)) > 0) or
+           (Pos(LowerCase('<html><body>'), LowerCase(LFileContent)) > 0) then
         Begin
-          LFileName := Copy(sl.Text, Pos('<a href="', sl.Text) + 9, Length(sl.Text));
-          LFileName := Copy(LFileName, 1, Pos('"', LFileName) -1);
-          bTryAgain:= True;
-        End;
+          if Pos(LowerCase('<a href="'), LowerCase(LFileContent)) > 0 then
+          Begin
+            LFileName := Copy(LFileContent, Pos('<a href="', LFileContent) + 9, Length(LFileContent));
+            LFileName := Copy(LFileName, 1, Pos('"', LFileName) -1);
+            bTryAgain:= True;
+          End;
+        end;
       end;
     end;
 
@@ -373,7 +383,7 @@ Begin
   finally
     LIdSSLIOHandler.Free;
     LIdHttp.Free;
-    sl.Free;
+    LFileStream.Free;
   end;
 end;
 

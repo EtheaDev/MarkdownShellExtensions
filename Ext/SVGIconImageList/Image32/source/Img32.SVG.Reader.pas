@@ -179,6 +179,7 @@ type
     property  BackgndImage   : TImage32 read fBackgndImage;
     property  TempImage      : TImage32 read GetTempImage;
   public
+    procedure CalcViewBoxOfRootElement;
     constructor Create;
     destructor Destroy; override;
     procedure Clear;
@@ -5545,6 +5546,12 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+procedure TSvgReader.CalcViewBoxOfRootElement;
+begin
+  fRootElement.viewboxWH.Width := fRootElement.elRectWH.width.GetValue(defaultSvgWidth, 0);
+  fRootElement.viewboxWH.height := fRootElement.elRectWH.height.GetValue(defaultSvgHeight, 0);
+end;
+
 procedure TSvgReader.DrawImage(img: TImage32; scaleToImage: Boolean);
 var
   scale, scaleH: double;
@@ -5556,8 +5563,7 @@ begin
   begin
     if viewboxWH.IsEmpty then
     begin
-      viewboxWH.Width := elRectWH.width.GetValue(defaultSvgWidth, 0);
-      viewboxWH.height := elRectWH.height.GetValue(defaultSvgHeight, 0);
+      CalcViewBoxOfRootElement;
       if viewboxWH.IsEmpty then Exit;  // this should never happen
     end;
 

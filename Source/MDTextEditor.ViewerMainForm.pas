@@ -2448,7 +2448,7 @@ begin
     UpdateMDViewer(True);
     Handled := True;
   end
-  else if not PathIsURL(PChar(LFileName)) then
+  else if not PathIsURL(PChar(ASource)) then
   begin
     //Try to create Local File
     if StyledTaskMessageDlg(CREATE_NEW_FILE,

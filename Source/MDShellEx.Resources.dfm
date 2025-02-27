@@ -1955,6 +1955,39 @@ object dmResources: TdmResources
           '9 399.69h324.12c7.927 0 14.309 6.3816 14.309 14.309s-6.3816 14.3' +
           '09-14.309 14.309h-324.12c-7.927 0-14.309-6.3816-14.309-14.309s6.' +
           '3816-14.309 14.309-14.309z" fill="#2196f3"/>'#10'</svg>'#10
+      end
+      item
+        IconName = 'layout_both'
+        SVGText = 
+          '<svg version="1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0' +
+          ' 48 48" enable-background="new 0 0 48 48">'#13#10'    <rect x="4" y="7' +
+          '" fill="#BBDEFB" width="40" height="34"/>'#13#10'    <rect x="9" y="12' +
+          '" fill="#3F51B5" width="30" height="5"/>'#13#10'    <g>'#13#10'        <rect' +
+          ' x="9" y="21" width="13" height="16" fill="#2196F3"/>'#13#10'        <' +
+          'rect x="26" y="21" width="13" height="16" fill="#82AE82"/>'#13#10'    ' +
+          '</g>'#13#10'</svg>'#13#10
+      end
+      item
+        IconName = 'layout_left'
+        SVGText = 
+          '<svg version="1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0' +
+          ' 48 48" enable-background="new 0 0 48 48">'#13#10'    <rect x="4" y="7' +
+          '" fill="#BBDEFB" width="40" height="34"/>'#13#10'    <rect x="9" y="12' +
+          '" fill="#3F51B5" width="30" height="5"/>'#13#10'    <g>'#13#10'        <rect' +
+          ' x="9" y="21" width="26" height="16" fill="#2196F3"/>'#13#10'        <' +
+          'rect x="37" y="21" width="2" height="16" fill="#82AE82"/>'#13#10'    <' +
+          '/g>'#13#10'</svg>'#13#10
+      end
+      item
+        IconName = 'layout_right'
+        SVGText = 
+          '<svg version="1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0' +
+          ' 48 48" enable-background="new 0 0 48 48">'#13#10'    <rect x="4" y="7' +
+          '" fill="#BBDEFB" width="40" height="34"/>'#13#10'    <rect x="9" y="12' +
+          '" fill="#3F51B5" width="30" height="5"/>'#13#10'    <g>'#13#10'        <rect' +
+          ' x="9" y="21" width="2" height="16" fill="#2196F3"/>'#13#10'        <r' +
+          'ect x="13" y="21" width="26" height="16" fill="#82AE82"/>'#13#10'    <' +
+          '/g>'#13#10'</svg>'#13#10
       end>
     Left = 248
     Top = 152

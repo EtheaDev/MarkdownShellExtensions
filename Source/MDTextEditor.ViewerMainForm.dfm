@@ -218,6 +218,7 @@ object frmMain: TfrmMain
     OnClosing = SVClosing
     OnOpened = SVOpened
     OnOpening = SVOpening
+    OnResize = SVResize
     object catMenuItems: TStyledCategoryButtons
       Left = 0
       Top = 0
@@ -229,7 +230,7 @@ object frmMain: TfrmMain
       ButtonFlow = cbfVertical
       ButtonHeight = 36
       ButtonWidth = 36
-      ButtonOptions = [boFullSize, boShowCaptions, boBoldCaptions, boCaptionOnlyBorder]
+      ButtonOptions = [boFullSize, boBoldCaptions, boCaptionOnlyBorder]
       Categories = <
         item
           Caption = 'File'
@@ -335,20 +336,19 @@ object frmMain: TfrmMain
     TabOrder = 1
     object lblTitle: TLabel
       AlignWithMargins = True
-      Left = 40
+      Left = 41
       Top = 3
       Width = 116
-      Height = 32
+      Height = 15
       Align = alLeft
       Caption = 'MarkDown Text Editor'
       Layout = tlCenter
-      ExplicitHeight = 15
     end
     object SettingsToolBar: TStyledToolbar
       AlignWithMargins = True
-      Left = 800
+      Left = 696
       Top = 3
-      Width = 200
+      Width = 304
       Height = 32
       Align = alRight
       ButtonHeight = 32
@@ -356,38 +356,64 @@ object frmMain: TfrmMain
       Images = VirtualImageList
       Indent = 3
       TabOrder = 0
-      object ColorSettingsToolButton: TStyledToolButton
+      object btLayoutBoth: TStyledToolButton
         Left = 0
+        Top = 0
+        Action = acLayoutBoth
+        Grouped = True
+        Style = tbsCheck
+      end
+      object btLayoutMarkDown: TStyledToolButton
+        Left = 32
+        Top = 0
+        Action = acLayoutMarkDown
+        Grouped = True
+        Style = tbsCheck
+      end
+      object btLayoutViewer: TStyledToolButton
+        Left = 64
+        Top = 0
+        Action = acLayoutViewer
+        Grouped = True
+        Style = tbsCheck
+      end
+      object SepLayoutButtons: TStyledToolButton
+        Left = 96
+        Top = 0
+        Style = tbsSeparator
+      end
+      object ColorSettingsToolButton: TStyledToolButton
+        Left = 102
         Top = 0
         Action = actnSettings
       end
       object EditOptionsToolButton: TStyledToolButton
-        Left = 32
+        Left = 134
         Top = 0
         Action = actnEditOptions
       end
       object PageSetupToolButton: TStyledToolButton
-        Left = 64
+        Left = 166
         Top = 0
         Action = actnPageSetup
       end
       object PrinterSetupToolButton: TStyledToolButton
-        Left = 96
+        Left = 198
         Top = 0
         Action = actnPrinterSetup
       end
       object SepToolButton: TStyledToolButton
-        Left = 128
+        Left = 230
         Top = 0
         Style = tbsSeparator
       end
       object AboutToolButton: TStyledToolButton
-        Left = 134
+        Left = 236
         Top = 0
         Action = acAbout
       end
       object QuitToolButton: TStyledToolButton
-        Left = 166
+        Left = 268
         Top = 0
         Action = acQuit
         ImageName = 'Exit'
@@ -397,7 +423,7 @@ object frmMain: TfrmMain
       AlignWithMargins = True
       Left = 3
       Top = 3
-      Width = 31
+      Width = 32
       Height = 32
       Align = alLeft
       ButtonHeight = 32
@@ -713,6 +739,40 @@ object frmMain: TfrmMain
       ShortCut = 116
       OnExecute = acRefreshExecute
       OnUpdate = acHTMLViewerUpdate
+    end
+    object acLayoutBoth: TAction
+      Category = 'Layout'
+      AutoCheck = True
+      Caption = 'Editor and Viewer'
+      Checked = True
+      GroupIndex = 1
+      Hint = 'Show MarkDown Editor and HTML Viewer'
+      ImageIndex = 59
+      ImageName = 'layout_both'
+      OnExecute = acLayoutExecute
+      OnUpdate = acLayoutUpdate
+    end
+    object acLayoutMarkDown: TAction
+      Category = 'Layout'
+      AutoCheck = True
+      Caption = 'Only Editor'
+      GroupIndex = 1
+      Hint = 'Show only MarkDown Editor'
+      ImageIndex = 60
+      ImageName = 'layout_left'
+      OnExecute = acLayoutExecute
+      OnUpdate = acLayoutUpdate
+    end
+    object acLayoutViewer: TAction
+      Category = 'Layout'
+      AutoCheck = True
+      Caption = 'Only Viewer'
+      GroupIndex = 1
+      Hint = 'Show only HTML Viewer'
+      ImageIndex = 61
+      ImageName = 'layout_right'
+      OnExecute = acLayoutExecute
+      OnUpdate = acLayoutUpdate
     end
   end
   object SaveDialog: TSaveDialog
@@ -1107,6 +1167,21 @@ object frmMain: TfrmMain
         CollectionIndex = 79
         CollectionName = 'refresh'
         Name = 'refresh'
+      end
+      item
+        CollectionIndex = 84
+        CollectionName = 'layout_both'
+        Name = 'layout_both'
+      end
+      item
+        CollectionIndex = 85
+        CollectionName = 'layout_left'
+        Name = 'layout_left'
+      end
+      item
+        CollectionIndex = 86
+        CollectionName = 'layout_right'
+        Name = 'layout_right'
       end>
     ImageCollection = dmResources.SVGIconImageCollection
     Width = 24

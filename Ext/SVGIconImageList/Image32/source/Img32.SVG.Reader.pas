@@ -3,15 +3,15 @@ unit Img32.SVG.Reader;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  4.8                                                             *
-* Date      :  12 January 2025                                                 *
-* Website   :  http://www.angusj.com                                           *
+* Date      :  2 Febuary 2025                                                  *
+* Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2019-2025                                         *
 *                                                                              *
 * Purpose   :  Read SVG 2.0 files                                              *
 *                                                                              *
 * License   :  Use, modification & distribution is subject to                  *
 *              Boost Software License Ver 1                                    *
-*              http://www.boost.org/LICENSE_1_0.txt                            *
+*              https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
 
 interface
@@ -369,7 +369,7 @@ type
     angle       : TArrayOfDouble;
     currentPt   : TPointD;
     currSpanEl  : TTSpanElement; //the current 'real' <tspan>
-    lastChrSpc  : Boolean;
+    lastChrWasSpc  : Boolean;
     procedure Draw(img: TImage32; drawDat: TDrawData); override;
   public
     constructor Create(parent: TBaseElement; svgEl: TSvgXmlEl); override;
@@ -1323,7 +1323,7 @@ begin
       clipRec := maskRec;
     end;
 
-    // Translate the maskRec, the matix and the clipRec to minimize
+    // Translate the maskRec, the matrix and the clipRec to minimize
     // the size of the mask image.
     dstClipRec := clipRec; // save for blending tmpImg to image
     offsetX := -clipRec.Left;
@@ -3411,7 +3411,7 @@ begin
   else
     currentPt.Y := 0;
 
-  lastChrSpc := false;
+  lastChrWasSpc := false;
   textDx := 0;
   currSpanEl := nil;
 
@@ -3488,12 +3488,18 @@ begin
   fontScale := fontSize / fSvgReader.fFontCache.FontHeight;
 
   if elRectWH.left.IsValid then
+  begin
     textEl.currentPt.X := elRectWH.left.rawVal;
+    textEl.lastChrWasSpc := false;
+  end;
   if elRectWH.top.IsValid then
     textEl.currentPt.Y := elRectWH.top.rawVal;
 
   if offset.X.IsValid then
+  begin
     textEl.currentPt.X := textEl.currentPt.X + offset.X.GetValue(0, 0);
+    //textEl.lastChrWasSpc := false;
+  end;
   if offset.Y.IsValid then
     textEl.currentPt.Y := textEl.currentPt.Y + offset.Y.GetValue(0, 0);
 
@@ -3524,16 +3530,16 @@ begin
 
     s := DecodeUtf8ToUnicode(HtmlDecode(fXmlEl.text));
     // don't allow a dup. spaces or a space at the beginning of a text
-    s := FixSpaces(s, textEl.lastChrSpc or
+    s := FixSpaces(s, textEl.lastChrWasSpc or
       ((fParent = textEl) and (self = textEl.Child[0])));
 
     if IsBlankText(s) then
     begin
       drawPathsC := nil;
       // don't allow duplicate spaces or a space at the beginning of text
-      if textEl.lastChrSpc or (self = textEl.Child[0]) then Exit;
+      if textEl.lastChrWasSpc or (self = textEl.Child[0]) then Exit;
       tmpX := fSvgReader.fFontCache.GetSpaceWidth;
-      textEl.lastChrSpc := true;
+      textEl.lastChrWasSpc := true;
     end
     else if Assigned(angles) then
     begin
@@ -3550,7 +3556,7 @@ begin
         for i := j +1 to len -1 do angles[i] := angles[j];
       end;
 
-      textEl.lastChrSpc := (codepoints[len -1] = 32);
+      textEl.lastChrWasSpc := (codepoints[len -1] = 32);
       // now get each rotated glyph and append to drawPathsC ...
       for i := 0 to len -1 do
       begin
@@ -3568,7 +3574,7 @@ begin
     end else
     begin
       drawPathsC := fSvgReader.fFontCache.GetTextOutline(0, 0, s, tmpX);
-      textEl.lastChrSpc := s[length(s)] = space;
+      textEl.lastChrWasSpc := s[length(s)] = space;
     end;
 
     chunkDx := tmpX * fontScale;
@@ -5564,7 +5570,9 @@ begin
     if viewboxWH.IsEmpty then
     begin
       CalcViewBoxOfRootElement;
-      if viewboxWH.IsEmpty then Exit;  // this should never happen
+      if not elRectWH.IsValid then Exit;  // should never happen
+      viewboxWH.Width := elRectWH.width.GetValue(defaultSvgWidth, 0);
+      viewboxWH.height := elRectWH.height.GetValue(defaultSvgHeight, 0);
     end;
 
     fBackgndImage := img;

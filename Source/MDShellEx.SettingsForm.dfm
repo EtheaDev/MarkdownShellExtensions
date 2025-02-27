@@ -422,7 +422,7 @@ object SVGSettingsForm: TSVGSettingsForm
             Left = 9
             Top = 6
             Width = 174
-            Height = 25
+            Height = 29
             Anchors = [akLeft, akTop, akRight]
             Caption = 'Reset to default colors'
             TabOrder = 0
@@ -527,30 +527,66 @@ object SVGSettingsForm: TSVGSettingsForm
           Left = 0
           Top = 65
           Width = 453
-          Height = 336
+          Height = 289
           Align = alClient
           Font.Charset = DEFAULT_CHARSET
           Font.Color = clWindowText
           Font.Height = -13
           Font.Name = 'Courier New'
           Font.Style = []
+          Font.Quality = fqClearTypeNatural
           TabOrder = 1
           OnClick = SynEditClick
           OnKeyUp = SynEditKeyUp
           CodeFolding.GutterShapeSize = 11
-          CodeFolding.CollapsedLineColor = clGrayText
-          CodeFolding.FolderBarLinesColor = clGrayText
           CodeFolding.IndentGuidesColor = clGray
           CodeFolding.IndentGuides = True
-          CodeFolding.ShowCollapsedLine = False
-          CodeFolding.ShowHintMark = True
           UseCodeFolding = False
           Gutter.Font.Charset = DEFAULT_CHARSET
           Gutter.Font.Color = clWindowText
           Gutter.Font.Height = -11
-          Gutter.Font.Name = 'Terminal'
+          Gutter.Font.Name = 'Consolas'
           Gutter.Font.Style = []
+          Gutter.Font.Quality = fqClearTypeNatural
+          Gutter.Width = 0
+          Gutter.Bands = <>
+          ScrollbarAnnotations = <>
           FontSmoothing = fsmNone
+        end
+        object ActiveLineColorGroupBox: TGroupBox
+          Left = 0
+          Top = 354
+          Width = 453
+          Height = 47
+          Align = alBottom
+          Caption = 'Active Line Color of Editor'
+          TabOrder = 2
+          object DarkActiveLineColorColorBox: TColorBox
+            Left = 2
+            Top = 17
+            Width = 174
+            Height = 22
+            Hint = 'Active Line Color for Dark Theme'
+            Align = alLeft
+            NoneColorColor = clDefault
+            Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbIncludeNone, cbCustomColor, cbPrettyNames, cbCustomColors]
+            DropDownCount = 20
+            TabOrder = 0
+            OnSelect = ColorBoxSelect
+          end
+          object LightActiveLineColorColorBox: TColorBox
+            Left = 176
+            Top = 17
+            Width = 174
+            Height = 22
+            Hint = 'Active Line Color for Light Theme'
+            Align = alLeft
+            NoneColorColor = clDefault
+            Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbIncludeNone, cbCustomColor, cbPrettyNames, cbCustomColors]
+            DropDownCount = 20
+            TabOrder = 1
+            OnSelect = ColorBoxSelect
+          end
         end
       end
     end

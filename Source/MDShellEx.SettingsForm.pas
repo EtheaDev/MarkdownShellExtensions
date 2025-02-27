@@ -117,6 +117,9 @@ type
     MenuRoundedCheckBox: TCheckBox;
     EditingOptionsGroupBox: TGroupBox;
     AutoRefreshCheckBox: TCheckBox;
+    ActiveLineColorGroupBox: TGroupBox;
+    DarkActiveLineColorColorBox: TColorBox;
+    LightActiveLineColorColorBox: TColorBox;
     procedure BoxElementsClick(Sender: TObject);
     procedure cbForegroundClick(Sender: TObject);
     procedure cbBackgroundClick(Sender: TObject);
@@ -335,6 +338,8 @@ begin
 {$ENDIF}
   SynEdit.Highlighter.Assign(dmResources.GetSynHighlighter(
     SelectedStyleIsDark, LBackGroundColor));
+  DarkActiveLineColorColorBox.Selected := default_darkactivelinecolor;
+  LightActiveLineColorColorBox.Selected := default_lightactivelinecolor;
 end;
 
 procedure TSVGSettingsForm.RefreshMap;
@@ -598,6 +603,8 @@ begin
   MarginRightEdit.ValueFloat := ASettings.PDFPageSettings.MarginRight;
   MarginTopEdit.ValueFloat := ASettings.PDFPageSettings.MarginTop;
   MarginBottomEdit.ValueFloat := ASettings.PDFPageSettings.MarginBottom;
+  DarkActiveLineColorColorBox.Selected := TEditorSettings(ASettings).DarkActiveLineColor;
+  LightActiveLineColorColorBox.Selected := TEditorSettings(ASettings).LightActiveLineColor;
 
   PopulateAvailThemes;
 end;
@@ -641,6 +648,8 @@ begin
   begin
     TEditorSettings(ASettings).DownloadFromWEB := DownloadFromWEBCheckBox.Checked;
     TEditorSettings(ASettings).AutoRefreshWhenEditing := AutoRefreshCheckBox.Checked;
+    TEditorSettings(ASettings).DarkActiveLineColor := DarkActiveLineColorColorBox.Selected;
+    TEditorSettings(ASettings).LightActiveLineColor := LightActiveLineColorColorBox.Selected;
   end;
 
   TEditorSettings(ASettings).ToolbarDrawRounded := ToolbarRoundedCheckBox.Checked;
@@ -730,6 +739,8 @@ begin
     SelectThemeRadioGroup.OnClick := SelectThemeRadioGroupClick;
     SelectThemeRadioGroupClick(SelectThemeRadioGroup);
   end;
+  DarkActiveLineColorColorBox.Visible := not IsLight;
+  LightActiveLineColorColorBox.Visible := IsLight;
 end;
 
 procedure TSVGSettingsForm.ExitFromSettings(Sender: TObject);

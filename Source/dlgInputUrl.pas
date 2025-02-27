@@ -243,9 +243,7 @@ end;
 
 function TInputUrlDialog.IsUrl(const AText: string): Boolean;
 begin
-  Result := AnsiStartsText('http://', AText) or
-            AnsiStartsText('https://', AText) or
-            AnsiStartsText('www.', AText);
+  Result := PathIsURL(PChar(AText));
 end;
 
 procedure TInputUrlDialog.acPasteExecute(Sender: TObject);

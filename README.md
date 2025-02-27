@@ -1,6 +1,6 @@
 ﻿# Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 2.3.3 - 26 Jan 2025**
+**Latest Version 2.4.0 - 23 Feb 2025**
 
 **A collection of tools for markdown files, to edit and view content:**
 
@@ -60,12 +60,18 @@ or the command: Build.bat (defining location of your Delphi environment)
 To manually install the SVGShellExtensions.dll follow these steps:
 
 1. Close all the windows explorer instances which have the preview handler active or the preview handler was used (remember the dll remains in memory until the windows explorer was closed).
-  
+
 2. If you have already used the installer uninstall the components from system.
-     
+
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+
+23 Feb 2025: ver. 2.4.0
+- Added "Wordwrap option" for the editor (active by default)
+- Added "Layout Views"
+- Fixed Menu over Editor Toolbar and Captions when collapsed
+- Updated the latest Image32 library
 
 26 Jan 2025: ver. 2.3.3
 - Fixed loading remote svg files
@@ -232,7 +238,7 @@ Copyright © Muzio Valerio.
 
 **Image32 Library** - http://www.angusj.com/delphi/image32/Docs/_Body.htm
 
-Copyright ©2019-2023 Angus Johnson.
+Copyright ©2019-2025 Angus Johnson.
 
 **dzlib** - https://sourceforge.net/projects/dzlib/
 

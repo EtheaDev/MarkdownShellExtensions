@@ -3992,7 +3992,8 @@ end;
 procedure TCustomStyledGraphicButton.CMDialogChar(var Message: TCMDialogChar);
 begin
   with Message do
-    if IsAccel(CharCode, Caption) and Visible then
+    if IsAccel(CharCode, Caption) and Visible and Enabled and
+      (Parent <> nil) and Parent.Showing then
     begin
       Click;
       Result := 1;
@@ -4821,25 +4822,24 @@ end;
 procedure TCustomStyledGraphicButton.MouseDown(Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  FRender.MouseDown(Button, Shift, X, Y);
-  if Enabled then
-    inherited;
+  if Assigned(FRender) then
+    FRender.MouseDown(Button, Shift, X, Y);
+  inherited;
 end;
 
 procedure TCustomStyledGraphicButton.MouseMove(Shift: TShiftState; X, Y: Integer);
 begin
+  if Assigned(FRender) then
+    FRender.MouseMove(Shift, X, Y);
   inherited;
-  FRender.MouseMove(Shift, X, Y);
 end;
 
 procedure TCustomStyledGraphicButton.MouseUp(Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  if Enabled then
-  begin
+  if Assigned(FRender) then
     FRender.MouseUp(Button, Shift, X, Y);
-    inherited;
-  end;
+  inherited;
 end;
 
 procedure TCustomStyledGraphicButton.ControlClick(Sender: TObject);
@@ -6055,25 +6055,24 @@ end;
 procedure TCustomStyledButton.MouseDown(Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  FRender.MouseDown(Button, Shift, X, Y);
-  if Enabled then
-    inherited;
+  if Assigned(FRender) then
+    FRender.MouseDown(Button, Shift, X, Y);
+  inherited;
 end;
 
 procedure TCustomStyledButton.MouseMove(Shift: TShiftState; X, Y: Integer);
 begin
+  if Assigned(FRender) then
+    FRender.MouseMove(Shift, X, Y);
   inherited;
-  FRender.MouseMove(Shift, X, Y);
 end;
 
 procedure TCustomStyledButton.MouseUp(Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  if Enabled then
-  begin
+  if Assigned(FRender) then
     FRender.MouseUp(Button, Shift, X, Y);
-    inherited;
-  end;
+  inherited;
 end;
 
 procedure TCustomStyledButton.ControlClick(Sender: TObject);

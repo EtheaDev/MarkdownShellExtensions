@@ -2,12 +2,12 @@ unit Img32.Panels;
 
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
-* Version   :  4.7                                                             *
-* Date      :  16 January 2025                                                 *
-* Website   :  http:// $1ww.angusj.com                                           *
+* Version   :  4.8                                                             *
+* Date      :  2 Febuary 2025                                                  *
+* Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2019-2025                                         *
 * Purpose   :  Component that displays images on a TPanel descendant           *
-* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
+* License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
 
 interface
@@ -65,6 +65,7 @@ type
     fOnScrolling    : TNotifyEvent;
     fOnZooming      : TNotifyEvent;
     fOnMouseWheel   : TMouseWheelEvent;
+    fCursor         : TCursor;
 {$IFDEF GESTURES}
     fLastDistance: integer;
     fLastLocation: TPoint;
@@ -73,6 +74,7 @@ type
     fBkgChBrdColor1 : TColor32;
     fBkgChBrdColor2 : TColor32;
     fBkgChBrdSize : Integer;
+    procedure SetCursor(cursor: TCursor);
     procedure UpdateOffsetDelta(resetOrigin: Boolean);
     function  GetMinScrollBtnSize: integer;
     function  GetDstOffset: TPoint;
@@ -92,6 +94,8 @@ type
     procedure SetBkgChBrdColor1(value : TColor32);
     procedure SetBkgChBrdColor2(value : TColor32);
     procedure SetBkgChBrdSize(value : Integer);
+    function  GetTabStop: Boolean;
+    procedure SetTabStop(tabstop: Boolean);
 {$IFDEF GESTURES}
     procedure Gesture(Sender: TObject;
       const EventInfo: TGestureEventInfo; var Handled: Boolean);
@@ -163,6 +167,8 @@ type
     property OnMouseWheel: TMouseWheelEvent read FOnMouseWheel write FOnMouseWheel;
     property OnScrolling: TNotifyEvent read fOnScrolling write fOnScrolling;
     property OnZooming: TNotifyEvent read fOnZooming write fOnZooming;
+    property Cursor: TCursor read fCursor write SetCursor;
+    property TabStop: Boolean read GetTabStop write SetTabStop stored True;
   end;
 
   TImage32Panel = class(TBaseImgPanel)
@@ -375,8 +381,8 @@ begin
   BevelWidth := 1;
   BorderWidth := 12;
   BevelInner := bvLowered;
-  DoubleBuffered := true;
-  TabStop := true;
+  //DoubleBuffered := true;
+  inherited TabStop := true;
   {$IFDEF GESTURES}
   OnGesture := Gesture;
   Touch.InteractiveGestures := [igPressAndTap, igZoom, igPan];
@@ -388,6 +394,7 @@ begin
   fAutoCenter := true;
   fFocusedColor := RgbColor(clActiveCaption);
   fUnfocusedColor := clBtnFace;
+  fCursor := inherited Cursor;
   fScale := 1.0;
   fScaleMin := 0.05;
   fScaleMax := 20;
@@ -552,6 +559,18 @@ begin
   ParentBackground := false;
   ParentColor := false;
   inherited Color := acolor
+end;
+//------------------------------------------------------------------------------
+
+function TBaseImgPanel.GetTabStop: Boolean;
+begin
+  Result := inherited TabStop;
+end;
+//------------------------------------------------------------------------------
+
+procedure TBaseImgPanel.SetTabStop(tabstop: Boolean);
+begin
+  inherited TabStop := tabstop;
 end;
 //------------------------------------------------------------------------------
 
@@ -771,10 +790,11 @@ begin
       fScrollbarHorz.MouseOver := false;
       fScrollbarVert.MouseOver := false;
     end;
-    cursor := crDefault;
+    inherited cursor := fCursor;
     inherited;
     Exit;
   end;
+
   if not fMouseDown or
     not (fAllowScrnScroll or fAllowKeyScroll) then
   begin
@@ -786,19 +806,19 @@ begin
       begin
         if (Y < rec.Bottom) then
         begin
-          cursor := crSizeNS;
+          inherited cursor := crSizeNS;
           if not fScrollbarVert.MouseOver then Invalidate;
           fScrollbarVert.MouseOver := true;
         end else
-          cursor := crDefault;
+          inherited cursor := fCursor;
       end
       else if (Y >= rec.Bottom) and (fScrollbarHorz.btnSize > 0) then
       begin
-        Cursor := crSizeWE;
+        inherited cursor := crSizeWE;
         if not fScrollbarHorz.MouseOver then Invalidate;
         fScrollbarHorz.MouseOver := true;
       end else
-        cursor := crDefault;
+        inherited cursor := fCursor;
     end;
     Exit;
   end;
@@ -836,11 +856,10 @@ begin
       MouseDownPos := X;
     end;
   end else
-  begin
     Exit; // ie exit here if NOT scrolling
-  end;
   if assigned(fOnScrolling) then fOnScrolling(self);
   Invalidate;
+  inherited;
 end;
 //------------------------------------------------------------------------------
 
@@ -1145,6 +1164,14 @@ begin
 end;
 //------------------------------------------------------------------------------
 
+procedure TBaseImgPanel.SetCursor(cursor: TCursor);
+begin
+  if cursor = inherited Cursor then Exit;
+  inherited Cursor := cursor;
+  fCursor := cursor;
+end;
+//------------------------------------------------------------------------------
+
 function TBaseImgPanel.DoMouseHWheel(Shift: TShiftState;
   WheelDelta: Integer; MousePos: TPoint): Boolean;
 begin
@@ -1265,6 +1292,7 @@ begin
   fImage.SetSize(200,200);
   fAllowCopy := true;
   fAllowPaste := true;
+  DoubleBuffered := true;
 end;
 //------------------------------------------------------------------------------
 

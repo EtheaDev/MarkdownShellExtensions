@@ -72,6 +72,9 @@ uses
 
 const
   SET_FILE_NAME = 'HiglightSettings';
+  SV_COLLAPSED_WIDTH = 38;
+  SV_COLLAPSED_WIDTH_WITH_SCROLLBARS = 50;
+
 
 resourcestring
   PAGE_HEADER_FIRST_LINE_LEFT = '$TITLE$';
@@ -104,6 +107,7 @@ type
     FHTMLViewer: THTMLViewer;
     FEditorSettings: TEditorSettings;
     FChildForm: TMDIChildForm;
+    FViewerUpdated: Boolean;
     procedure ReadFromFile;
     procedure SaveToFile;
     function GetFileName: string;
@@ -261,6 +265,13 @@ type
     btHorizontalRule: TStyledToolButton;
     btSeparator4: TStyledToolButton;
     btHelp: TStyledToolButton;
+    btLayoutBoth: TStyledToolButton;
+    acLayoutBoth: TAction;
+    acLayoutMarkDown: TAction;
+    acLayoutViewer: TAction;
+    btLayoutMarkDown: TStyledToolButton;
+    btLayoutViewer: TStyledToolButton;
+    SepLayoutButtons: TStyledToolButton;
     procedure WMGetMinMaxInfo(var Message: TWMGetMinMaxInfo); message WM_GETMINMAXINFO;
     procedure acOpenFileExecute(Sender: TObject);
     procedure acSaveExecute(Sender: TObject);
@@ -361,6 +372,9 @@ type
     procedure acRefreshExecute(Sender: TObject);
     procedure AppDeactivate(Sender: TObject);
     procedure AppActivate(Sender: TObject);
+    procedure SVResize(Sender: TObject);
+    procedure acLayoutUpdate(Sender: TObject);
+    procedure acLayoutExecute(Sender: TObject);
   private
     FormTabsBar: TSpecialFormTabsBar;
     FEditingInProgress: Boolean;
@@ -392,10 +406,11 @@ type
     function GetMarkdownHelpFileName: TFileName;
     procedure CloseSplitViewMenu;
     procedure UpdateHighlighters;
+    procedure UpdateApplicationLayout(const ALayoutMode: TLayoutMode);
     procedure UpdateFromSettings(AEditor: TSynEdit);
     function DialogPosRect: TRect;
     procedure AdjustCompactWidth;
-    procedure AdjustViewerWidth(const ACenter: Boolean = False);
+    procedure AdjustViewerWidth;
     function OpenFile(const FileName: string;
       const ARaiseError: Boolean = True): Boolean;
     function AddEditingFile(const EditingFile: TEditingFile): Integer;
@@ -514,13 +529,14 @@ begin
   HtmlViewer.DefFontName := ASettings.HTMLFontName;
   LStream := TStringStream.Create(FMarkDownFile.HTML, TEncoding.UTF8);
   try
-    HtmlViewer.LoadFromStream(LStream);
+    //HtmlViewer.LoadFromStream(LStream); si "perde" i caratteri speciali unicode codepoint
+    HtmlViewer.Text := LStream.DataString;
     HtmlViewer.VScrollBarPosition := LOldPos;
     dmResources.StopLoadingImages(False);
-    HtmlViewer.Visible := True;
   finally
     LStream.Free;
   end;
+  FViewerUpdated := True;
 end;
 
 procedure TEditingFile.ReadFromFile;
@@ -811,8 +827,11 @@ end;
 
 procedure TfrmMain.FormResize(Sender: TObject);
 begin
-  AdjustCompactWidth;
-  AdjustViewerWidth;
+  if not (csDestroying in ComponentState) then
+  begin
+    AdjustCompactWidth;
+    AdjustViewerWidth;
+  end;
 end;
 
 function TfrmMain.GetMarkdownHelpFileName: TFileName;
@@ -894,6 +913,9 @@ begin
   LChildForm := TSplitter(Sender).Owner as TMDIChildForm;
   LEditingFile := TEditingFile(LChildForm.EditingFile);
   LEditingFile.ShowMarkDownAsHTML(FEditorSettings, True);
+  var LContainerWidth := ClientWidth - catMenuItems.Width;
+  FEditorSettings.ViewerPercentSize := Round(
+    CurrentEditFile.HTMLViewer.Width * 100 / LContainerWidth);
 end;
 
 procedure TfrmMain.SVClosed(Sender: TObject);
@@ -920,6 +942,12 @@ procedure TfrmMain.SVOpening(Sender: TObject);
 begin
   // When animating, change size of catMenuItems at the beginning of open
   catMenuItems.ButtonOptions := catMenuItems.ButtonOptions + [boShowCaptions];
+end;
+
+procedure TfrmMain.SVResize(Sender: TObject);
+begin
+  StyledToolbar.Margins.Left :=
+    Round(SV.Width - (SV_COLLAPSED_WIDTH * ScaleFactor) + (3 * ScaleFactor));
 end;
 
 procedure TfrmMain.DestroyWindowHandle;
@@ -1044,7 +1072,6 @@ var
   LFileName: string;
   LIndex: Integer;
   LCurrentFileName: string;
-  EditingFile: TEditingFile;
 begin
   LIndex := -1;
   for I := 0 to FEditorSettings.OpenedFileList.Count-1 do
@@ -1056,7 +1083,7 @@ begin
   end;
   if LIndex <> -1 then
   begin
-    EditingFile := TEditingFile(EditFileList.Items[LIndex]);
+    EditFileList.Items[LIndex];
     UpdateMDViewer(True);
   end;
 end;
@@ -1185,8 +1212,7 @@ var
 begin
   LAction := Sender as TAction;
   LAction.Enabled := (CurrentEditFile <> nil) and (CurrentEditFile.SynEditor <> nil) and
-    (CurrentEditFile.SynEditor.Focused) and
-    not (CurrentEditFile.SynEditor.SelectionMode = TSynSelectionMode.smColumn);
+    (CurrentEditFile.SynEditor.Focused);
 end;
 
 procedure TfrmMain.acReplaceUpdate(Sender: TObject);
@@ -1344,6 +1370,21 @@ begin
   InsertMDCommand('### ');
 end;
 
+procedure TfrmMain.acLayoutExecute(Sender: TObject);
+begin
+  if Sender = acLayoutBoth then
+    UpdateApplicationLayout(lmBoth)
+  else if Sender = acLayoutMarkDown then
+    UpdateApplicationLayout(lmMarkDown)
+  else if Sender = acLayoutViewer then
+    UpdateApplicationLayout(lmHTML);
+end;
+
+procedure TfrmMain.acLayoutUpdate(Sender: TObject);
+begin
+  (Sender as TAction).Enabled := CurrentEditFile <> nil;
+end;
+
 procedure TfrmMain.acLinkExecute(Sender: TObject);
 begin
   InputUrl('[', itLink);
@@ -1453,6 +1494,45 @@ begin
   acHelp.Visible := FileExists(LHelpFileName);
 end;
 
+procedure TfrmMain.UpdateApplicationLayout(const ALayoutMode: TLayoutMode);
+begin
+  FEditorSettings.LayoutMode := ALayoutMode;
+  if CurrentEditFile <> nil then
+  begin
+    case ALayoutMode of
+      lmBoth:
+      begin
+        CurrentEditFile.HTMLViewer.Align := alRight;
+        AdjustViewerWidth;
+        CurrentEditFile.HTMLViewer.Visible := True;
+        CurrentEditFile.Splitter.Visible := True;
+        CurrentEditFile.Splitter.Left := CurrentEditFile.HTMLViewer.left -1;
+        CurrentEditFile.SynEditor.Visible := True;
+        btLayoutBoth.Down := True;
+      end;
+      lmMarkDown:
+      begin
+        CurrentEditFile.HTMLViewer.Visible := False;
+        CurrentEditFile.Splitter.Visible := False;
+        CurrentEditFile.SynEditor.Visible := True;
+        btLayoutMarkDown.Down := True;
+      end;
+      lmHTML:
+      begin
+        CurrentEditFile.SynEditor.Visible := False;
+        CurrentEditFile.Splitter.Visible := False;
+        CurrentEditFile.HTMLViewer.Align := alClient;
+        CurrentEditFile.HTMLViewer.Visible := True;
+        CurrentEditFile.Splitter.Visible := False;
+        btLayoutViewer.Down := True;
+      end;
+    end;
+    if CurrentEditFile.HTMLViewer.Visible and not
+       CurrentEditFile.FViewerUpdated then
+      UpdateMDViewer(True);
+  end;
+end;
+
 procedure TfrmMain.UpdateChildFormImage(AChildForm: TMDIChildForm;
   AModified: Boolean; const AImageName: string);
 var
@@ -1474,7 +1554,8 @@ begin
     LoadTimer.Enabled := False;
     dmResources.StopLoadingImages(True);
     //UpdateMDViewer(False);
-    LoadTimer.Enabled := True;
+    if not FProcessingFiles then
+      LoadTimer.Enabled := True;
   end;
 end;
 
@@ -1506,7 +1587,6 @@ begin
 
     LFEViewer := THtmlViewer.Create(LChildForm);
     LFEViewer.ScrollBars := ssNone;
-    LFEViewer.Align := alRight;
     LFEViewer.Width := LChildForm.Width div 2;
     LFEViewer.Parent := LChildForm;
     LFEViewer.PopupMenu := PopHTMLViewer;
@@ -1539,17 +1619,16 @@ begin
 
     //Assign user preferences to the editor
     FEditorOptions.AssignTo(LEditor);
-    LEditor.MaxScrollWidth := 3000;
     EditingFile.SynEditor := LEditor;
     UpdateFromSettings(LEditor);
     UpdateHighlighter(LEditor);
 
-    LEditor.Visible := True;
-
     //Make the ChildForm the current page
     //and call "change" method passing EditingChild
     ChildFormActivate(LChildForm);
-    AdjustViewerWidth(True);
+
+    //Show Editor or Viewer or both
+    UpdateApplicationLayout(FEditorSettings.LayoutMode);
   Except
     LChildForm.Free;
     LEditor.Free;
@@ -1565,17 +1644,24 @@ begin
   if (CurrentEditor <> nil) and (CurrentEditFile <> nil) then
   begin
     LoadTimer.Enabled := False;
-    Screen.Cursor := crHourGlass;
-    try
-      UpdateChildFormImage(CurrentChildForm, CurrentEditor.Modified,
-        CurrentEditFile.ImageName);
+    if (CurrentEditFile.HTMLViewer.Visible) then
+    begin
+      Screen.Cursor := crHourGlass;
+      try
+        UpdateChildFormImage(CurrentChildForm, CurrentEditor.Modified,
+          CurrentEditFile.ImageName);
 
-      StatusBar.Panels[STATUSBAR_MESSAGE].Text := CurrentEditFile.FileName;
+        StatusBar.Panels[STATUSBAR_MESSAGE].Text := CurrentEditFile.FileName;
 
-      //Show HTML content of MarkDown
-      CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings, AReloadImages);
-    finally
-      Screen.Cursor := crDefault;
+        //Show HTML content of MarkDown
+        CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings, AReloadImages);
+      finally
+        Screen.Cursor := crDefault;
+      end;
+    end
+    else
+    begin
+      CurrentEditFile.FViewerUpdated := False;
     end;
   end;
 end;
@@ -1601,7 +1687,6 @@ begin
       CurrentEditFile.SynEditor.SetFocus;
   end;
   UpdateMDViewer(False);
-  AdjustViewerWidth;
 end;
 
 procedure TfrmMain.acSaveUpdate(Sender: TObject);
@@ -1840,7 +1925,7 @@ procedure TfrmMain.SetMDFontSize(const Value: Integer);
 begin
   if (CurrentEditor <> nil) and (Value >= MinfontSize) and (Value <= MaxfontSize) then
   begin
-    CurrentEditor.Font.Height := Round(Value * Self.ScaleFactor);
+    CurrentEditor.Font.Height := -Round(Value * Self.ScaleFactor);
     FEditorSettings.MDFontSize := Value;
   end;
   FMDFontSize := Value;
@@ -2000,6 +2085,7 @@ begin
   InitEditorOptions;
   UpdateEditorsOptions;
   UpdateHighlighter(AEditor);
+  UpdateApplicationLayout(FEditorSettings.LayoutMode);
 end;
 
 procedure TfrmMain.UpdateHighlighter(ASynEditor: TSynEdit);
@@ -2211,7 +2297,7 @@ begin
     OpenDialog.InitialDir := InitialDir;
     SaveDialog.InitialDir := InitialDir;
   end;
-  LoadTimer.Enabled := True;
+  //LoadTimer.Enabled := True;
 end;
 
 procedure TfrmMain.actMenuExecute(Sender: TObject);
@@ -2269,25 +2355,13 @@ begin
   FEditorSettings.HistoryFileList.Insert(0, AFileName);
 end;
 
-procedure TfrmMain.AdjustViewerWidth(const ACenter: Boolean = False);
+procedure TfrmMain.AdjustViewerWidth;
 begin
   if (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil) then
   begin
-    if ACenter then
-    begin
-      CurrentEditFile.HTMLViewer.Width :=
-        (Self.Width - catMenuItems.Width) div 2;
-    end
-    else
-    begin
-      var LViewerWidth := CurrentEditFile.HTMLViewer.Width;
-      var LMinWidth := Self.Width div 6;
-      var LMaxWidth := Self.Width - LMinWidth;
-      if LViewerWidth < LMinWidth then
-        CurrentEditFile.HTMLViewer.Width := LMinWidth
-      else if LViewerWidth > LMaxWidth then
-        CurrentEditFile.HTMLViewer.Width := LMaxWidth;
-    end;
+    var LContainerWidth := ClientWidth - catMenuItems.Width;
+    CurrentEditFile.HTMLViewer.Width :=
+      Round(LContainerWidth * FEditorSettings.ViewerPercentSize / 100);
   end;
 end;
 
@@ -2295,9 +2369,9 @@ procedure TfrmMain.AdjustCompactWidth;
 begin
   //Change size of compact view because Scrollbars appears
   if (Height / ScaleFactor) > 900 then
-    SV.CompactWidth := Round(44 * ScaleFactor)
+    SV.CompactWidth := Round(SV_COLLAPSED_WIDTH * ScaleFactor)
   else
-    SV.CompactWidth := Round(66 * ScaleFactor);
+    SV.CompactWidth := Round(SV_COLLAPSED_WIDTH_WITH_SCROLLBARS * ScaleFactor);
   if (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil) and (CurrentEditFile.HTMLViewer.Width > CurrentEditFile.ChildForm.Width) then
     CurrentEditFile.HTMLViewer.Width := width div 3;
 end;

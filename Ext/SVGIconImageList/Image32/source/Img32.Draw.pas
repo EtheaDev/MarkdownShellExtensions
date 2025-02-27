@@ -3,15 +3,15 @@ unit Img32.Draw;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  4.8                                                             *
-* Date      :  10 January 2025                                                 *
-* Website   :  http://www.angusj.com                                           *
+* Date      :  2 February 2025                                                 *
+* Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2019-2025                                         *
 *                                                                              *
 * Purpose   :  Polygon renderer for TImage32                                   *
 *                                                                              *
 * License   :  Use, modification & distribution is subject to                  *
 *              Boost Software License Ver 1                                    *
-*              http://www.boost.org/LICENSE_1_0.txt                            *
+*              https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
 
 interface
@@ -144,8 +144,15 @@ type
   end;
 
   TInverseRenderer = class(TCustomRenderer)
+  private
+    fBackImage      : TImage32;
+    fCurrBackY      : integer;
+    fCurrBkLinePtr  : Pointer;
   protected
+    function GetSrcPixel(x, y: integer): Pointer;
     procedure RenderProc(x1, x2, y: integer; alpha: PByte); override;
+  public
+    constructor Create(bkImg: TImage32 = nil); reintroduce;
   end;
 
   TImageRenderer = class(TCustomRenderer)
@@ -321,8 +328,18 @@ type
     joinStyle: TJoinStyle = jsAuto); overload;
   procedure DrawInvertedDashedLine(img: TImage32;
     const lines: TPathsD; dashPattern: TArrayOfDouble;
-    patternOffset: PDouble; lineWidth: double;
-    endStyle: TEndStyle; joinStyle: TJoinStyle = jsAuto); overload;
+    patternOffset: PDouble; lineWidth: double; endStyle: TEndStyle;
+    joinStyle: TJoinStyle = jsAuto); overload;
+  // bkgndImg - an alternative background image
+  // (useful when drawing on a layered image)
+  procedure DrawInvertedDashedLine(img, bkgndImg: TImage32;
+    const line: TPathD; dashPattern: TArrayOfDouble;
+    patternOffset: PDouble; lineWidth: double; endStyle: TEndStyle;
+    joinStyle: TJoinStyle = jsAuto); overload;
+  procedure DrawInvertedDashedLine(img, bkgndImg: TImage32;
+    const lines: TPathsD; dashPattern: TArrayOfDouble;
+    patternOffset: PDouble; lineWidth: double; endStyle: TEndStyle;
+    joinStyle: TJoinStyle = jsAuto); overload;
 
   procedure DrawPolygon(img: TImage32; const polygon: TPathD;
     fillRule: TFillRule; color: TColor32); overload;
@@ -353,6 +370,13 @@ type
   // /////////////////////////////////////////////////////////////////////////
   // MISCELLANEOUS FUNCTIONS
   // /////////////////////////////////////////////////////////////////////////
+
+  procedure EraseLine(img: TImage32; const line: TPathD; lineWidth: double;
+    endStyle: TEndStyle; joinStyle: TJoinStyle = jsAuto;
+    miterLimit: double = 2); overload;
+  procedure EraseLine(img: TImage32; const lines: TPathsD; lineWidth: double;
+    endStyle: TEndStyle; joinStyle: TJoinStyle = jsAuto;
+    miterLimit: double = 2); overload;
 
   procedure ErasePolygon(img: TImage32; const polygon: TPathD;
     fillRule: TFillRule); overload;
@@ -506,7 +530,7 @@ begin
 end;
 // ------------------------------------------------------------------------------
 
-// Here "const" is used for opimization reasons, to skip the
+// Here "const" is used for optimization reasons, to skip the
 // dyn-array reference counting. "const" for dyn-arrays doesn't
 // prevent one from changing the array's content.
 procedure ReverseColors(const colors: TArrayOfGradientColor);
@@ -1249,7 +1273,7 @@ var
   FillByteBuffer: procedure(byteBuffer: PByte; windingAccum: PDouble; count: nativeint);
 begin
   // See also https://nothings.org/gamedev/rasterize/
-  if not assigned(renderer) then Exit;
+  if not assigned(paths) or not assigned(renderer) then Exit;
   renderer.SetClipRect(clipRec);
   skipRenderer := renderer.SupportsRenderProcSkip;
 
@@ -1395,7 +1419,7 @@ begin
   fPixelSize := pixelSize;
 
   fCurrLinePtr := fImgBase;
-  fCurrY       := 0;
+  fCurrY       := -1;
   result       := true;
 end;
 // ------------------------------------------------------------------------------
@@ -1848,7 +1872,7 @@ procedure TCustomGradientRenderer.SetParameters(startColor, endColor: TColor32;
   gradFillStyle: TGradientFillStyle = gfsClamp);
 begin
   SetGradientFillStyle(gradFillStyle);
-  // reset gradient colors if perviously set
+  // reset gradient colors if previously set
   SetLength(fGradientColors, 2);
   fGradientColors[0].offset := 0;
   fGradientColors[0].color := startColor;
@@ -2239,23 +2263,74 @@ end;
 // TInverseRenderer
 // ------------------------------------------------------------------------------
 
+constructor TInverseRenderer.Create(bkImg: TImage32);
+begin
+  inherited Create;
+  fCurrBackY := -1;
+  // bkImg, when assigned, is the background master image
+  // and fImage is very likely a transparent (layered) image
+  fBackImage := bkImg;
+end;
+// ------------------------------------------------------------------------------
+
+function TInverseRenderer.GetSrcPixel(x, y: integer): Pointer;
+begin
+  if (y <> fCurrBackY) then
+  begin
+    fCurrBackY := y;
+    fCurrBkLinePtr := fBackImage.PixelBase;
+    inc(PByte(fCurrBkLinePtr), y * fImgWidth * fPixelSize);
+  end;
+  Result := fCurrBkLinePtr;
+  inc(PByte(Result), x * fPixelSize);
+end;
+// ------------------------------------------------------------------------------
+
+function IsMidColor(const color: TARGB): Boolean;
+{$IFDEF INLINE} inline; {$ENDIF}
+begin
+  // not too dark and not too light :))
+  Result := Abs(color.R + color.G + color.B - 383) < 64;
+end;
+// ------------------------------------------------------------------------------
+
 procedure TInverseRenderer.RenderProc(x1, x2, y: integer; alpha: PByte);
 var
   i: integer;
-  dst: PARGB;
+  src, dst: PARGB;
   c: TARGB;
 begin
   dst := PARGB(GetDstPixel(x1,y));
-  for i := x1 to x2 do
+  if Assigned(fBackImage) then
   begin
-    c.Color := not dst.Color;
-    c.A := MulTable[dst.A, Ord(alpha^)];
-    dst.Color := BlendToAlpha(dst.Color, c.Color);
-    inc(dst); inc(alpha);
+    src := PARGB(GetSrcPixel(x1,y));
+    for i := x1 to x2 do
+    begin
+      if src.Color = 0 then c.Color := clBlack32
+      else if IsMidColor(src^) then c.Color := clWhite32
+      else c.Color := not src.Color;
+      c.A := Ord(alpha^);
+      dst.Color := BlendToAlpha(dst.Color, c.Color);
+      inc(dst); inc(src); inc(alpha);
+    end;
+  end else
+  begin
+    for i := x1 to x2 do
+    begin
+      if dst.Color = 0 then c.Color := clBlack32
+      else if IsMidColor(dst^) then c.Color := clWhite32
+      else c.Color := not dst.Color;
+      c.A := Ord(alpha^);
+      dst.Color := BlendToAlpha(dst.Color, c.Color);
+      inc(dst); inc(alpha);
+    end;
   end;
 end;
 
 // ------------------------------------------------------------------------------
+// TBarycentricRenderer
+// ------------------------------------------------------------------------------
+
 
 procedure TBarycentricRenderer.SetParameters(const a, b, c: TPointD;
   c1, c2, c3: TColor32);
@@ -2615,7 +2690,7 @@ begin
 end;
 // ------------------------------------------------------------------------------
 
-procedure DrawInvertedDashedLine(img: TImage32;
+procedure DrawInvertedDashedLine(img, bkgndImg: TImage32;
   const line: TPathD; dashPattern: TArrayOfDouble;
   patternOffset: PDouble; lineWidth: double; endStyle: TEndStyle;
   joinStyle: TJoinStyle = jsAuto);
@@ -2624,7 +2699,14 @@ var
   lines: TPathsD;
   renderer: TInverseRenderer;
 begin
-  if not assigned(line) then exit;
+  // when using an alterate background image,
+  // make sure it's the same size as img ...
+  if Assigned(bkgndImg) and
+    (bkgndImg.Width <> img.Width) or
+    (bkgndImg.Height <> img.Height) then bkgndImg := nil;
+
+  if not assigned(line) or img.IsEmpty then exit;
+
   if (lineWidth < MinStrokeWidth) then lineWidth := MinStrokeWidth;
 
   for i := 0 to High(dashPattern) do
@@ -2633,7 +2715,7 @@ begin
   lines := GetDashedPath(line, endStyle = esPolygon, dashPattern, patternOffset);
   if Length(lines) = 0 then Exit;
   lines := RoughOutline(lines, lineWidth, joinStyle, endStyle);
-  renderer := TInverseRenderer.Create;
+  renderer := TInverseRenderer.Create(bkgndImg);
   try
     Rasterize(img, lines, img.bounds, frNonZero, renderer);
   finally
@@ -2642,16 +2724,40 @@ begin
 end;
 // ------------------------------------------------------------------------------
 
-procedure DrawInvertedDashedLine(img: TImage32;
+procedure DrawInvertedDashedLine(img, bkgndImg: TImage32;
   const lines: TPathsD; dashPattern: TArrayOfDouble;
-  patternOffset: PDouble; lineWidth: double;
-  endStyle: TEndStyle; joinStyle: TJoinStyle = jsAuto);
+  patternOffset: PDouble; lineWidth: double; endStyle: TEndStyle;
+  joinStyle: TJoinStyle = jsAuto);
 var
   i: integer;
 begin
   if not assigned(lines) then exit;
   for i := 0 to high(lines) do
-    DrawInvertedDashedLine(img, lines[i],
+    DrawInvertedDashedLine(img, bkgndImg, lines[i],
+      dashPattern, patternOffset, lineWidth, endStyle, joinStyle);
+end;
+// ------------------------------------------------------------------------------
+
+procedure DrawInvertedDashedLine(img: TImage32;
+  const line: TPathD; dashPattern: TArrayOfDouble;
+  patternOffset: PDouble; lineWidth: double; endStyle: TEndStyle;
+  joinStyle: TJoinStyle);
+begin
+  DrawInvertedDashedLine(img, nil, line,
+    dashPattern, patternOffset, lineWidth, endStyle, joinStyle);
+end;
+// ------------------------------------------------------------------------------
+
+procedure DrawInvertedDashedLine(img: TImage32;
+  const lines: TPathsD; dashPattern: TArrayOfDouble;
+  patternOffset: PDouble; lineWidth: double; endStyle: TEndStyle;
+  joinStyle: TJoinStyle);
+var
+  i: integer;
+begin
+  if not assigned(lines) then exit;
+  for i := 0 to high(lines) do
+    DrawInvertedDashedLine(img, nil, lines[i],
       dashPattern, patternOffset, lineWidth, endStyle, joinStyle);
 end;
 // ------------------------------------------------------------------------------
@@ -2779,6 +2885,33 @@ begin
     img.CopyBlend(tmpImg, tmpImg.Bounds, rec, BlendToAlphaLine);
   finally
     tmpImg.Free;
+  end;
+end;
+// ------------------------------------------------------------------------------
+
+procedure EraseLine(img: TImage32; const line: TPathD; lineWidth: double;
+  endStyle: TEndStyle; joinStyle: TJoinStyle = jsAuto; miterLimit: double = 2);
+var
+  lines: TPathsD;
+begin
+  if not assigned(line) then exit;
+  setLength(lines, 1);
+  lines[0] := line;
+  EraseLine(img, lines, lineWidth, endStyle, joinStyle, miterLimit);
+end;
+// ------------------------------------------------------------------------------
+
+procedure EraseLine(img: TImage32; const lines: TPathsD; lineWidth: double;
+  endStyle: TEndStyle; joinStyle: TJoinStyle = jsAuto; miterLimit: double = 2);
+var
+  er: TEraseRenderer;
+begin
+  if not assigned(lines) then exit;
+  er := TEraseRenderer.Create;
+  try
+    DrawLine(img, lines, lineWidth, er, endStyle, joinStyle, miterLimit);
+  finally
+    er.Free;
   end;
 end;
 // ------------------------------------------------------------------------------

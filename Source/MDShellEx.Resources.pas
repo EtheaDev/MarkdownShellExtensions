@@ -310,6 +310,7 @@ var
   LFileName: TFileName;
   LFileContent: string;
 Begin
+  //downloading Image from WEB
   Result := nil;
   FStream.Clear;
   LIdHTTP := nil;
@@ -346,7 +347,10 @@ Begin
     begin
       // Need To check For Failed Retrieval...
       FStream.Position:= 0;
-      LFileStream := TStringStream.Create('', TEncoding.UTF8);
+      if SameText(ExtractFileExt(LFileName),'svg') then
+        LFileStream := TStringStream.Create('', TEncoding.UTF8)
+      else
+        LFileStream := TStringStream.Create('', TEncoding.Ansi);
       LFileStream.LoadFromStream(FStream);
       LFileContent := LFileStream.DataString;
       // Save string to local File

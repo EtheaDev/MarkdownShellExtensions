@@ -3,11 +3,11 @@ unit Img32;
 (*******************************************************************************
 * Author    :  Angus Johnson                                                   *
 * Version   :  4.8                                                             *
-* Date      :  10 January 2025                                                 *
-* Website   :  http://www.angusj.com                                           *
+* Date      :  24 Febuary 2025                                                 *
+* Website   :  https://www.angusj.com                                          *
 * Copyright :  Angus Johnson 2019-2025                                         *
 * Purpose   :  The core module of the Image32 library                          *
-* License   :  http://www.boost.org/LICENSE_1_0.txt                            *
+* License   :  https://www.boost.org/LICENSE_1_0.txt                           *
 *******************************************************************************)
 
 interface
@@ -141,9 +141,9 @@ type
 
   //A INotifyRecipient receives change notifications though a property
   //interface from a single NotifySender (eg a Font property).
-  //A NotifySender can send change notificatons to multiple NotifyRecipients
+  //A NotifySender can send change notifications to multiple NotifyRecipients
   //(eg where multiple object use the same font property). NotifyRecipients can
-  //still receive change notificatons from mulitple NotifySenders, but it
+  //still receive change notifications from multiple NotifySenders, but it
   //must use a separate property for each NotifySender. (Also there's little
   //benefit in using INotifySender and INotifyRecipient interfaces where there
   //will only be one receiver - eg scroll - scrolling window.)
@@ -271,9 +271,10 @@ type
     procedure Assign(src: TImage32);
     procedure AssignTo(dst: TImage32);
     procedure AssignSettings(src: TImage32);
-    //AssignPixelArray: Replaces the content and takes ownership of src.
-    //  Uses src for the pixels without copying it.
-    procedure AssignPixelArray(const src: TArrayOfColor32; width: Integer; height: Integer);
+    // AssignPixelArray: Replaces the image content and
+    // takes ownership of 'src' unless forceCopy is true
+    procedure AssignPixelArray(const src: TArrayOfColor32;
+      width: Integer; height: Integer; forceCopy: Boolean = false);
 
     //SetSize: Erases any current image, and fills with the specified color.
     procedure SetSize(newWidth, newHeight: Integer; color: TColor32 = 0);
@@ -478,7 +479,7 @@ type
   function BlendToAlpha(bgColor, fgColor: TColor32): TColor32;
   function BlendToAlpha3(bgColor, fgColor: TColor32; blendOpacity: Byte): TColor32;
   procedure BlendToAlphaLine(bgColor, fgColor: PColor32; width: nativeint);
-  //BlendMask: Whereever the mask is, preserves the background
+  //BlendMask: Wherever the mask is, preserves the background
   function BlendMask(bgColor, alphaMask: TColor32): TColor32;
   procedure BlendMaskLine(bgColor, alphaMask: PColor32; width: nativeint);
   function BlendAltMask(bgColor, alphaMask: TColor32): TColor32;
@@ -534,6 +535,7 @@ type
   function ArrayOfHSLToArrayColor32(const hslArr: TArrayofHSL): TArrayOfColor32;
 
   function GetAlpha(color: TColor32): Byte;  {$IFDEF INLINE} inline; {$ENDIF}
+  function SetAlpha(color: TColor32; alpha: Byte): TColor32; {$IFDEF INLINE} inline; {$ENDIF}
 
   function PointD(const X, Y: Double): TPointD; overload; {$IFDEF INLINE} inline; {$ENDIF}
   function PointD(const pt: TPoint): TPointD; overload; {$IFDEF INLINE} inline; {$ENDIF}
@@ -1075,9 +1077,9 @@ begin
     bw := PByteArray(@MulTable[not fgA]); //ie weight of background
 
     Result := $FF000000
-              or (TColor32(Byte(fw[Byte(fgColor shr 16)] + bw[Byte(bgColor shr 16)])) shl 16)
-              or (TColor32(Byte(fw[Byte(fgColor shr 8 )] + bw[Byte(bgColor shr  8)])) shl  8)
-              or (TColor32(Byte(fw[Byte(fgColor       )] + bw[Byte(bgColor       )]))       );
+      or (TColor32(Byte(fw[Byte(fgColor shr 16)] + bw[Byte(bgColor shr 16)])) shl 16)
+      or (TColor32(Byte(fw[Byte(fgColor shr 8 )] + bw[Byte(bgColor shr  8)])) shl  8)
+      or (TColor32(Byte(fw[Byte(fgColor       )] + bw[Byte(bgColor       )]))       );
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1098,15 +1100,15 @@ begin
     //combine alphas ...
     bgA := not MulTable[not fgA, not bgA];
     fgWeight := DivTable[fgA, bgA];     // fgWeight = amount foreground color
-                                        // contibutes to the result color
+                                        // contributes to the result color
 
     R     := PByteArray(@MulTable[fgWeight]);      // ie weight of foreground
     InvR  := PByteArray(@MulTable[not fgWeight]);  // ie weight of background
 
     Result := bgA shl 24
-              or (TColor32(R[Byte(fgColor shr 16)] + InvR[Byte(bgColor shr 16)]) shl 16)
-              or (TColor32(R[Byte(fgColor shr 8 )] + InvR[Byte(bgColor shr  8)]) shl  8)
-              or (TColor32(R[Byte(fgColor)       ] + InvR[Byte(bgColor)       ])       );
+      or (TColor32(R[Byte(fgColor shr 16)] + InvR[Byte(bgColor shr 16)]) shl 16)
+      or (TColor32(R[Byte(fgColor shr 8 )] + InvR[Byte(bgColor shr  8)]) shl  8)
+      or (TColor32(R[Byte(fgColor)       ] + InvR[Byte(bgColor)       ])       );
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1128,15 +1130,15 @@ begin
     //combine alphas ...
     bgA := not MulTable[not fgA, not bgA];
     fgWeight := DivTable[fgA, bgA];     // fgWeight = amount foreground color
-                                        // contibutes to the result color
+                                        // contributes to the result color
 
     R     := PByteArray(@MulTable[fgWeight]);      // ie weight of foreground
     InvR  := PByteArray(@MulTable[not fgWeight]);  // ie weight of background
 
     Result := bgA shl 24
-              or (TColor32(R[Byte(fgColor shr 16)] + InvR[Byte(bgColor shr 16)]) shl 16)
-              or (TColor32(R[Byte(fgColor shr 8 )] + InvR[Byte(bgColor shr  8)]) shl  8)
-              or (TColor32(R[Byte(fgColor)       ] + InvR[Byte(bgColor)       ])       );
+      or (TColor32(R[Byte(fgColor shr 16)] + InvR[Byte(bgColor shr 16)]) shl 16)
+      or (TColor32(R[Byte(fgColor shr 8 )] + InvR[Byte(bgColor shr  8)]) shl  8)
+      or (TColor32(R[Byte(fgColor)       ] + InvR[Byte(bgColor)       ])       );
   end;
 end;
 //------------------------------------------------------------------------------
@@ -1166,7 +1168,7 @@ begin
     //combine alphas ...
     newBgA := not MulTable[not fgA, not bgA];
     fgWeight := DivTable[fgA, newBgA]; //fgWeight = amount foreground color
-                                       //contibutes to total (result) color
+                                       //contributes to total (result) color
 
     R     := PByteArray(@MulTable[fgWeight]);      //ie weight of foreground
     InvR  := PByteArray(@MulTable[not fgWeight]);  //ie weight of foreground
@@ -1264,7 +1266,7 @@ LabelBgAlphaIsZero:
     bgA := bgCol shr 24;
     bgA := not MulTable[not fgA, not bgA];
     fgWeight := DivTable[fgA, bgA]; //fgWeight = amount foreground color
-                                    //contibutes to total (result) color
+                                    //contributes to total (result) color
 
     R     := PByteArray(@MulTable[fgWeight]);      //ie weight of foreground
     InvR  := PByteArray(@MulTable[not fgWeight]);  //ie weight of foreground
@@ -1323,7 +1325,7 @@ begin
           //combine alphas ...
           bgA := not MulTable[not fgA, not bgA];
           fgWeight := DivTable[fgA, bgA]; //fgWeight = amount foreground color
-                                          //contibutes to total (result) color
+                                          //contributes to total (result) color
 
           R     := PByteArray(@MulTable[fgWeight]);      //ie weight of foreground
           InvR  := PByteArray(@MulTable[not fgWeight]);  //ie weight of foreground
@@ -1733,6 +1735,12 @@ end;
 function GetAlpha(color: TColor32): Byte;
 begin
   Result := Byte(color shr 24);
+end;
+//------------------------------------------------------------------------------
+
+function SetAlpha(color: TColor32; alpha: Byte): TColor32;
+begin
+  Result := (color and $FFFFFF) or (alpha shl 24);
 end;
 //------------------------------------------------------------------------------
 
@@ -2426,7 +2434,8 @@ begin
 end;
 //------------------------------------------------------------------------------
 
-procedure TImage32.AssignPixelArray(const src: TArrayOfColor32; width: Integer; height: Integer);
+procedure TImage32.AssignPixelArray(const src: TArrayOfColor32;
+  width: Integer; height: Integer; forceCopy: Boolean = false);
 var
   wasResized: Boolean;
 begin
@@ -2436,12 +2445,16 @@ begin
     raise Exception.Create(rsInvalidImageArrayData);
 
   wasResized := (fWidth <> width) or (fHeight <> height);
-
   BeginUpdate;
   try
     fWidth := width;
     fHeight := height;
-    fPixels := src;
+    if forceCopy then
+    begin
+      SetLength(fPixels, width * height);
+      Move(src[0], fPixels[0], width * height * SizeOf(TColor32));
+    end else
+      fPixels := src;
   finally
     EndUpdate;
   end;
@@ -2666,7 +2679,7 @@ begin
 
   if w * h = 0 then Exit;
   Types.IntersectRect(recClipped, rec, Bounds);
-  //if recClipped is wholely outside the bounds of the image ...
+  //if recClipped is completely outside the bounds of the image ...
   if IsEmptyRect(recClipped) then
   begin
     //rec is considered valid even when completely outside the image bounds,
@@ -2675,7 +2688,7 @@ begin
     Exit;
   end;
 
-  //if recClipped is wholely within the bounds of the image ...
+  //if recClipped is completely within the bounds of the image ...
   if RectsEqual(recClipped, rec) then
   begin
     pDst := @Result[0];
@@ -3012,7 +3025,7 @@ begin
     c := PixelBase;
     for i := 0 to Width * Height -1 do
     begin
-      //ignore colors with signifcant transparency
+      //ignore colors with significant transparency
       if GetAlpha(c^)  > $80 then
         allColors[c^ and $FFFFFF] := 1;
       inc(c);
@@ -3910,7 +3923,7 @@ begin
         begin
           if cLinear <= (0.0031308 * 255) then // adjust for cLinear being "cLiniear * 255"
             c := ClampByte(Integer(Round(12.92 * cLinear)))
-          else // for Power we must divide by 255 and then later multipy by 255
+          else // for Power we must divide by 255 and then later multiply by 255
             //c := ClampByte(Integer(Round((1.055 * 255) * Power(cLinear / 255, 1/2.4) - (0.055 * 255))));
         end;
 

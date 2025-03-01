@@ -336,10 +336,10 @@ object frmMain: TfrmMain
     TabOrder = 1
     object lblTitle: TLabel
       AlignWithMargins = True
-      Left = 41
+      Left = 45
       Top = 3
       Width = 116
-      Height = 15
+      Height = 32
       Align = alLeft
       Caption = 'MarkDown Text Editor'
       Layout = tlCenter
@@ -423,11 +423,11 @@ object frmMain: TfrmMain
       AlignWithMargins = True
       Left = 3
       Top = 3
-      Width = 32
+      Width = 36
       Height = 32
       Align = alLeft
       ButtonHeight = 32
-      ButtonWidth = 32
+      ButtonWidth = 36
       Images = VirtualImageList
       Indent = 3
       TabOrder = 1

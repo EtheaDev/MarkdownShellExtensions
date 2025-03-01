@@ -72,8 +72,8 @@ uses
 
 const
   SET_FILE_NAME = 'HiglightSettings';
-  SV_COLLAPSED_WIDTH = 38;
-  SV_COLLAPSED_WIDTH_WITH_SCROLLBARS = 50;
+  SV_COLLAPSED_WIDTH = 42;
+  SV_COLLAPSED_WIDTH_WITH_SCROLLBARS = 60;
 
 
 resourcestring
@@ -529,9 +529,10 @@ begin
   HtmlViewer.DefFontName := ASettings.HTMLFontName;
   LStream := TStringStream.Create(FMarkDownFile.HTML, TEncoding.UTF8);
   try
-    //HtmlViewer.LoadFromStream(LStream); si "perde" i caratteri speciali unicode codepoint
-    HtmlViewer.Text := LStream.DataString;
+    //HtmlViewer.LoadFromStream(LStream); //si "perde" i caratteri speciali unicode codepoint
+    HtmlViewer.LoadFromString(LStream.DataString);
     HtmlViewer.VScrollBarPosition := LOldPos;
+    HtmlViewer.Refresh;
     dmResources.StopLoadingImages(False);
   finally
     LStream.Free;

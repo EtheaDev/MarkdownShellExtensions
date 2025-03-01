@@ -263,14 +263,14 @@ object fmEditorOptionsDialog: TfmEditorOptionsDialog
           object Label8: TLabel
             Left = 9
             Top = 27
-            Width = 58
+            Width = 59
             Height = 15
             Caption = 'Extra Lines:'
           end
           object Label9: TLabel
             Left = 9
             Top = 56
-            Width = 57
+            Width = 56
             Height = 15
             Caption = 'Tab Width:'
           end
@@ -602,13 +602,13 @@ object fmEditorOptionsDialog: TfmEditorOptionsDialog
           Caption = 'Show special chars'
           TabOrder = 21
         end
-        object ckCompleteBrackets: TCheckBox
+        object ckWordWrap: TCheckBox
           Left = 9
           Top = 224
           Width = 170
           Height = 17
-          Hint = 'Auto complete brackets'
-          Caption = 'Complete brackets'
+          Hint = 'Enable wrapping of long lines'
+          Caption = 'Word wrap'
           TabOrder = 22
         end
         object ckCompleteQuotes: TCheckBox

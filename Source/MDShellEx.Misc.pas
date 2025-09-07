@@ -67,10 +67,6 @@ const
     FileAttrib: Integer = SysUtils.faArchive or SysUtils.faReadOnly );
   function  GetModuleLocation: string;
   function TryLoadTextFile(const AFileName: TFileName): string;
-  procedure GetVerInfo(const FileName : string;
-    var MajorVersion, MinorVersion, Release, Build : integer);
-  function GetVersionString(const FileName: string;
-    FormatString: string = '%d.%d.%d'): string;
   function GetDefaultCSS: string;
   function FileWithExtExists(var AFileName: TFileName; const AFileExt: array of string): boolean;
   function GetFileMasks(const AFileExt: array of string;
@@ -261,53 +257,6 @@ begin
     else
       raise;
   end;
-end;
-
-procedure GetVerInfo(const FileName : string;
-  var MajorVersion, MinorVersion, Release, Build : integer);
-type
-  cArray   = Array[1..$3FFF] of Char;
-  TLangInf = Array[1..2]     of Word;      // Language and charset identifiers
-
-var
-  InfoSize, Wnd: DWORD;
-  VerBuf: Pointer;
-  FI: PVSFixedFileInfo;
-   VerSize: DWORD;
-begin
-  MajorVersion := 0;
-  MinorVersion := 0;
-  Release := 0;
-  Build := 0;
-
-  InfoSize := GetFileVersionInfoSize(PChar(FileName), Wnd);
-  if InfoSize > 0 then
-  begin
-    GetMem(VerBuf, InfoSize);
-    try
-      if GetFileVersionInfo(PChar(FileName), Wnd, InfoSize, VerBuf) then
-      begin
-        if VerQueryValue(VerBuf, '\', Pointer(FI), VerSize) then
-        begin
-          MajorVersion := HIWORD(FI.dwFileVersionMS);
-          MinorVersion := LOWORD(FI.dwFileVersionMS);
-          Release := HIWORD(FI.dwFileVersionLS);
-          Build := LOWORD(FI.dwFileVersionLS);
-        end;
-      end;
-    finally
-      FreeMem(VerBuf);
-    end;
-  end;
-end;
-
-function GetVersionString(const FileName: string;
-  FormatString: string = '%d.%d.%d') : string;
-var
-  MajorVersion, MinorVersion, Release, Build : integer;
-begin
-  GetVerInfo(FileName,MajorVersion, MinorVersion, Release, Build);
-  Result := Format(FormatString,[MajorVersion, MinorVersion, Release, Build]);
 end;
 
 function GetDefaultCSS: string;

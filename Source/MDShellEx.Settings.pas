@@ -48,6 +48,7 @@ const
   MinfontSize = 8;
   default_lightactivelinecolor = 15066597;
   default_darkactivelinecolor = 0;
+  default_checkdays = 7;
 
 resourcestring
   Background_Grayscale_Caption = 'Backlight %d%%';
@@ -80,6 +81,8 @@ type
   TSettings = class
   private
     FSplitterPos: Integer;
+    FVersionCheckTime: TDateTime;
+    FDaysForNextCheck: Integer;
     FMDFontSize: Integer;
     FStyleName: string;
     FUseDarkStyle: boolean;
@@ -106,6 +109,7 @@ type
     procedure SetToolbarDrawRounded(const Value: Boolean);
     procedure SetMenuDrawRounded(const Value: Boolean);
     procedure SetViewerPercentSize(const AValue: word);
+    procedure SetDaysForNextCheck(const Value: Integer);    
   protected
     FIniFile: TIniFile;
   public
@@ -146,6 +150,7 @@ type
     property MenuDrawRounded: Boolean read FMenuDrawRounded write SetMenuDrawRounded;
     property LayoutMode: TLayoutMode read FLayoutMode write FLayoutMode;
     property ViewerPercentSize: word read FViewerPercentSize write SetViewerPercentSize;
+    property DaysForNextCheck: Integer read FDaysForNextCheck write SetDaysForNextCheck;
   end;
 
   TPreviewSettings = class(TSettings)
@@ -169,6 +174,7 @@ type
     HistoryFileList: TStrings;
     OpenedFileList: TStrings;
     CurrentFileName: string;
+    function IsTimeToCheckNewVersion: Boolean;
     procedure ReadSettings(const ASynEditHighilighter: TSynCustomHighlighter;
       const ASynEditorOptions: TSynEditorOptionsContainer;
       const LoadFileList: Boolean = False); override;
@@ -340,6 +346,8 @@ var
   LAttribute: TSynHighlighterAttributes;
 begin
   TLogPreview.Add('ReadSettings '+SettingsFileName);
+  FVersionCheckTime := FIniFile.ReadDateTime('Global', 'VersionCheckTime', Now());
+  FDaysForNextCheck := FIniFile.ReadInteger('Global', 'DaysForNextCheck', default_checkdays);
   FMDFontSize := FIniFile.ReadInteger('Global', 'MDFontSize', 10);
   FHTMLFontSize := FIniFile.ReadInteger('Global', 'HTMLFontSize', 12);
   FMDFontName := FIniFile.ReadString('Global', 'MDFontName', 'Consolas');
@@ -414,6 +422,9 @@ var
   LAttribute: TSynHighlighterAttributes;
   LThemeSection: string;
 begin
+  FIniFile.WriteDateTime('Global', 'VersionCheckTime', FVersionCheckTime);
+  FIniFile.WriteInteger('Global', 'DaysForNextCheck', FDaysForNextCheck);
+
   FIniFile.WriteInteger('Global', 'MDFontSize', FMDFontSize);
   FIniFile.WriteInteger('Global', 'HTMLFontSize', FHTMLFontSize);
 
@@ -484,6 +495,11 @@ begin
     FViewerPercentSize := AValue;
 end;
 
+procedure TSettings.SetDaysForNextCheck(const Value: Integer);
+begin
+  FDaysForNextCheck := Value;
+end;
+
 { TPreviewSettings }
 
 constructor TPreviewSettings.CreateSettings(
@@ -527,6 +543,13 @@ begin
   FreeAndNil(HistoryFileList);
   FreeAndNil(OpenedFileList);
   inherited;
+end;
+
+function TEditorSettings.IsTimeToCheckNewVersion: Boolean;
+begin
+  Result := Now() > FVersionCheckTime + FDaysForNextCheck;
+  if Result then
+    FVersionCheckTime := Now(); //Update Next time for check
 end;
 
 procedure TEditorSettings.ReadSettings(

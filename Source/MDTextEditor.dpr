@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2024 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2025 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MDShellExtensions                          }
@@ -22,12 +22,6 @@
 {  See the License for the specific language governing permissions and         }
 {  limitations under the License.                                              }
 {                                                                              }
-{  The Original Code is:                                                       }
-{  Delphi Preview Handler  https://github.com/RRUZ/delphi-preview-handler      }
-{                                                                              }
-{  The Initial Developer of the Original Code is Rodrigo Ruz V.                }
-{  Portions created by Rodrigo Ruz V. are Copyright 2011-2021 Rodrigo Ruz V.   }
-{  All Rights Reserved.                                                        }
 {******************************************************************************}
 program MDTextEditor;
 
@@ -38,9 +32,9 @@ uses
   Vcl.Styles,
   dlgSearchText in 'dlgSearchText.pas' {TextSearchDialog},
   dlgReplaceText in 'dlgReplaceText.pas' {TextReplaceDialog},
+  PageControlHook in 'PageControlHook.pas',
   dlgInputUrl in 'dlgInputUrl.pas' {InputUrlDialog},
-  MDTextEditor.ViewerMainForm in 'MDTextEditor.ViewerMainForm.pas' {frmMain},
-  ChildForm in 'ChildForm.pas' {MDIChildForm},
+  MDTextEditor.EditorMainForm in 'MDTextEditor.EditorMainForm.pas' {frmMain},
   MDShellEx.Resources in 'MDShellEx.Resources.pas' {dmResources: TDataModule},
   DPageSetup in 'DPageSetup.pas' {PageSetupDlg},
   MDShellEx.Splash in 'MDShellEx.Splash.pas' {SplashForm},
@@ -49,9 +43,10 @@ uses
   MDShellEx.Misc in 'MDShellEx.Misc.pas',
   SynEditOptionsDialog in 'SynEditOptionsDialog.pas' {fmEditorOptionsDialog},
   MDShellEx.Settings in 'MDShellEx.Settings.pas',
-  MDShellEx.SettingsForm in 'MDShellEx.SettingsForm.pas' {SVGSettingsForm},
+  MDShellEx.SettingsForm in 'MDShellEx.SettingsForm.pas' {MDSettingsForm},
   MDShellEx.Registry in 'MDShellEx.Registry.pas',
   vmHtmlToPdf in 'vmHtmlToPdf.pas',
+  GitHubAPI in 'GitHubAPI.pas' {fmEditorOptionsDialog},
   Vcl.StyledTaskDialogFormUnit in '..\Ext\StyledComponents\source\Vcl.StyledTaskDialogFormUnit.pas' {StyledTaskDialogForm},
   Skia.Vcl.StyledTaskDialogAnimatedUnit in '..\Ext\StyledComponents\source\Skia.Vcl.StyledTaskDialogAnimatedUnit.pas' {StyledTaskDialogAnimated};
 
@@ -70,9 +65,9 @@ begin
     Update;
     Application.HelpFile := '';
     Application.CreateForm(TdmResources, dmResources);
-    Application.CreateForm(TfrmMain, frmMain);
-    Application.CreateForm(TPageSetupDlg, PageSetupDlg);
-    Application.OnException := frmMain.ManageExceptions;
+  Application.CreateForm(TfrmMain, frmMain);
+  Application.CreateForm(TPageSetupDlg, PageSetupDlg);
+  Application.OnException := frmMain.ManageExceptions;
     Hide;
   Finally
     Free;

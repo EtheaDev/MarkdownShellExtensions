@@ -642,6 +642,7 @@ var
   Item: TSVGIconItem;
 begin
   FOpenDialog.Options := FOpenDialog.Options - [ofAllowMultiSelect];
+  FOpenDialog.FileName:=ExtractFilename(FEditingList.SVGIconItems[ImageView.ItemIndex].IconName)+'.svg';  // JR
   if FOpenDialog.Execute then
   begin
     FEditingList.BeginUpdate;
@@ -658,6 +659,7 @@ begin
       BuildList(ImageView.Items[ImageView.ItemIndex].ImageIndex);
     finally
       FEditingList.EndUpdate;
+      FEditingList.RecreateBitmaps;
       Screen.Cursor := crDefault;
     end;
   end;

@@ -1,4 +1,4 @@
-object SVGSettingsForm: TSVGSettingsForm
+object MDSettingsForm: TMDSettingsForm
   Left = 259
   Top = 148
   BorderIcons = [biSystemMenu]
@@ -539,8 +539,6 @@ object SVGSettingsForm: TSVGSettingsForm
           OnClick = SynEditClick
           OnKeyUp = SynEditKeyUp
           CodeFolding.GutterShapeSize = 11
-          CodeFolding.IndentGuidesColor = clGray
-          CodeFolding.IndentGuides = True
           UseCodeFolding = False
           Gutter.Font.Charset = DEFAULT_CHARSET
           Gutter.Font.Color = clWindowText
@@ -548,10 +546,8 @@ object SVGSettingsForm: TSVGSettingsForm
           Gutter.Font.Name = 'Consolas'
           Gutter.Font.Style = []
           Gutter.Font.Quality = fqClearTypeNatural
-          Gutter.Width = 0
           Gutter.Bands = <>
           ScrollbarAnnotations = <>
-          FontSmoothing = fsmNone
         end
         object ActiveLineColorGroupBox: TGroupBox
           Left = 0
@@ -710,6 +706,47 @@ object SVGSettingsForm: TSVGSettingsForm
         TabOrder = 1
       end
     end
+    object tsUpdates: TTabSheet
+      Caption = 'Updates'
+      ImageIndex = 7
+      ImageName = 'update'
+      object UpdateGroupBox: TGroupBox
+        AlignWithMargins = True
+        Left = 3
+        Top = 3
+        Width = 644
+        Height = 94
+        Align = alTop
+        TabOrder = 0
+        object CheckNDaysLabel: TLabel
+          Left = 17
+          Top = 39
+          Width = 278
+          Height = 16
+          AutoSize = False
+          Caption = 'Interval in days:'
+        end
+        object AutoUpdateCheckBox: TCheckBox
+          Left = 17
+          Top = 16
+          Width = 278
+          Height = 17
+          Caption = 'Automatic check'
+          TabOrder = 0
+          OnClick = AutoUpdateCheckBoxClick
+        end
+        object CheckNDaysSpinEdit: TSpinEdit
+          Left = 17
+          Top = 60
+          Width = 90
+          Height = 24
+          MaxValue = 365
+          MinValue = -1
+          TabOrder = 1
+          Value = 0
+        end
+      end
+    end
   end
   object StatusBar: TStatusBar
     Left = 0
@@ -762,9 +799,16 @@ object SVGSettingsForm: TSVGSettingsForm
         Caption = 'PDF Layout'
         ImageIndex = 6
         ImageName = 'pdf-box'
+      end
+      item
+        Caption = 'Updates'
+        ImageIndex = 7
+        ImageName = 'update'
       end>
     TabOrder = 2
     OnButtonClicked = MenuButtonGroupButtonClicked
+    ExplicitLeft = -2
+    ExplicitTop = 35
   end
   object TitlePanel: TPanel
     Left = 0
@@ -874,6 +918,21 @@ object SVGSettingsForm: TSVGSettingsForm
           '9H5.5V15H7V13H8A1.5,1.5 0 0,0 9.5,11.5V10.5M14.5,10.5A1.5,1.5 0 ' +
           '0,0 13,9H10.5V15H13A1.5,1.5 0 0,0 14.5,13.5V10.5M18.5,9H15.5V15H' +
           '17V13H18.5V11.5H17V10.5H18.5V9Z" /></svg>'
+      end
+      item
+        IconName = 'update'
+        SVGText = 
+          '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE svg PUBLIC "-//W' +
+          '3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg' +
+          '11.dtd"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="htt' +
+          'p://www.w3.org/1999/xlink" version="1.1" id="mdi-update" width="' +
+          '24" height="24" viewBox="0 0 24 24"><path d="M21,10.12H14.22L16.' +
+          '96,7.3C14.23,4.6 9.81,4.5 7.08,7.2C4.35,9.91 4.35,14.28 7.08,17C' +
+          '9.81,19.7 14.23,19.7 16.96,17C18.32,15.65 19,14.08 19,12.1H21C21' +
+          ',14.08 20.12,16.65 18.36,18.39C14.85,21.87 9.15,21.87 5.64,18.39' +
+          'C2.14,14.92 2.11,9.28 5.62,5.81C9.13,2.34 14.76,2.34 18.27,5.81L' +
+          '21,3V10.12M12.5,8V12.25L16,14.33L15.28,15.54L11,13V8H12.5Z" /></' +
+          'svg>'
       end>
     Scaled = True
     Left = 492

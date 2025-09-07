@@ -37,6 +37,16 @@ uses
   ;
 
 Type
+  {$if compilerversion <= 26}
+  //Char Helper for old Delphi Versions
+  TCharHelper = record helper for Char
+  private
+    function IsLetterOrDigit: Boolean; overload;
+    function IsWhiteSpace: Boolean; overload;
+    function IsDigit: Boolean; overload;
+  end;
+  {$ifend}
+
   TMarkdownProcessorDialect = (mdDaringFireball, mdCommonMark, mdTxtMark);
   TSeTMarkdownProcessorDialect = set of TMarkdownProcessorDialect;
 
@@ -46,7 +56,43 @@ Type
     hes, hesamp, hescript, heselect, hesmall, hespan, hestrike, hestrong, hestyle, hesub, hesup, hetable, hetbody, hetd, hetextarea, hetfoot, heth, hethead, hetitle, hetr, hett,
     heu, heul, hevar);
 
-const
+const MarkdownDefaultCSS =
+    '<style type="text/css">'#10+
+    'body{'+
+    '     font-family: Arial, sans-serif;'+
+    '}'+
+    'code{'#10+
+    '  font-family: "Consolas", monospace;'#10+
+    '}'#10+
+    'pre{'#10+
+    '  border: 1px solid #ddd;'#10+
+    '  border-left: 3px solid #f36d33;'#10+
+    '  overflow: auto;'#10+
+    '  padding: 1em 1.5em;'#10+
+    '  display: block;'#10+
+    '}'#10+
+    'Blockquote{'#10+
+    '  border-left: 3px solid #d0d0d0;'#10+
+    '  padding-left: 0.5em;'#10+
+    '  margin-left:1em;'#10+
+    '}'#10+
+    'Blockquote p{'#10+
+    '  margin: 0;'#10+
+    '}'#10+
+    'table{'#10+
+    '  border:1px solid;'#10+
+    '  border-collapse:collapse;'#10+
+    '}'#10+
+    'th{'+
+    '  padding:5px;'#10+
+    '  border:1px solid;'#10+
+    '}'#10+
+    'td{'#10+
+    '  padding:5px;'#10+
+    '  border:1px solid;'#10+
+    '}'#10+
+    '</style>'#10;
+
   // pstfix
   ENTITY_NAMES: array[0..249] of String = ('&Acirc;', '&acirc;', '&acute;', '&AElig;', '&aelig;', '&Agrave;', '&agrave;', '&alefsym;', '&Alpha;', '&alpha;', '&amp;', '&and;', '&ang;',
     '&apos;', '&Aring;', '&aring;', '&asymp;', '&Atilde;', '&atilde;', '&Auml;', '&auml;', '&bdquo;', '&Beta;', '&beta;', '&brvbar;', '&bull;', '&cap;', '&Ccedil;', '&ccedil;',
@@ -3087,5 +3133,21 @@ begin
   end;
   self.hlDepth := System.Math.min(level, 6);
 end;
+
+{$if compilerversion <= 26}
+{ TCharHelper }
+function TCharHelper.IsDigit: Boolean;
+begin
+  Result := TCharacter.IsDigit(Self);
+end;
+function TCharHelper.IsLetterOrDigit: Boolean;
+begin
+  Result := TCharacter.IsLetterOrDigit(Self);
+end;
+function TCharHelper.IsWhiteSpace: Boolean;
+begin
+  Result := TCharacter.IsWhiteSpace(Self);
+end;
+{$ifend}
 
 end.

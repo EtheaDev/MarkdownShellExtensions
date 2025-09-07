@@ -42,7 +42,7 @@ Type
   public
     Constructor Create;
     Destructor Destroy; override;
-    function process(source: String): String; override;
+    function Process(const ASource: string): string; override;
   end;
 
 implementation
@@ -62,9 +62,9 @@ begin
   inherited;
 end;
 
-function TMarkdownTxtMark.process(source: String): String;
+function TMarkdownTxtMark.Process(const ASource: string): string;
 begin
-  result:=inherited process(source);
+  result := inherited Process(ASource);
 end;
 
 

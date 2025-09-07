@@ -5477,7 +5477,6 @@ end;
 
 function TSynZipCompressor.Read(var Buffer; Count: Integer): Longint;
 begin
-  assert(false);
   result := 0;
 end;
 

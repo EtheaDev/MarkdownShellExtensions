@@ -74,6 +74,7 @@ contains
   SynEditTypes in '..\Source\SynEditTypes.pas',
   SynEditUndo in '..\Source\SynEditUndo.pas',
   SynEditWordWrap in '..\Source\SynEditWordWrap.pas',
+  SynEditActionsResource in '..\Source\SynEditActionsResource.pas',
   SynExportHTML in '..\Source\SynExportHTML.pas',
   SynExportRTF in '..\Source\SynExportRTF.pas',
   SynExportTeX in '..\Source\SynExportTeX.pas',

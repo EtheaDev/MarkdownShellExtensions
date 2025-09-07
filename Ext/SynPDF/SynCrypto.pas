@@ -6279,7 +6279,7 @@ begin
   with P do
     AES.DoBlocks(bIn,bOut,bIn,bOut,BlockCount,Encrypt);
   ExitThread(0);
-  result := 0; // make the compiler happy, but won't never be called
+  {$if compilerversion <= 36}result := 0;{$ifend} // make the compiler happy, but won't never be called
 end;
 
 procedure TAES.DoBlocksThread(var bIn, bOut: PAESBlock; Count: integer; doEncrypt: boolean);

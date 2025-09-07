@@ -58,6 +58,7 @@ are covered by separate copyright notices located in those modules.
 { Identify Delphi Compiler Version:
 
   #   Compiler      Version Compiler Defined Symbol Codename
+  D37 Delphi 13       37    VER370                  Florence
   D29 Delphi 12       36    VER360                  Athens
   D28 Delphi 11       35    VER350                  Alexandria
   D27 Delphi 10.4     34    VER340                  Sydney
@@ -177,6 +178,10 @@ are covered by separate copyright notices located in those modules.
                                                 {$define Compiler36_Plus}
                                                 {$ifdef ver360}
                                                 {$else}
+                                                  {$define Compiler37_Plus}
+                                                  {$ifdef ver370}
+                                                  {$else}
+                                                  {$endif}
                                                 {$endif}
                                               {$endif}
                                             {$endif}

@@ -233,7 +233,7 @@ var
 begin
   inherited;
   TLogPreview.Add('TFrmEditor.FormCreate');
-  FileVersionStr := GetVersionString(GetModuleLocation());
+  FileVersionStr := GetCurrentVersion(GetModuleLocation());
   FSimpleText := Format(StatusBar.SimpleText,
     [FileVersionStr, {$IFDEF WIN32}32{$ELSE}64{$ENDIF}]);
   StatusBar.SimpleText := FSimpleText;
@@ -416,7 +416,7 @@ end;
 
 procedure TFrmPreview.ToolButtonAboutClick(Sender: TObject);
 begin
-  ShowAboutForm(DialogPosRect, Title_SVGPreview);
+  ShowAboutForm(DialogPosRect, Title_SVGPreview, False);
 end;
 
 procedure TFrmPreview.ToolButtonMouseEnter(Sender: TObject);

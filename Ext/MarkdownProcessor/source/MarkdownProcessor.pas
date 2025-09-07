@@ -64,7 +64,7 @@ Type
 
   { TMarkdownProcessor }
 
-  TMarkdownProcessor = {abstract} class
+  TMarkdownProcessor = class
   private
     FConfig: TConfiguration;
   protected
@@ -72,8 +72,9 @@ Type
     procedure SetAllowUnSafe(const Value: boolean); virtual; abstract;
   public
     class function CreateDialect(dialect : TMarkdownProcessorDialect) : TMarkdownProcessor;
-    function process(source : String) : String; virtual; abstract;
-    function processFile(source: String; Encoding: TEncoding = nil): String; virtual;
+    function Process(const ASource : string) : string; virtual; abstract;
+    function ProcessFile(const AFileName: TFileName;
+      const AEncoding: TEncoding = nil): string; virtual;
     property config: TConfiguration read FConfig write FConfig;
     // when AllowUnsafe = true, then the processor can create scripts etc.
     property AllowUnsafe : boolean read GetAllowUnSafe write SetAllowUnSafe;
@@ -100,17 +101,18 @@ begin
   end;
 end;
 
-function TMarkdownProcessor.processFile(source: String; Encoding: TEncoding): String;
+function TMarkdownProcessor.ProcessFile(const AFileName: TFileName;
+  const AEncoding: TEncoding): string;
 var
-  markdown:TStringList;
+  LMarkdown: TStringList;
 begin
   result:='';
-  markdown := TStringList.Create;
+  LMarkdown := TStringList.Create;
   try
-    markdown.LoadFromFile(source, Encoding);
-    result:=process(markdown.Text);
+    LMarkdown.LoadFromFile(AFileName, AEncoding);
+    result:=process(LMarkdown.Text);
   finally
-    if assigned(markdown) then markdown.Free;
+    if assigned(LMarkdown) then Lmarkdown.Free;
   end;
 end;
 

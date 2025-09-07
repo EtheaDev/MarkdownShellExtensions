@@ -39,7 +39,7 @@
         <SanitizedProjectName>dclFrameViewer</SanitizedProjectName>
         <DCC_DcuOutput>..\..\Lib\D12\$(Platform)</DCC_DcuOutput>
         <DCC_Description>THtmlViewer, TFrameViewer, and TFrameBrowser</DCC_Description>
-        <DllSuffix>290</DllSuffix>
+        <DllSuffix>$(Auto)</DllSuffix>
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;$(DCC_Namespace)</DCC_Namespace>
         <DesignOnlyPackage>true</DesignOnlyPackage>
         <GenDll>true</GenDll>

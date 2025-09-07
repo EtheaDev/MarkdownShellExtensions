@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{D0A69637-2974-4401-9226-4F66893CB5CE}</ProjectGuid>
         <MainSource>SVGImage32Package.dpk</MainSource>
-        <ProjectVersion>20.3</ProjectVersion>
+        <ProjectVersion>20.2</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
@@ -89,6 +89,7 @@
         <DCCReference Include="..\..\Image32\source\Img32.SVG.Path.pas"/>
         <DCCReference Include="..\..\Image32\source\Img32.SVG.Reader.pas"/>
         <DCCReference Include="..\..\Image32\Source\Img32.Clipper2.pas"/>
+        <DCCReference Include="..\..\Image32\Source\Img32.TextChunks.pas"/>
         <DCCReference Include="..\..\Image32\source\Clipper.pas"/>
         <DCCReference Include="..\..\Image32\source\Clipper.Core.pas"/>
         <DCCReference Include="..\..\Image32\source\Clipper.Engine.pas"/>

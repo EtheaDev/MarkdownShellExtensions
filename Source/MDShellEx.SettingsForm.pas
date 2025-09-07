@@ -36,12 +36,13 @@ uses
   Dialogs, ComCtrls, ExtCtrls, ColorGrd, StdCtrls, CheckLst, SynEdit,
   ActnList, SynEditHighlighter, SynUnicode, System.ImageList, Vcl.ImgList,
   SVGIconImageListBase, SVGIconImageList, MDShellEx.Settings, Vcl.ButtonGroup,
-  Vcl.ToolWin, MDShellEx.Resources, Vcl.VirtualImageList, MDShellEx.About, Vcl.WinXCtrls,
+  Vcl.ToolWin, MDShellEx.Resources, Vcl.VirtualImageList, MDShellEx.About,
+  Vcl.WinXCtrls, Vcl.Samples.Spin,
   SVGIconImage, Vcl.NumberBox, Vcl.ButtonStylesAttributes,
   Vcl.StyledButtonGroup, Vcl.StyledButton;
 
 type
-  TSVGSettingsForm = class(TForm)
+  TMDSettingsForm = class(TForm)
     pc: TPageControl;
     tsColors: TTabSheet;
     stGeneral: TTabSheet;
@@ -120,6 +121,11 @@ type
     ActiveLineColorGroupBox: TGroupBox;
     DarkActiveLineColorColorBox: TColorBox;
     LightActiveLineColorColorBox: TColorBox;
+    tsUpdates: TTabSheet;
+    UpdateGroupBox: TGroupBox;
+    AutoUpdateCheckBox: TCheckBox;
+    CheckNDaysLabel: TLabel;
+    CheckNDaysSpinEdit: TSpinEdit;
     procedure BoxElementsClick(Sender: TObject);
     procedure cbForegroundClick(Sender: TObject);
     procedure cbBackgroundClick(Sender: TObject);
@@ -140,12 +146,14 @@ type
     procedure FontDrawItem(Control: TWinControl; Index: Integer; Rect: TRect;
       State: TOwnerDrawState);
     procedure OrientationRadioGroupClick(Sender: TObject);
+    procedure AutoUpdateCheckBoxClick(Sender: TObject);
   private
     FHighlighter: TSynCustomHighlighter;
     FSourceSynEdit: TSynEdit;
     FFileName: string;
     FAboutForm: TFrmAbout;
     FTitle: string;
+    procedure UpdateGUI;
     procedure PopulateAvailThemes;
     procedure AssignSettings(ASettings: TSettings);
     procedure UpdateSettings(ASettings: TSettings);
@@ -201,18 +209,18 @@ type
   TSynCustomHighlighterClass = class of TSynCustomHighlighter;
 var
   HighLightSettingsClass: TSynCustomHighlighterClass;
-  LSettingsForm: TSVGSettingsForm;
+  LSettingsForm: TMDSettingsForm;
   I: integer;
 begin
   Result := False;
   for I := 0 to Screen.FormCount - 1 do
-    if Screen.Forms[I].ClassType = TSVGSettingsForm then
+    if Screen.Forms[I].ClassType = TMDSettingsForm then
     begin
       Screen.Forms[I].BringToFront;
       exit;
     end;
 
-  LSettingsForm := TSVGSettingsForm.Create(nil);
+  LSettingsForm := TMDSettingsForm.Create(nil);
   with LSettingsForm do
   Try
     Title := ATitle;
@@ -253,9 +261,9 @@ begin
   End;
 end;
 
-{ TSVGSettingsForm }
+{ TMDSettingsForm }
 
-procedure TSVGSettingsForm.AddElements;
+procedure TMDSettingsForm.AddElements;
 var
   i : integer;
 begin
@@ -271,12 +279,12 @@ begin
   RefreshMap;
 end;
 
-procedure TSVGSettingsForm.BoxElementsClick(Sender: TObject);
+procedure TMDSettingsForm.BoxElementsClick(Sender: TObject);
 begin
   RefreshMap;
 end;
 
-procedure TSVGSettingsForm.RefreshColorBoxes;
+procedure TMDSettingsForm.RefreshColorBoxes;
 begin
   if (CurrentElement.ForeGround <> ForeGroundColor) or
     CurrentIsWhiteSpace then
@@ -302,7 +310,7 @@ begin
   end;
 end;
 
-procedure TSVGSettingsForm.RefreshDefaultCheckBox;
+procedure TMDSettingsForm.RefreshDefaultCheckBox;
 begin
   cbForeground.OnClick := nil;
   cbBackground.OnClick := nil;
@@ -315,7 +323,7 @@ begin
   End;
 end;
 
-procedure TSVGSettingsForm.RefreshTextAttributes;
+procedure TMDSettingsForm.RefreshTextAttributes;
 begin
   with CurrentElement do
   begin
@@ -327,7 +335,7 @@ begin
   end;
 end;
 
-procedure TSVGSettingsForm.ResetButtonClick(Sender: TObject);
+procedure TMDSettingsForm.ResetButtonClick(Sender: TObject);
 var
   LBackGroundColor: TColor;
 begin
@@ -342,7 +350,7 @@ begin
   LightActiveLineColorColorBox.Selected := default_lightactivelinecolor;
 end;
 
-procedure TSVGSettingsForm.RefreshMap;
+procedure TMDSettingsForm.RefreshMap;
 begin
   //imposta la mappa sulla base delle impostazioni della lista
   with CurrentElement do
@@ -354,17 +362,17 @@ begin
   end;
 end;
 
-function TSVGSettingsForm.GetCurrentElement: TSynHighlighterAttributes;
+function TMDSettingsForm.GetCurrentElement: TSynHighlighterAttributes;
 begin
   Result := TSynHighlighterAttributes(BoxElements.Items.Objects[BoxElements.ItemIndex]);
 end;
 
-function TSVGSettingsForm.GetCurrentIsWhiteSpace: Boolean;
+function TMDSettingsForm.GetCurrentIsWhiteSpace: Boolean;
 begin
   Result := CurrentElement.Name = 'Whitespace';
 end;
 
-procedure TSVGSettingsForm.cbForegroundClick(Sender: TObject);
+procedure TMDSettingsForm.cbForegroundClick(Sender: TObject);
 begin
   if cbForeground.Checked then
     CurrentElement.Foreground := ForeGroundColor
@@ -374,7 +382,7 @@ begin
   RefreshDefaultCheckBox;
 end;
 
-procedure TSVGSettingsForm.ChangeAllDefaultColors(const OldForeground,
+procedure TMDSettingsForm.ChangeAllDefaultColors(const OldForeground,
   NewForeground, OldBackGround, NewBackGround: TColor);
 var
   I: Integer;
@@ -393,7 +401,7 @@ begin
   end;
 end;
 
-procedure TSVGSettingsForm.cbBackgroundClick(Sender: TObject);
+procedure TMDSettingsForm.cbBackgroundClick(Sender: TObject);
 begin
   if cbBackground.Checked then
     CurrentElement.Background := BackGroundColor
@@ -403,7 +411,7 @@ begin
   RefreshDefaultCheckBox;
 end;
 
-procedure TSVGSettingsForm.FontDrawItem(Control: TWinControl; Index: Integer;
+procedure TMDSettingsForm.FontDrawItem(Control: TWinControl; Index: Integer;
   Rect: TRect; State: TOwnerDrawState);
 begin
   with Control as TComboBox do
@@ -414,7 +422,7 @@ begin
   end;
 end;
 
-procedure TSVGSettingsForm.ColorBoxChanged;
+procedure TMDSettingsForm.ColorBoxChanged;
 begin
   cbForeground.OnClick := nil;
   cbBackground.OnClick := nil;
@@ -445,7 +453,7 @@ begin
   end;
 end;
 
-procedure TSVGSettingsForm.cbFontStyleClick(Sender: TObject);
+procedure TMDSettingsForm.cbFontStyleClick(Sender: TObject);
 var
   FontStyle : TFontStyle;
 begin
@@ -470,7 +478,7 @@ begin
   RefreshMap;
 end;
 
-procedure TSVGSettingsForm.GetActiveAttribute;
+procedure TMDSettingsForm.GetActiveAttribute;
 var
   Token : UnicodeString;
   Attr : TSynHighlighterAttributes;
@@ -487,41 +495,41 @@ begin
     BoxElements.ItemIndex := 0; //goto WiteSpace Element
 end;
 
-procedure TSVGSettingsForm.SelectThemeRadioGroupClick(Sender: TObject);
+procedure TMDSettingsForm.SelectThemeRadioGroupClick(Sender: TObject);
 begin
   ThemeClientPanel.StyleName := SelectedStyleName;
   CreateAboutForm;
 end;
 
-procedure TSVGSettingsForm.SetTitle(const Value: string);
+procedure TMDSettingsForm.SetTitle(const Value: string);
 begin
   FTitle := Value;
   TitlePanel.Caption := '  '+FTitle+' - '+TitlePanel.Caption;
   Caption := TitlePanel.Caption;
 end;
 
-procedure TSVGSettingsForm.SynEditClick(Sender: TObject);
+procedure TMDSettingsForm.SynEditClick(Sender: TObject);
 begin
   GetActiveAttribute;
 end;
 
-procedure TSVGSettingsForm.SynEditKeyUp(Sender: TObject; var Key: Word;
+procedure TMDSettingsForm.SynEditKeyUp(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
   GetActiveAttribute;
 end;
 
-procedure TSVGSettingsForm.ThemesRadioGroupClick(Sender: TObject);
+procedure TMDSettingsForm.ThemesRadioGroupClick(Sender: TObject);
 begin
   PopulateAvailThemes;
 end;
 
-procedure TSVGSettingsForm.ColorGridClick(Sender: TObject);
+procedure TMDSettingsForm.ColorGridClick(Sender: TObject);
 begin
   ColorBoxChanged;
 end;
 
-procedure TSVGSettingsForm.FormCreate(Sender: TObject);
+procedure TMDSettingsForm.FormCreate(Sender: TObject);
 begin
   MDFontComboBox.Items.Assign(Screen.Fonts);
   HTMLFontComboBox.Items.Assign(Screen.Fonts);
@@ -530,37 +538,47 @@ begin
   tsFont.TabVisible := false;
   stTheme.TabVisible := false;
   tsPDFLayout.TabVisible := false;
+  tsUpdates.TabVisible := false;  
 
   TitlePanel.Font.Height := Round(TitlePanel.Font.Height * 1.5);
   MenuButtonGroup.Font.Height := Round(MenuButtonGroup.Font.Height * 1.2);
+
+  UpdateGroupBox.Caption := CheckForUpdates_Msg;
 end;
 
-procedure TSVGSettingsForm.FormDestroy(Sender: TObject);
+procedure TMDSettingsForm.FormDestroy(Sender: TObject);
 begin
   FAboutForm.Free;
 end;
 
-procedure TSVGSettingsForm.ColorBoxSelect(Sender: TObject);
+procedure TMDSettingsForm.AutoUpdateCheckBoxClick(Sender: TObject);
+begin
+  if AutoUpdateCheckBox.Checked and (CheckNDaysSpinEdit.Value = -1) then
+    CheckNDaysSpinEdit.Value := default_checkdays;
+  UpdateGUI;
+end;
+
+procedure TMDSettingsForm.ColorBoxSelect(Sender: TObject);
 begin
   ColorBoxChanged;
 end;
 
-function TSVGSettingsForm.GetBackGroundColor: TColor;
+function TMDSettingsForm.GetBackGroundColor: TColor;
 begin
   Result := FHighlighter.WhitespaceAttribute.Background;
 end;
 
-function TSVGSettingsForm.GetForeGroundColor: TColor;
+function TMDSettingsForm.GetForeGroundColor: TColor;
 begin
   Result := FHighlighter.WhitespaceAttribute.Foreground;
 end;
 
-procedure TSVGSettingsForm.ChangePage(AIndex: Integer);
+procedure TMDSettingsForm.ChangePage(AIndex: Integer);
 begin
   pc.ActivePageIndex := AIndex;
 end;
 
-procedure TSVGSettingsForm.AssignSettings(ASettings: TSettings);
+procedure TMDSettingsForm.AssignSettings(ASettings: TSettings);
 begin
   if not (ASettings is TEditorSettings) and (MenuButtonGroup.items.Count > 5) then
     MenuButtonGroup.items.Delete(5);
@@ -606,10 +624,14 @@ begin
   DarkActiveLineColorColorBox.Selected := TEditorSettings(ASettings).DarkActiveLineColor;
   LightActiveLineColorColorBox.Selected := TEditorSettings(ASettings).LightActiveLineColor;
 
+  AutoUpdateCheckBox.Checked := ASettings.DaysForNextCheck <> -1;
+  CheckNDaysSpinEdit.Value := ASettings.DaysForNextCheck;
+
   PopulateAvailThemes;
+  UpdateGUI;  
 end;
 
-function TSVGSettingsForm.SelectedStyleIsDark: Boolean;
+function TMDSettingsForm.SelectedStyleIsDark: Boolean;
 var
   LThemeAttributes: TThemeAttribute;
 begin
@@ -620,7 +642,7 @@ begin
     Result := LThemeAttributes.ThemeType = ttDark;
 end;
 
-function TSVGSettingsForm.SelectedStyleName: string;
+function TMDSettingsForm.SelectedStyleName: string;
 begin
   if SelectThemeRadioGroup.ItemIndex <> -1 then
     Result := SelectThemeRadioGroup.Items[SelectThemeRadioGroup.ItemIndex]
@@ -628,7 +650,12 @@ begin
     Result := DefaultStyleName;
 end;
 
-procedure TSVGSettingsForm.UpdateSettings(ASettings: TSettings);
+procedure TMDSettingsForm.UpdateGUI;
+begin
+  CheckNDaysSpinEdit.Enabled := AutoUpdateCheckBox.Checked;
+end;
+
+procedure TMDSettingsForm.UpdateSettings(ASettings: TSettings);
 begin
   ASettings.ActivePageIndex := pc.ActivePageIndex;
   ASettings.ThemeSelection := TThemeSelection(ThemesRadioGroup.ItemIndex);
@@ -652,6 +679,11 @@ begin
     TEditorSettings(ASettings).LightActiveLineColor := LightActiveLineColorColorBox.Selected;
   end;
 
+  if AutoUpdateCheckBox.Checked then
+    ASettings.DaysForNextCheck := CheckNDaysSpinEdit.Value
+  else
+    ASettings.DaysForNextCheck := -1;
+
   TEditorSettings(ASettings).ToolbarDrawRounded := ToolbarRoundedCheckBox.Checked;
   TEditorSettings(ASettings).ButtonDrawRounded := ButtonsRoundedCheckBox.Checked;
   TEditorSettings(ASettings).MenuDrawRounded := MenuRoundedCheckBox.Checked;
@@ -664,26 +696,26 @@ begin
   ASettings.PDFPageSettings.MarginBottom := MarginBottomEdit.ValueFloat;
 end;
 
-procedure TSVGSettingsForm.MenuButtonGroupButtonClicked(Sender: TObject;
+procedure TMDSettingsForm.MenuButtonGroupButtonClicked(Sender: TObject;
   Index: Integer);
 begin
   if Sender is TButtonGroup then
   begin
     case Index of
       0: ExitFromSettings(nil);
-      1,2,3,4,5: ChangePage(Index -1);
+      1,2,3,4,5,6: ChangePage(Index -1);
     else
       Beep;
     end;
   end;
 end;
 
-procedure TSVGSettingsForm.OrientationRadioGroupClick(Sender: TObject);
+procedure TMDSettingsForm.OrientationRadioGroupClick(Sender: TObject);
 begin
   SVGIconPosition.ImageIndex := OrientationRadioGroup.ItemIndex;
 end;
 
-procedure TSVGSettingsForm.CreateAboutForm;
+procedure TMDSettingsForm.CreateAboutForm;
 begin
   FAboutForm.Free;
   FAboutForm := TFrmAbout.Create(Self);
@@ -696,7 +728,7 @@ begin
   FAboutForm.Visible := True;
 end;
 
-procedure TSVGSettingsForm.PopulateAvailThemes;
+procedure TMDSettingsForm.PopulateAvailThemes;
 var
   I: Integer;
   IsLight: Boolean;
@@ -743,7 +775,7 @@ begin
   LightActiveLineColorColorBox.Visible := IsLight;
 end;
 
-procedure TSVGSettingsForm.ExitFromSettings(Sender: TObject);
+procedure TMDSettingsForm.ExitFromSettings(Sender: TObject);
 begin
   //Salva i parametri su file
   if Assigned(FSourceSynEdit) and Assigned(SynEdit) then
@@ -751,7 +783,7 @@ begin
   ModalResult := mrOk;
 end;
 
-procedure TSVGSettingsForm.CloneSynEdit(Source, Dest: TSynEdit);
+procedure TMDSettingsForm.CloneSynEdit(Source, Dest: TSynEdit);
 begin
   Dest.Highlighter.Assign(Source.Highlighter);
   Dest.Font.Assign(Source.Font);

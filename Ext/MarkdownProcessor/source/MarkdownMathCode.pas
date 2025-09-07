@@ -28,7 +28,9 @@ unit MarkdownMathCode;
 interface
 
 uses
-  Classes, SysUtils, MarkdownUtils;
+  System.Classes,
+  System.SysUtils,
+  MarkdownUtils;
 
 function checkMathCode(out_: TStringBuilder; s: String; start: integer): integer;
 

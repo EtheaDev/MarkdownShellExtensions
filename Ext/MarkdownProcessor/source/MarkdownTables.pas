@@ -28,7 +28,9 @@ unit MarkdownTables;
 interface
 
 uses
-  Classes, SysUtils, MarkdownUtils;
+  System.Classes,
+  System.SysUtils,
+  MarkdownUtils;
 
 type
 

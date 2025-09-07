@@ -121,14 +121,9 @@ inherited FrmPreview: TFrmPreview
       Font.Name = 'Consolas'
       Font.Pitch = fpFixed
       Font.Style = []
+      Font.Quality = fqClearTypeNatural
       TabOrder = 0
       CodeFolding.GutterShapeSize = 11
-      CodeFolding.CollapsedLineColor = clGrayText
-      CodeFolding.FolderBarLinesColor = clGrayText
-      CodeFolding.IndentGuidesColor = clGray
-      CodeFolding.IndentGuides = True
-      CodeFolding.ShowCollapsedLine = False
-      CodeFolding.ShowHintMark = True
       UseCodeFolding = False
       BorderStyle = bsNone
       Gutter.Font.Charset = DEFAULT_CHARSET
@@ -136,9 +131,11 @@ inherited FrmPreview: TFrmPreview
       Gutter.Font.Height = -11
       Gutter.Font.Name = 'Consolas'
       Gutter.Font.Style = []
+      Gutter.Font.Quality = fqClearTypeNatural
       Gutter.ShowLineNumbers = True
+      Gutter.Bands = <>
       ReadOnly = True
-      FontSmoothing = fsmNone
+      ScrollbarAnnotations = <>
     end
   end
   object StatusBar: TStatusBar
@@ -149,8 +146,7 @@ inherited FrmPreview: TFrmPreview
     Panels = <>
     ParentFont = True
     SimplePanel = True
-    SimpleText = ' Markdown file Preview - Copyright '#169' 2021-2025 - Ethea S.r.l.'
-    SizeGrip = False
+    SimpleText = ' Markdown file Preview - %s (%dbit)- Copyright '#169' 2021-2025 - Ethea S.r.l.'
     UseSystemFont = False
   end
   object PanelBottom: TPanel

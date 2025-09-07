@@ -29,7 +29,7 @@ interface
 
 uses
   SysUtils, Windows, Messages, Classes, Graphics, Controls,
-  Forms, Dialogs, StdCtrls, ExtCtrls, jpeg, SVGIconImage;
+  Forms, Dialogs, StdCtrls, ExtCtrls, jpeg, SVGIconImage, Vcl.Imaging.pngimage;
 
 type
   TSplashForm = class(TForm)
@@ -45,53 +45,14 @@ var
 
 implementation
 
-{$R *.DFM}
+{$R *.dfm}
 
-procedure GetVerInfo( const FileName : string;
-  var MajorVersion, MinorVersion, Release, Build : integer);
-var
-  InfoSize, Wnd: DWORD;
-  VerBuf: Pointer;
-  FI: PVSFixedFileInfo;
-  VerSize: DWORD;
-begin
-  MajorVersion := 0;
-  MinorVersion := 0;
-  Release := 0;
-  Build := 0;
-
-  InfoSize := GetFileVersionInfoSize(PChar(FileName), Wnd);
-  if InfoSize <> 0 then
-  begin
-    GetMem(VerBuf, InfoSize);
-    try
-      if GetFileVersionInfo(PChar(FileName), Wnd, InfoSize, VerBuf) then
-        if VerQueryValue(VerBuf, '\', Pointer(FI), VerSize) then
-        begin
-          MajorVersion := HIWORD(FI.dwFileVersionMS);
-          MinorVersion := LOWORD(FI.dwFileVersionMS);
-          Release := HIWORD(FI.dwFileVersionLS);
-          Build := LOWORD(FI.dwFileVersionLS);
-        end;
-    finally
-      FreeMem(VerBuf);
-    end;
-  end;
-end;
+uses
+  MDShellEx.About;
 
 procedure TSplashForm.FormShow(Sender: TObject);
-var
-  MajorVersion : integer;
-  MinorVersion : integer;
-  Release : integer;
-  Build : integer;
 begin
-  GetVerInfo( Application.ExeName,
-    MajorVersion, MinorVersion, Release, Build );
-
-  lbVersion.Caption := Format(lbVersion.Caption,
-    [MajorVersion, MinorVersion]);
+  lbVersion.Caption := GetCurrentVersion(Application.ExeName);
 end;
-
 
 end.

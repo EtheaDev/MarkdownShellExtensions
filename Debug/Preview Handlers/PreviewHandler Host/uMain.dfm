@@ -43,7 +43,7 @@ object FrmMain: TFrmMain
       Width = 415
       Height = 557
       ObjectTypes = [otFolders, otNonFolders]
-      Root = 'D:\Users\Carlo\Downloads\Test'
+      Root = 'D:\ETHEA\MARKDownHelpViewer\Demo\Help'
       Sorted = True
       Align = alClient
       ReadOnly = False

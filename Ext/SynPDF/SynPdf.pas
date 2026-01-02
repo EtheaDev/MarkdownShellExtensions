@@ -6,7 +6,7 @@ unit SynPdf;
 {
     This file is part of Synopse framework.
 
-    Synopse framework. Copyright (C) 2022 Arnaud Bouchez
+    Synopse framework. Copyright (c) Arnaud Bouchez
       Synopse Informatique - https://synopse.info
 
   *** BEGIN LICENSE BLOCK *****
@@ -25,7 +25,7 @@ unit SynPdf;
 
   The Initial Developer of the Original Code is Arnaud Bouchez.
 
-  Portions created by the Initial Developer are Copyright (C) 2022
+  Portions created by the Initial Developer are Copyright (c)
   the Initial Developer. All Rights Reserved.
 
   Contributor(s):
@@ -1310,6 +1310,10 @@ type
     // - shall be made once after a SaveToStreamDirectBegin() call
     // - is called by SaveToStream() method
     procedure SaveToStreamDirectEnd;
+    /// try to save the PDF file content into a specified file
+    /// - do not check any writing error (e.g. if the file is opened in the
+    // Acrobar Reader)
+    procedure TrySaveToFile(const aFileName: TFileName);
     /// save the PDF file content into a specified file
     // - return FALSE on any writing error (e.g. if the file is opened in the
     // Acrobar Reader)
@@ -2294,7 +2298,7 @@ type
     procedure CreateAssociatedUnicodeFont;
     // update font description from used chars
     procedure PrepareForSaving;
-    // low level adding of a glyph (returns the real glyph index found, 0 if none)
+    // low level adding of a glyph (returns the real glyph index found, aGlyph if none)
     function GetAndMarkGlyphAsUsed(aGlyph: word): word;
   public
     /// create the TrueType font object instance
@@ -5880,17 +5884,23 @@ begin
   raise EPdfInvalidOperation.Create('TPdfDocument.Document is null');
 end;
 
+procedure TPdfDocument.TrySaveToFile(const aFileName: TFileName);
+var FS: TFileStream;
+begin
+  FS := TFileStream.Create(aFileName,fmCreate);
+  try
+    SaveToStream(FS);
+  finally
+    FS.Free;
+  end;
+end;
+
 function TPdfDocument.SaveToFile(const aFileName: TFileName): boolean;
 var FS: TFileStream;
 begin
   try
-    FS := TFileStream.Create(aFileName,fmCreate);
-    try
-      SaveToStream(FS);
-      result := true;
-    finally
-      FS.Free;
-    end;
+    TrySaveToFile(aFileName);
+    result := true;
   except
     on E: Exception do // error on file creation (opened in reader?)
       result := false;
@@ -8002,9 +8012,9 @@ begin
       if fUsedWide[i].Glyph=aGlyph then begin
         result := WinAnsiFont.fUsedWide[
           FindOrAddUsedWideChar(WideChar(fUsedWideChar.Values[i]))].Glyph;
-        exit; // result may be 0 if this glyph doesn't exist in the CMAP content
+        exit;
       end;
-  result := 0; // returns 0 if not found
+  // result may be aGlyph if this glyph doesn't exist in the CMAP content
 end;
 
 constructor TPdfFontTrueType.Create(ADoc: TPdfDocument; AFontIndex: integer;
@@ -10149,7 +10159,13 @@ begin
         if Kind=pgcLink then
           W := 1 else
           W := 0;
-        Canvas.Doc.CreateLink(Canvas.RectI(PRect(P)^,true),Text,abSolid,W);
+        // Check if Text is an external URL (http:// or https://)
+        // and create a HyperLink instead of an internal bookmark Link
+        if (Length(Text) > 7) and
+           ((Copy(Text, 1, 7) = 'http://') or (Copy(Text, 1, 8) = 'https://')) then
+          Canvas.Doc.CreateHyperLink(Canvas.RectI(PRect(P)^,true),Text,abSolid,W)
+        else
+          Canvas.Doc.CreateLink(Canvas.RectI(PRect(P)^,true),Text,abSolid,W);
       end;
       pgcJpegDirect:
       if Len>Sizeof(TRect) then begin
@@ -10728,14 +10744,6 @@ begin
       end else
         Canvas.ShowText(pointer(tmp));
     Canvas.EndText;
-    case Positioning of
-    tpSetTextJustification:
-      if nspace>0 then
-        Canvas.SetWordSpace(0);
-    tpKerningFromAveragePosition:
-      if hscale<>100 then
-        Canvas.SetHorizontalScaling(100); //reset hor. scaling
-    end;
     // handle underline or strike out styles (direct draw PDF lines on canvas)
     if font.LogFont.lfUnderline<>0 then
       DrawLine(Posi, aSize / 8 / Canvas.GetWorldFactorX / Canvas.FDevScaleX);
@@ -10745,6 +10753,14 @@ begin
     if WithClip then begin
       Canvas.GRestore;
       fFillColor := -1; // force set drawing color
+    end;
+    case Positioning of // reset to be done after Canvas.GRestore
+    tpSetTextJustification:
+      if nspace>0 then
+        Canvas.SetWordSpace(0);
+    tpKerningFromAveragePosition:
+      if hscale<>100 then
+        Canvas.SetHorizontalScaling(100); 
     end;
     if not Canvas.FNewPath then begin
       if WithClip then

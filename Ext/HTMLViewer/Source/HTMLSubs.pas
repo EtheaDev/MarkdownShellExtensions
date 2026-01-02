@@ -1761,6 +1761,7 @@ type
     procedure SetBackgroundImage(const Name: ThtString; const APrec: PtPositionRec);
     procedure SetFormControlData(FormData: TFormData);
     procedure SetYOffset(Y: Integer);
+    procedure AddGDILinkComment(AHandle: HDC; const AUrl: ThtString; const ARect: TRect);
     procedure SetFonts(const Name, PreName: ThtString; ASize: Integer;
       AColor, AHotSpot, AVisitedColor, AActiveColor, ABackground: TColor; LnksActive, LinkUnderLine: Boolean;
       ACodePage: TBuffCodePage; ACharSet: TFontCharSet; MarginHeight, MarginWidth: Integer);
@@ -2552,6 +2553,8 @@ begin
 end;
 
 constructor TFontObj.CreateCopy(ASection: TSection; T: TFontObj);
+var
+  LOriginalSize: Integer;
 begin
   inherited Create;
 {$ifndef NoTabLink}
@@ -2561,8 +2564,13 @@ begin
   SScript := T.SScript;
   TheFont := ThtFont.Create;
   TheFont.Assign(T.TheFont);
+  LOriginalSize := TheFont.Size;  // Save original size before ConvertFont
   if Assigned(T.FIArray) then
     ConvertFont(T.FIArray.Ar[LFont]);
+  // Fix: restore font size if ConvertFont set it to 0 (happens with links)
+  // This ensures link text is rendered in PDF export via MakePagedMetaFiles
+  if (TheFont.Size = 0) and (LOriginalSize <> 0) then
+    TheFont.Size := LOriginalSize;
   UrlTarget := TUrlTarget.Create;
   UrlTarget.Assign(T.UrlTarget);
   FontChanged;
@@ -3497,7 +3505,7 @@ begin
     end;
 
   if (Assigned(MyFormControl) and MyFormControl.Active or FO.Active) or
-    IsCopy and Assigned(Document.LinkDrawnEvent) and (FO.UrlTarget.Url <> '')
+    (IsCopy and (FO.UrlTarget.Url <> ''))
   then
     with Canvas do
     begin
@@ -3517,8 +3525,15 @@ begin
           Canvas.DrawFocusRect(ARect);  {draw focus box}
       end
       else
-        Document.LinkDrawnEvent(Document.TheOwner, Document.LinkPage,
-          FO.UrlTarget.Url, FO.UrlTarget.Target, ARect);
+      begin
+        // When IsCopy is true (PDF export via MakePagedMetaFiles), insert a GDI comment
+        // that SynPDF will interpret as a hyperlink annotation
+        if FO.UrlTarget.Url <> '' then
+          Document.AddGDILinkComment(Canvas.Handle, FO.UrlTarget.Url, ARect);
+        if Assigned(Document.LinkDrawnEvent) then
+          Document.LinkDrawnEvent(Document.TheOwner, Document.LinkPage,
+            FO.UrlTarget.Url, FO.UrlTarget.Target, ARect);
+      end;
       SetTextColor(handle, SaveColor);
     end;
 end;
@@ -7588,6 +7603,41 @@ begin
   YOff := Y;
   YOffChange := True;
   HideControls;
+end;
+
+//------------------------------------------------------------------------------
+// AddGDILinkComment - Inserts a GDI comment into the metafile canvas that
+// SynPDF will interpret as a hyperlink annotation during PDF export.
+// The comment format is compatible with SynPDF's pgcLink/pgcLinkNoBorder.
+//------------------------------------------------------------------------------
+procedure ThtDocument.AddGDILinkComment(AHandle: HDC; const AUrl: ThtString;
+  const ARect: TRect);
+const
+  pgcLinkNoBorder: Byte = 3; // from SynPdf.pas TPdfGDIComment enumeration
+var
+  LUrl: RawByteString;
+  LData: RawByteString;
+  LLen, LTotalLen: Integer;
+  D: PAnsiChar;
+begin
+  // Convert URL to UTF8 for SynPDF compatibility
+  LUrl := UTF8Encode(AUrl);
+  LLen := Length(LUrl);
+  // Format: 1 byte (link type) + SizeOf(TRect) bytes (rectangle) + URL bytes
+  LTotalLen := 1 + SizeOf(TRect) + LLen;
+  SetLength(LData, LTotalLen);
+  D := PAnsiChar(LData);
+  // pgcLinkNoBorder = 3 (no visible border around the link in PDF)
+  D^ := AnsiChar(pgcLinkNoBorder);
+  Inc(D);
+  // Copy rectangle
+  PRect(D)^ := ARect;
+  Inc(D, SizeOf(TRect));
+  // Copy URL
+  if LLen > 0 then
+    System.Move(Pointer(LUrl)^, D^, LLen);
+  // Insert GDI comment into the metafile
+  GdiComment(AHandle, LTotalLen, Pointer(LData));
 end;
 
 //-- BG ---------------------------------------------------------- 08.01.2023 --
@@ -13799,6 +13849,10 @@ var
               if Document.TheOwner.ShowFocusRect then //MK20091107
                 Canvas.DrawFocusRect(ARect);
             end;
+            // When IsCopy is true (PDF export via MakePagedMetaFiles), insert a GDI comment
+            // that SynPDF will interpret as a hyperlink annotation
+            if IsCopy and (FO.UrlTarget.Url <> '') then
+              Document.AddGDILinkComment(Canvas.Handle, FO.UrlTarget.Url, ARect);
             if Assigned(Document.LinkDrawnEvent) then
               Document.LinkDrawnEvent(Document.TheOwner, Document.LinkPage,
                 FO.UrlTarget.Url, FO.UrlTarget.Target, ARect);

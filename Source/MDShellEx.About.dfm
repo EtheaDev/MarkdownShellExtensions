@@ -244,7 +244,7 @@ object FrmAbout: TFrmAbout
       'Author:'
       'Carlo Barazzetta'
       'https://github.com/EtheaDev/MarkdownShellExtensions'
-      'Copyright '#169' 2021-2025 all rights reserved.'
+      'Copyright '#169' 2021-2026 all rights reserved.'
       'Contributors:'
       'Ariel Montes'
       ''

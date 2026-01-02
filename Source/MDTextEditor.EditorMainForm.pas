@@ -3,7 +3,7 @@
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
 {                                                                              }
-{       Copyright (c) 2021-2025 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2021-2026 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {       Contributors: Ariel Montes                                             }
 {                                                                              }
@@ -626,9 +626,21 @@ begin
 end;
 
 destructor TEditingFile.Destroy;
+var
+  LParentForm: TCustomForm;
 begin
-  FreeAndNil(SynEditor);
+  //Remove focus from controls before destroying them
+  //to avoid Access Violation on 64-bit when Canvas.TryLock
+  //is called during control destruction
+  if Assigned(SynEditor) then
+  begin
+    LParentForm := GetParentForm(SynEditor);
+    if SynEditor.Focused and Assigned(LParentForm) then
+      LParentForm.ActiveControl := nil;
+  end;
+
   FreeAndNil(HTMLViewer);
+  FreeAndNil(SynEditor);
   inherited;
 end;
 
@@ -2008,12 +2020,12 @@ end;
 procedure TfrmMain.acSavePDFFileExecute(Sender: TObject);
 begin
   SaveDialogPDF.FileName := ChangeFileExt(CurrentEditFile.FileName, '.pdf');
-  if SaveDialog.Execute then
+  if SaveDialogPDF.Execute then
   begin
     Screen.Cursor := crHourGlass;
     try
-      HTMLToPDF(SaveDialog.FileName);
-      FileSavedAskToOpen(SaveDialog.FileName);
+      HTMLToPDF(SaveDialogPDF.FileName);
+      FileSavedAskToOpen(SaveDialogPDF.FileName);
     finally
       Screen.Cursor := crDefault;
     end;
@@ -2443,7 +2455,7 @@ end;
 procedure TfrmMain.AdjustCompactWidth;
 begin
   //Change size of compact view because Scrollbars appears
-  if (Height / ScaleFactor) > 900 then
+  if (Height / ScaleFactor) > 880 then
     SV.CompactWidth := Round(SV_COLLAPSED_WIDTH * ScaleFactor)
   else
     SV.CompactWidth := Round(SV_COLLAPSED_WIDTH_WITH_SCROLLBARS * ScaleFactor);
@@ -2563,7 +2575,7 @@ begin
       lHtmlToPdf.PageNumberPositionPrint := ppBottom;
 
       lHtmlToPdf.Execute;
-      lHtmlToPdf.SaveToFile(APDFFileName);
+      lHtmlToPdf.TrySaveToFile(APDFFileName);
     finally
       CurrentEditFile.HTMLViewer.DefBackground := LOldColor;
     end;

@@ -2,7 +2,7 @@
 {                                                                              }
 {  StyledComponents: a set of Styled VCL Components                            }
 {                                                                              }
-{  Copyright (c) 2022-2025 (Ethea S.r.l.)                                      }
+{  Copyright (c) 2022-2026 (Ethea S.r.l.)                                      }
 {  Author: Carlo Barazzetta                                                    }
 {  Contributors:                                                               }
 {                                                                              }
@@ -41,6 +41,7 @@ uses
   , Vcl.Controls
   , Vcl.ComCtrls
   , System.Types
+  , Vcl.CategoryButtons
   , Vcl.StyledButton
   , Vcl.StyledToolbar
   , Vcl.StyledDbNavigator
@@ -48,6 +49,7 @@ uses
   , Vcl.StyledCategoryButtons
   , Vcl.ButtonStylesAttributes
   , Vcl.StyledTaskDialog
+  , Vcl.StyledPanel
   ;
 
 Type
@@ -69,6 +71,19 @@ Type
   public
     function GetAttributes: TPropertyAttributes; override;
     procedure GetValues(Proc: TGetStrProc); override;
+  end;
+
+  TInheritedComponentEditor = class(TComponentEditor)
+  strict private
+    FInheritedCompEditor: TComponentEditor;
+    function InheritedCompEditor: TComponentEditor;
+  protected
+    function GetInheritedClass: TComponentClass; virtual; abstract;
+  public
+    function GetVerbCount: Integer; override;
+    function GetVerb(Index: Integer): string; override;
+    procedure ExecuteVerb(Index: Integer); override;
+    destructor Destroy; override;
   end;
 
   TStyledButtonComponentEditor = class(TComponentEditor)
@@ -99,18 +114,22 @@ Type
     procedure ExecuteVerb(Index: Integer); override;
   end;
 
-  TStyledButtonGroupComponentEditor = class(TComponentEditor)
+  TStyledButtonGroupComponentEditor = class(TInheritedComponentEditor)
   private
     function GetButtonGroup: TStyledButtonGroup;
+  protected
+    function GetInheritedClass: TComponentClass; override;
   public
     function GetVerbCount: Integer; override;
     function GetVerb(Index: Integer): string; override;
     procedure ExecuteVerb(Index: Integer); override;
   end;
 
-  TStyledCategoryButtonsComponentEditor = class(TComponentEditor)
+  TStyledCategoryButtonsComponentEditor = class(TInheritedComponentEditor)
   private
     function GetCategoryButtons: TStyledCategoryButtons;
+  protected
+    function GetInheritedClass: TComponentClass; override;
   public
     function GetVerbCount: Integer; override;
     function GetVerb(Index: Integer): string; override;
@@ -187,7 +206,6 @@ uses
   , Vcl.StyledCmpStrUtils
   , Vcl.DbCtrls
   , Vcl.ButtonGroup
-  , Vcl.CategoryButtons
   , System.Contnrs
   , System.UITypes
   , Winapi.ShellAPI
@@ -324,7 +342,9 @@ begin
   else if AComponent is TStyledCategoryButtons then
     LFamily := TStyledCategoryButtons(AComponent).StyleFamily
   else if AComponent is TStyledButtonItem then
-    LFamily := TStyledButtonItem(AComponent).StyleFamily;
+    LFamily := TStyledButtonItem(AComponent).StyleFamily
+  else if AComponent is TStyledPanel then
+    LFamily := TStyledPanel(AComponent).StyleFamily;
   if LFamily <> '' then
   begin
     Result := True;
@@ -357,7 +377,6 @@ begin
       Proc(GetButtonFamilyName(I));
   end;
 end;
-
 
 { TStyledClassPropertyEditor }
 
@@ -444,7 +463,7 @@ begin
   if Index = 0 then
     Result := 'Styled Button Editor...'
   else if Index = 1 then
-    Result := 'Project page on GitHub...';
+    Result := Format('Ver. %s - © Ethea S.r.l. - Open Web Help...',[StyledComponentsVersion]);
 end;
 
 function TStyledButtonComponentEditor.GetVerbCount: Integer;
@@ -545,7 +564,7 @@ begin
   else if Index = 2 then
     Result := 'Add StyledToolbar Separator'
   else if Index = 3 then
-    Result := 'Project page on GitHub...';
+    Result := Format('Ver. %s - © Ethea S.r.l. - Open Web Help...',[StyledComponentsVersion]);
 end;
 
 function TStyledToolbarComponentEditor.GetVerbCount: Integer;
@@ -560,7 +579,6 @@ var
   LDbNavigator: TCustomStyledDbNavigator;
   LNavButton: TStyledNavButton;
 begin
-  inherited;
   if Index = 0 then
   begin
     LDbNavigator := GetDbNavigator;
@@ -608,7 +626,7 @@ begin
   if Index = 0 then
     Result := 'Styled DbNavigator Editor...'
   else if Index = 1 then
-    Result := 'Project page on GitHub...';
+    Result := Format('Ver. %s - © Ethea S.r.l. - Open Web Help...',[StyledComponentsVersion]);
 end;
 
 function TStyledNavigatorComponentEditor.GetVerbCount: Integer;
@@ -660,7 +678,9 @@ begin
   end
   else if Index = 1 then
   ShellExecute(0, 'open',
-    PChar(GetProjectURL), nil, nil, SW_SHOWNORMAL);
+    PChar(GetProjectURL), nil, nil, SW_SHOWNORMAL)
+  else
+    inherited ExecuteVerb(Index-2);
 end;
 
 function TStyledButtonGroupComponentEditor.GetButtonGroup: TStyledButtonGroup;
@@ -673,17 +693,78 @@ begin
     Result := TStyledButtonGroup(LComponent);
 end;
 
+function TStyledButtonGroupComponentEditor.GetInheritedClass: TComponentClass;
+begin
+  //VCL Class to capture Editor
+  Result := TButtonGroup;
+end;
+
 function TStyledButtonGroupComponentEditor.GetVerb(Index: Integer): string;
 begin
   if Index = 0 then
     Result := 'Styled ButtonGroup Editor...'
   else if Index = 1 then
-    Result := 'Project page on GitHub...';
+    Result := Format('Ver. %s - © Ethea S.r.l. - Open Web Help...',[StyledComponentsVersion])
+  else
+    Result := Inherited GetVerb(Index-2);
 end;
 
 function TStyledButtonGroupComponentEditor.GetVerbCount: Integer;
 begin
-  Result := 2;
+  Result := Inherited GetVerbCount+2;
+end;
+
+{ TInheritedComponentEditor }
+
+destructor TInheritedComponentEditor.Destroy;
+begin
+  inherited;
+  FInheritedCompEditor := nil;
+end;
+
+procedure TInheritedComponentEditor.ExecuteVerb(Index: Integer);
+begin
+  InheritedCompEditor.ExecuteVerb(Index);
+end;
+(*
+function TInheritedComponentEditor.GetInheritedClass: TComponentClass;
+begin
+  Result := TComponentClass(GetComponent.ClassParent);
+end;
+*)
+function TInheritedComponentEditor.GetVerb(Index: Integer): string;
+begin
+  Result := InheritedCompEditor.GetVerb(Index);
+end;
+
+function TInheritedComponentEditor.GetVerbCount: Integer;
+begin
+  Result := InheritedCompEditor.GetVerbCount;
+end;
+
+function TInheritedComponentEditor.InheritedCompEditor: TComponentEditor;
+var
+  LComponentEditor: TObject;
+  LInheritedCompEditor: IComponentEditor;
+  LInheritedComponent: TComponent;
+begin
+  if not Assigned(FInheritedCompEditor) then
+  begin
+    LInheritedComponent := GetInheritedClass.Create(nil);
+    try
+      LInheritedCompEditor := GetComponentEditor(
+        LInheritedComponent, Designer);
+      LComponentEditor := LInheritedCompEditor as TObject;
+      if LComponentEditor.InheritsFrom(TComponentEditor) then
+      begin
+        FInheritedCompEditor := TComponentEditor(LComponentEditor).Create(
+          Self.GetComponent, Self.Designer);
+      end;
+    finally
+      LInheritedComponent.Free;
+    end;
+  end;
+  Result := FInheritedCompEditor;
 end;
 
 { TStyledCategoryButtonsComponentEditor }
@@ -729,8 +810,12 @@ begin
     end;
   end
   else if Index = 1 then
-  ShellExecute(0, 'open',
-    PChar(GetProjectURL), nil, nil, SW_SHOWNORMAL);
+  begin
+    ShellExecute(0, 'open',
+      PChar(GetProjectURL), nil, nil, SW_SHOWNORMAL);
+  end
+  else
+    inherited ExecuteVerb(Index-2);
 end;
 
 function TStyledCategoryButtonsComponentEditor.GetCategoryButtons: TStyledCategoryButtons;
@@ -743,17 +828,25 @@ begin
     Result := TStyledCategoryButtons(LComponent);
 end;
 
+function TStyledCategoryButtonsComponentEditor.GetInheritedClass: TComponentClass;
+begin
+  //VCL Class to capture Editor
+  Result := TCategoryButtons;
+end;
+
 function TStyledCategoryButtonsComponentEditor.GetVerb(Index: Integer): string;
 begin
   if Index = 0 then
     Result := 'Styled CategoryButtons Editor...'
   else if Index = 1 then
-    Result := 'Project page on GitHub...';
+    Result := Format('Ver. %s - © Ethea S.r.l. - Open Web Help...',[StyledComponentsVersion])
+  else
+    Result := Inherited GetVerb(Index-2);
 end;
 
 function TStyledCategoryButtonsComponentEditor.GetVerbCount: Integer;
 begin
-  Result := 2;
+  Result := Inherited GetVerbCount+2;
 end;
 
 { TStyledTaskDialogComponentEditor }
@@ -788,7 +881,7 @@ begin
   if Index = 0 then
     Result := 'Test Dialog...'
   else if Index = 1 then
-    Result := 'Project page on GitHub...';
+    Result := Format('Ver. %s - © Ethea S.r.l. - Open Web Help...',[StyledComponentsVersion]);
 end;
 
 function TStyledTaskDialogComponentEditor.GetVerbCount: Integer;
@@ -807,12 +900,12 @@ function TStyledTaskDialogIconPropertyEditor.ValueToString(
   const AValue: Integer): string;
 begin
   case AValue of
-    tdiNone: Result := 'tdiNone';
-    tdiWarning: Result := 'tdiWarning';
+    tdiNone: Result := 'None';
+    tdiWarning: Result := 'Warning';
     tdiError: Result := 'Error';
-    tdiInformation: Result := 'tdiInformation';
-    tdiShield: Result := 'tdiShield';
-    tdiQuestion: Result := 'tdiQuestion';
+    tdiInformation: Result := 'Information';
+    tdiShield: Result := 'Shield';
+    tdiQuestion: Result := 'Question';
   else
     Result := IntToStr(AValue);
   end;
@@ -821,12 +914,12 @@ end;
 function TStyledTaskDialogIconPropertyEditor.StringToValue(
   const AValue: string): Integer;
 begin
-  if SameText(AValue, 'tdiNone') then Result := tdiNone
-  else if SameText(AValue, 'tdiWarning') then Result := tdiWarning
-  else if SameText(AValue, 'tdiError') then Result := tdiError
-  else if SameText(AValue, 'tdiInformation') then Result := tdiInformation
-  else if SameText(AValue, 'tdiShield') then Result := tdiShield
-  else if SameText(AValue, 'tdiQuestion') then Result := tdiQuestion
+  if SameText(AValue, 'None') then Result := tdiNone
+  else if SameText(AValue, 'Warning') then Result := tdiWarning
+  else if SameText(AValue, 'Error') then Result := tdiError
+  else if SameText(AValue, 'Information') then Result := tdiInformation
+  else if SameText(AValue, 'Shield') then Result := tdiShield
+  else if SameText(AValue, 'Question') then Result := tdiQuestion
   else
     TryStrToInt(AValue, Result);
 end;
@@ -1021,7 +1114,8 @@ begin
      TStyledDbNavigator,
      TStyledBindNavigator,
      TStyledButtonGroup,
-     TStyledCategoryButtons]);
+     TStyledCategoryButtons,
+     TStyledPanel]);
 
   RegisterPropertyEditor(TypeInfo(string),
     TStyledTaskDialog, 'Caption', TStringProperty);
@@ -1052,6 +1146,8 @@ begin
   RegisterPropertyEditor(TypeInfo(TStyledButtonFamily),
     TStyledButtonItem, 'StyleFamily', TStyledFamilyPropertyEditor);
   RegisterPropertyEditor(TypeInfo(TStyledButtonFamily),
+    TStyledPanel, 'StyleFamily', TStyledFamilyPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(TStyledButtonFamily),
     TStyledTaskDialog, 'DialogButtonsFamily', TStyledFamilyPropertyEditor);
 
   //Property Editor for StyleClass
@@ -1079,6 +1175,8 @@ begin
     TStyledCategoryButtons, 'StyleClass', TStyledClassPropertyEditor);
   RegisterPropertyEditor(TypeInfo(TStyledButtonClass),
     TStyledButtonItem, 'StyleClass', TStyledClassPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(TStyledButtonClass),
+    TStyledPanel, 'StyleClass', TStyledClassPropertyEditor);
 
   //Property Editor for StyleAppearance
   RegisterPropertyEditor(TypeInfo(TStyledButtonAppearance),
@@ -1104,6 +1202,8 @@ begin
   RegisterPropertyEditor(TypeInfo(TStyledButtonAppearance),
     TStyledCategoryButtons, 'StyleAppearance', TStyledAppearancePropertyEditor);
   RegisterPropertyEditor(TypeInfo(TStyledButtonAppearance),
+    TStyledButtonItem, 'StyleAppearance', TStyledAppearancePropertyEditor);
+  RegisterPropertyEditor(TypeInfo(TStyledPanel),
     TStyledButtonItem, 'StyleAppearance', TStyledAppearancePropertyEditor);
 
   //Property Editor for Icon Value of StyledTaskDialog
@@ -1168,6 +1268,7 @@ begin
   RegisterComponentEditor(TStyledButton, TStyledButtonComponentEditor);
   RegisterComponentEditor(TStyledBitBtn, TStyledButtonComponentEditor);
   RegisterComponentEditor(TStyledToolButton, TStyledButtonComponentEditor);
+  RegisterComponentEditor(TStyledPanel, TStyledButtonComponentEditor);
 
   //Register custom Components editors
   RegisterComponentEditor(TStyledToolbar, TStyledToolbarComponentEditor);
@@ -1188,6 +1289,7 @@ begin
   RegisterSelectionEditor(TStyledBindNavigator, TStyledComponentSelection);
   RegisterSelectionEditor(TStyledButtonGroup, TStyledComponentSelection);
   RegisterSelectionEditor(TStyledCategoryButtons, TStyledComponentSelection);
+  RegisterSelectionEditor(TStyledPanel, TStyledComponentSelection);
 end;
 
 initialization

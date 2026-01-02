@@ -2,7 +2,7 @@
 {                                                                              }
 {       SVGIconImage Registration for Components and Editors                   }
 {                                                                              }
-{       Copyright (c) 2019-2025 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2019-2026 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {       Contributors: Vincent Parrett, Kiriakos Vlahos                         }
 {                                                                              }
@@ -264,7 +264,7 @@ begin
   Result := '';
   case Index of
     0: Result := 'SVG I&con ImageList Editor...';
-    1: Result := Format('Ver. %s - (c) Ethea S.r.l. - show help...',[SVGIconImageListVersion]);
+    1: Result := Format('Ver. %s - © Ethea S.r.l. - Open Web Help...',[SVGIconImageListVersion]);
   end;
 end;
 

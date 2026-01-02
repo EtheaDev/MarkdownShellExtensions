@@ -2,7 +2,7 @@
 {                                                                              }
 {  StyledButton Editor: Component editor for Styled Button                     }
 {                                                                              }
-{  Copyright (c) 2022-2025 (Ethea S.r.l.)                                      }
+{  Copyright (c) 2022-2026 (Ethea S.r.l.)                                      }
 {  Author: Carlo Barazzetta                                                    }
 {  Contributors:                                                               }
 {                                                                              }
@@ -471,7 +471,7 @@ end;
 procedure TStyledButtonEditor.HelpButtonClick(Sender: TObject);
 begin
   ShellExecute(handle, 'open',
-    PChar(GetProjectWikiURL), nil, nil, SW_SHOWNORMAL)
+    PChar(GetProjectURL), nil, nil, SW_SHOWNORMAL)
 end;
 
 procedure TStyledButtonEditor.Loaded;

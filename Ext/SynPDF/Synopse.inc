@@ -1,7 +1,7 @@
 {
     This file is part of Synopse framework.
 
-    Synopse framework. Copyright (C) 2022 Arnaud Bouchez
+    Synopse framework. Copyright (c) Arnaud Bouchez
       Synopse Informatique - https://synopse.info
 
   *** BEGIN LICENSE BLOCK *****
@@ -20,7 +20,7 @@
 
   The Initial Developer of the Original Code is Arnaud Bouchez.
 
-  Portions created by the Initial Developer are Copyright (C) 2022
+  Portions created by the Initial Developer are Copyright (c)
   the Initial Developer. All Rights Reserved.
 
   Contributor(s):
@@ -608,12 +608,6 @@
       {$ifend}
       {$if CompilerVersion >= 35.0}
         {$define ISDELPHI11}
-      {$ifend}
-      {$if CompilerVersion >= 36.0}
-        {$define ISDELPHI12}
-      {$ifend}
-      {$if CompilerVersion >= 37.0}
-        {$define ISDELPHI13}
       {$ifend}
     {$ifend CompilerVersion >= 17}
     {$ifopt O-} // if we don't expect fast code, don't optimize the framework

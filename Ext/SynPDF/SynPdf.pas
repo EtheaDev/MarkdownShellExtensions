@@ -5896,7 +5896,6 @@ begin
 end;
 
 function TPdfDocument.SaveToFile(const aFileName: TFileName): boolean;
-var FS: TFileStream;
 begin
   try
     TrySaveToFile(aFileName);

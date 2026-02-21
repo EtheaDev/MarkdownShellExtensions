@@ -664,7 +664,7 @@ end;
 
 procedure TEditingFile.SaveToFile;
 begin
-  SynEditor.Lines.SaveToFile(Self.FileName);
+  SynEditor.Lines.SaveToFile(Self.FileName, TEncoding.UTF8);
   SynEditor.Modified := False;
   FileAge(Self.FileName, FFileAge);
   SynEditor.OnChange(SynEditor);
@@ -2006,7 +2006,8 @@ begin
   SaveDialog.FileName := ChangeFileExt(CurrentEditFile.FileName, '.htm');
   if SaveDialog.Execute then
   begin
-    LStream := TStringStream.Create(CurrentEditFile.HTMLViewer.Text,
+    LStream := TStringStream.Create(
+      CurrentEditFile.HTMLViewer.Text,
       TEncoding.UTF8);
     try
       LStream.SaveToFile(SaveDialog.FileName);

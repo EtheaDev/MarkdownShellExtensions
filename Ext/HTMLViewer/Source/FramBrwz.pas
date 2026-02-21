@@ -148,7 +148,8 @@ type
 
 implementation
 {$ifdef Compiler24_Plus}
-uses System.Types;
+uses System.Types,
+  System.Generics.Collections;
 {$endif}
 
 function ConvDosToHTML(const Name: ThtString): ThtString; forward;

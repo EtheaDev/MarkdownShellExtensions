@@ -507,10 +507,19 @@ begin
   Result := '"'+AValue+'"';
 end;
 
-procedure UpdateApplicationStyle(const VCLStyleName: string);
+function UpdateApplicationStyle(const VCLStyleName: string): string;
 begin
   if StyleServices.Enabled then
-    TStyleManager.SetStyle(VCLStyleName);
+  begin
+    Result := VCLStyleName;
+    if not TStyleManager.TrySetStyle(Result, False) then
+    begin
+      Result := 'Windows Modern';
+      TStyleManager.TrySetStyle(Result);
+    end;
+  end
+  else
+    Result := 'Windows';
 end;
 
 { TEditingFile }
@@ -2097,7 +2106,7 @@ procedure TfrmMain.UpdateFromSettings(AEditor: TSynEdit);
 var
   LStyle: TStyledButtonDrawType;
 begin
-  UpdateApplicationStyle(FEditorSettings.StyleName);
+  FEditorSettings.StyleName := UpdateApplicationStyle(FEditorSettings.StyleName);
   if AEditor <> nil then
   begin
     FEditorSettings.ReadSettings(AEditor.Highlighter, self.FEditorOptions);

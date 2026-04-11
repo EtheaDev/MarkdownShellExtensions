@@ -5537,7 +5537,7 @@ end;
 function TSynZipCompressor.Read(var Buffer; Count: Integer): Longint;
 begin
   assert(false);
-  {$if compilerversion <= 36}result := 0;{$ifend}
+  {$if compilerversion <= 37}result := 0;{$ifend}
 end;
 
 function TSynZipCompressor.Seek(Offset: Integer; Origin: Word): Longint;

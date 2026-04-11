@@ -333,11 +333,10 @@ object frmMain: TfrmMain
       Left = 45
       Top = 3
       Width = 116
-      Height = 32
+      Height = 15
       Align = alLeft
       Caption = 'MarkDown Text Editor'
       Layout = tlCenter
-      ExplicitHeight = 15
     end
     object SettingsToolBar: TStyledToolbar
       AlignWithMargins = True

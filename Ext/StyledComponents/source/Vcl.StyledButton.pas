@@ -2310,7 +2310,7 @@ var
 begin
   if AsVCLStyle then
   begin
-    //if StyleElements contains seClient then use
+    //if StyleElements contains seBorder then use
     //VCL Style assigned to Button or Global VCL Style
     if seBorder in FOwnerControl.StyleElements then
       LStyleAppearance := DEFAULT_APPEARANCE;
@@ -3935,8 +3935,6 @@ begin
   begin
     if (LValue <> DEFAULT_WINDOWS_CLASS) then
       FOwnerControl.StyleElements := FOwnerControl.StyleElements - [seClient];
-//    else
-//      LValue := GetActiveStyleName;
     if LValue = '' then
       LValue := DEFAULT_WINDOWS_CLASS;
   end;
@@ -4008,7 +4006,7 @@ procedure TStyledButtonRender.Loaded;
 begin
   inherited;
   SetImageIndex(ImageIndex);
-  if not FStyleApplied (*and not HasCustomAttributes*) then
+  if not FStyleApplied then
   begin
     StyleFamilyUpdateAttributesByModalResult(FModalResult,
       FStyleFamily, FStyleClass, FStyleAppearance);

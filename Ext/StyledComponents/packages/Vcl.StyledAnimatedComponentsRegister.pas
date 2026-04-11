@@ -170,7 +170,7 @@ begin
         LNewButton.Name := Designer.UniqueName('Button');
         LNewButton.Caption := 'Button';
       end;
-      if EditStyledButton(LNewButton) then
+      if EditStyledControl(LNewButton) then
       begin
         LToolbar.SetToolbarStyle(LNewButton.StyleFamily,
           LNewButton.StyleClass, LNewButton.StyleAppearance);

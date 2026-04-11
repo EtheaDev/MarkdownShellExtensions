@@ -83,6 +83,7 @@ type
     FStyleClass: TStyledButtonClass;
     FStyleAppearance: TStyledButtonAppearance;
     FStyleApplied: Boolean;
+    FCustomDrawType: Boolean;
 
     //Caption Rendering
     FCaptionAlignment: TAlignment;
@@ -102,12 +103,18 @@ type
     procedure SetStyleClass(const AValue: TStyledButtonClass);
     procedure SetStyleAppearance(const AValue: TStyledButtonAppearance);
     procedure SetCaptionAlignment(const AValue: TAlignment);
-    function IsCustomDrawType: Boolean;
     function IsCustomRoundedCorners: Boolean;
     function IsCustomRadius: Boolean;
+    function IsStoredColor: Boolean;
+    function IsStoredParentBackground: Boolean;
+    /// <summary>Determines if StyleFamily should be stored</summary>
     function IsStoredStyleFamily: Boolean;
+    /// <summary>Determines if StyleClass should be stored</summary>
     function IsStoredStyleClass: Boolean;
+    /// <summary>Determines if StyleAppearance should be stored</summary>
     function IsStoredStyleAppearance: Boolean;
+    /// <summary>Determines if StyleElements should be stored</summary>
+    function IsStoredStyleElements: Boolean;
     function ApplyPanelStyle: Boolean;
     function GetAttributes(const AEnabled: Boolean): TStyledButtonAttributes;
     procedure CMStyleChanged(var AMessage: TMessage); message CM_STYLECHANGED;
@@ -116,6 +123,10 @@ type
     procedure SetAsVCLComponent(const AValue: Boolean);
     function AsVCLStyle: Boolean;
     function GetActiveStyleName: string;
+    function GetColor: TColor;
+    procedure SetColor(const AValue: TColor);
+    procedure SetPanelStyleDisabled(const AValue: TStyledButtonAttributes);
+    procedure SetPanelStyleNormal(const AValue: TStyledButtonAttributes);
   protected
     procedure Paint; override;
     procedure Loaded; override;
@@ -124,6 +135,10 @@ type
     function IsCustomStyleActive: Boolean;
     {$ENDIF}
   public
+    /// <summary>Checks if a custom draw type has been set</summary>
+    function IsCustomDrawType: Boolean;
+    /// <summary>Sets whether a custom draw type is being used</summary>
+    procedure SetCustomStyleDrawType(ACustomStyleDrawType: Boolean);
     {$IFDEF D10_4+}
     /// <summary>Scales panel for new PPI (High DPI support)</summary>
     procedure ScaleForPPI(NewPPI: Integer); override;
@@ -134,6 +149,8 @@ type
     {$ENDIF}
     /// <summary>Copies properties from another panel</summary>
     procedure Assign(Source: TPersistent); override;
+    /// <summary>Copies Styled properties to another Panel</summary>
+    procedure AssignStyleTo(Dest: TPersistent);
     /// <summary>Creates panel with default style settings</summary>
     constructor Create(AOwner: TComponent); override;
     /// <summary>Creates panel with specified style settings</summary>
@@ -166,9 +183,14 @@ type
       const AClass: TStyledButtonClass = DEFAULT_WINDOWS_CLASS;
       const AAppearance: TStyledButtonAppearance = DEFAULT_APPEARANCE;
       const AStyleRadius: Integer = DEFAULT_RADIUS); virtual;
+  published
     /// <summary>Returns the currently active VCL style name</summary>
     property ActiveStyleName: string read GetActiveStyleName;
-  published
+    /// <summary>Custom attributes for normal button state</summary>
+    property PanelStyleNormal: TStyledButtonAttributes read FPanelStyleNormal write SetPanelStyleNormal;
+    /// <summary>Custom attributes for disabled button state</summary>
+    property PanelStyleDisabled: TStyledButtonAttributes read FPanelStyleDisabled write SetPanelStyleDisabled;
+
     //Publishing TCustomPanel properties
     property Align;
     property Alignment;
@@ -177,13 +199,13 @@ type
     property BevelEdges;
     property BevelInner;
     property BevelKind;
-    property BevelOuter;
+    property BevelOuter default bvNone;
     property BevelWidth;
     property BiDiMode;
     property BorderWidth;
     property BorderStyle;
     property Caption;
-    property Color;
+    property Color: TColor read GetColor write SetColor stored IsStoredColor;
     property Constraints;
     property Ctl3D;
     property UseDockManager default True;
@@ -199,7 +221,7 @@ type
     property Padding;
     {$ENDIF}
     property ParentBiDiMode;
-    property ParentBackground;
+    property ParentBackground stored IsStoredParentBackground;
     property ParentColor;
     property ParentCtl3D;
     property ParentDoubleBuffered;
@@ -213,7 +235,7 @@ type
     property Touch;
     property VerticalAlignment;
     property Visible;
-    property StyleElements;
+    property StyleElements stored IsStoredStyleElements;
     {$IFDEF D10_3+}
     property OnAlignInsertBefore;
     property OnAlignPosition;
@@ -287,21 +309,25 @@ begin
   FPanelStyleDisabled := TStyledButtonAttributes.Create(Self);
   FPanelStyleDisabled.Name := 'PanelStyleDisabled';
 
-  //Set Style values from parameters
+  //Style initialization
   FStyleDrawType := _DefaultStyleDrawType;
+  FCustomDrawType := True;
   FStyleRadius := _DefaultStyleRadius;
   FStyleRoundedCorners := ALL_ROUNDED_CORNERS;
   FStyleFamily := AFamily;
-  FStyleClass := AClass;
   FStyleAppearance := AAppearance;
-  FStyleApplied := False;
+  FStyleApplied := True;
 
   //Caption defaults
   FCaptionAlignment := taCenter;
   FCaptionMargin := DEFAULT_CAPTION_MARGIN;
 
-  //Apply Style with parameters
-  ApplyPanelStyle;
+  //Different default
+  BevelOuter := bvNone;
+  ParentBackground := not IsStoredParentBackground;
+
+  //Call the Setter of StyleClass!
+  StyleClass := AClass;
 end;
 
 destructor TStyledPanel.Destroy;
@@ -309,6 +335,27 @@ begin
   FPanelStyleNormal.Free;
   FPanelStyleDisabled.Free;
   inherited Destroy;
+end;
+
+procedure TStyledPanel.AssignStyleTo(Dest: TPersistent);
+var
+  LDestPanel: TStyledPanel;
+begin
+  inherited;
+  if Dest is TStyledPanel then
+  begin
+    LDestPanel := TStyledPanel(Dest);
+    LDestPanel.FStyleRadius := FStyleRadius;
+    LDestPanel.FStyleRoundedCorners := FStyleRoundedCorners;
+    LDestPanel.FStyleDrawType := FStyleDrawType;
+    LDestPanel.FStyleFamily := FStyleFamily;
+    LDestPanel.FStyleAppearance := FStyleAppearance;
+    LDestPanel.FCaptionAlignment := FCaptionAlignment;
+    LDestPanel.FStyleApplied := Self.FStyleApplied;
+    LDestPanel.FCustomDrawType := Self.FCustomDrawType;
+    //Call Setter
+    LDestPanel.StyleClass := FStyleClass;
+  end;
 end;
 
 procedure TStyledPanel.Assign(Source: TPersistent);
@@ -323,39 +370,66 @@ begin
     FStyleRoundedCorners := LSourcePanel.FStyleRoundedCorners;
     FStyleDrawType := LSourcePanel.FStyleDrawType;
     FStyleFamily := LSourcePanel.FStyleFamily;
-    FStyleClass := LSourcePanel.FStyleClass;
     FStyleAppearance := LSourcePanel.FStyleAppearance;
     FCaptionAlignment := LSourcePanel.FCaptionAlignment;
-    FStyleApplied := False;
-    ApplyPanelStyle;
+    FStyleApplied := LSourcePanel.FStyleApplied;
+    StyleClass := LSourcePanel.FStyleClass;
   end;
 end;
 
 function TStyledPanel.ApplyPanelStyle: Boolean;
 var
-  LTempPressed, LTempSelected, LTempHot: TStyledButtonAttributes;
+  LDummyPressed, LDummySelected, LDummyHot: TStyledButtonAttributes;
+  LButtonFamily: TButtonFamily;
+  LStyleClass: TStyledButtonClass;
+  LStyleAppearance: TStyledButtonAppearance;
 begin
-  LTempPressed := TStyledButtonAttributes.Create(nil);
-  LTempSelected := TStyledButtonAttributes.Create(nil);
-  LTempHot := TStyledButtonAttributes.Create(nil);
-  try
-    StyleFamilyUpdateAttributes(
-      FStyleFamily,
-      FStyleClass,
-      FStyleAppearance,
-      FPanelStyleNormal,
-      LTempPressed,
-      LTempSelected,
-      LTempHot,
-      FPanelStyleDisabled);
-    FStyleApplied := True;
-    Result := FStyleApplied;
-  finally
-    LTempPressed.Free;
-    LTempSelected.Free;
-    LTempHot.Free;
+  if AsVCLStyle then
+  begin
+    //if StyleElements contains seBorder then use
+    //VCL Style assigned to Button or Global VCL Style
+    if seBorder in StyleElements then
+      LStyleAppearance := DEFAULT_APPEARANCE;
+    LStyleClass := GetActiveStyleName;
+  end
+  else
+  begin
+    LStyleClass := FStyleClass;
+    LStyleAppearance := FStyleAppearance;
   end;
-  Invalidate;
+  LDummyPressed := TStyledButtonAttributes.Create(nil);
+  LDummySelected := TStyledButtonAttributes.Create(nil);
+  LDummyHot := TStyledButtonAttributes.Create(nil);
+  try
+    Result := StyleFamilyCheckAttributes(FStyleFamily,
+      LStyleClass, LStyleAppearance, LButtonFamily);
+    if Result (*or (csDesigning in ComponentState)*) then
+    begin
+      StyleFamilyUpdateAttributes(
+        FStyleFamily,
+        FStyleClass,
+        FStyleAppearance,
+        FPanelStyleNormal,
+        LDummyPressed,
+        LDummySelected,
+        LDummyHot,
+        FPanelStyleDisabled);
+      Color := FPanelStyleNormal.ButtonColor;
+      if not FCustomDrawType then
+        FStyleDrawType := FPanelStyleNormal.DrawType;
+    end
+    else
+    begin
+      FStyleClass := LStyleClass;
+      FStyleAppearance := LStyleAppearance;
+    end;
+  finally
+    LDummyPressed.Free;
+    LDummySelected.Free;
+    LDummyHot.Free;
+  end;
+  if Result then
+    Invalidate;
 end;
 
 function TStyledPanel.GetAttributes(const AEnabled: Boolean): TStyledButtonAttributes;
@@ -405,7 +479,8 @@ end;
 procedure TStyledPanel.Loaded;
 begin
   inherited;
-  ApplyPanelStyle;
+  if not FStyleApplied then
+    FStyleApplied := ApplyPanelStyle;
 end;
 
 procedure TStyledPanel.Paint;
@@ -419,7 +494,7 @@ var
   LThemeAttribute: TPanelThemeAttribute;
 begin
   if not FStyleApplied then
-    ApplyPanelStyle;
+    FStyleApplied := ApplyPanelStyle;
 
   LStyle := StyleServices{$IFDEF D10_4+}(Self){$ENDIF};
   LDetails := LStyle.GetElementDetails(tpPanelDontCare);
@@ -532,6 +607,27 @@ begin
   end;
 end;
 
+function TStyledPanel.GetColor: TColor;
+begin
+  Result := Inherited Color;
+end;
+
+procedure TStyledPanel.SetColor(const AValue: TColor);
+begin
+  if inherited Color <> AValue then
+  begin
+    FPanelStyleNormal.ButtonColor := AValue;
+    FCustomDrawType := True;
+    Inherited Color := AValue;
+    Invalidate;
+  end;
+end;
+
+procedure TStyledPanel.SetCustomStyleDrawType(ACustomStyleDrawType: Boolean);
+begin
+  FCustomDrawType := ACustomStyleDrawType;
+end;
+
 procedure TStyledPanel.SetStyleRadius(const AValue: Integer);
 begin
   if FStyleRadius <> AValue then
@@ -552,40 +648,63 @@ end;
 
 procedure TStyledPanel.SetStyleDrawType(const AValue: TStyledButtonDrawType);
 begin
-  if FStyleDrawType <> AValue then
+  if (FStyleDrawType <> AValue) or (csLoading in ComponentState) then
   begin
     FStyleDrawType := AValue;
+    FCustomDrawType := True;
+    ParentBackground := not IsStoredParentBackground;
     Invalidate;
   end;
 end;
 
 procedure TStyledPanel.SetStyleFamily(const AValue: TStyledButtonFamily);
+var
+  LValue: TStyledButtonFamily;
 begin
-  if FStyleFamily <> AValue then
+  LValue := AValue;
+  if LValue = '' then
+    LValue := DEFAULT_CLASSIC_FAMILY;
+  if (LValue <> Self.FStyleFamily) or not FStyleApplied then
   begin
-    FStyleFamily := AValue;
-    FStyleApplied := False;
-    ApplyPanelStyle;
+    FStyleFamily := LValue;
+    FStyleApplied := ApplyPanelStyle;
   end;
+  if FStyleFamily = DEFAULT_CLASSIC_FAMILY then
+    StyleElements := [seFont, seClient, seBorder];
 end;
 
 procedure TStyledPanel.SetStyleClass(const AValue: TStyledButtonClass);
+var
+  LValue: TStyledButtonClass;
 begin
-  if FStyleClass <> AValue then
+  LValue := AValue;
+  //Using a specific Class in Classic Family force
+  //StyleElements without seClient
+  if (FStyleFamily = DEFAULT_CLASSIC_FAMILY) then
   begin
-    FStyleClass := AValue;
-    FStyleApplied := False;
-    ApplyPanelStyle;
+    if (LValue <> DEFAULT_WINDOWS_CLASS) then
+      StyleElements := StyleElements - [seClient];
+    if LValue = '' then
+      LValue := DEFAULT_WINDOWS_CLASS;
+  end;
+  if (LValue <> Self.FStyleClass) or not FStyleApplied then
+  begin
+    Self.FStyleClass := LValue;
+    FStyleApplied := ApplyPanelStyle;
   end;
 end;
 
 procedure TStyledPanel.SetStyleAppearance(const AValue: TStyledButtonAppearance);
+var
+  LValue: TStyledButtonAppearance;
 begin
-  if FStyleAppearance <> AValue then
+  LValue := AValue;
+  if LValue = '' then
+    LValue := DEFAULT_APPEARANCE;
+  if (LValue <> Self.FStyleAppearance) or not FStyleApplied then
   begin
-    FStyleAppearance := AValue;
-    FStyleApplied := False;
-    ApplyPanelStyle;
+    Self.FStyleAppearance := LValue;
+    FStyleApplied := ApplyPanelStyle;
   end;
 end;
 
@@ -596,13 +715,32 @@ begin
   FStyleFamily := AStyleFamily;
   FStyleClass := AStyleClass;
   FStyleAppearance := AStyleAppearance;
-  FStyleApplied := False;
-  ApplyPanelStyle;
+  if not ApplyPanelStyle then
+    raise EStyledPanelError.CreateFmt(ERROR_SETTING_PANEL_STYLE,
+      [AStyleFamily, AStyleClass, AStyleAppearance]);
+end;
+
+procedure TStyledPanel.SetPanelStyleNormal(
+  const AValue: TStyledButtonAttributes);
+begin
+  if not SameStyledButtonStyle(FPanelStyleNormal, AValue) then
+  begin
+    FPanelStyleNormal := AValue;
+  end;
+end;
+
+procedure TStyledPanel.SetPanelStyleDisabled(
+  const AValue: TStyledButtonAttributes);
+begin
+  if not SameStyledButtonStyle(FPanelStyleDisabled, AValue) then
+  begin
+    FPanelStyleDisabled := AValue;
+  end;
 end;
 
 function TStyledPanel.IsCustomDrawType: Boolean;
 begin
-  Result := FStyleDrawType <> _DefaultStyleDrawType;
+  Result := FCustomDrawType;
 end;
 
 function TStyledPanel.IsCustomRoundedCorners: Boolean;
@@ -623,6 +761,24 @@ end;
 function TStyledPanel.IsStoredStyleClass: Boolean;
 begin
   Result := FStyleClass <> _DefaultClass;
+end;
+
+function TStyledPanel.IsStoredStyleElements: Boolean;
+begin
+  if FStyleFamily = DEFAULT_CLASSIC_FAMILY then
+    Result := StyleElements <> [seFont, seClient, seBorder]
+  else
+    Result := False;
+end;
+
+function TStyledPanel.IsStoredColor: Boolean;
+begin
+  Result := inherited Color <> FPanelStyleNormal.ButtonColor;
+end;
+
+function TStyledPanel.IsStoredParentBackground: Boolean;
+begin
+  Result := not (FStyleDrawType in [btRoundRect, btRounded, btEllipse]);
 end;
 
 function TStyledPanel.IsStoredStyleAppearance: Boolean;
@@ -646,17 +802,7 @@ end;
 
 function TStyledPanel.GetActiveStyleName: string;
 begin
-  {$IFDEF D10_4+}
-  if TStyleManager.IsCustomStyleActive then
-    Result := TStyleManager.ActiveStyle.Name
-  else
-    Result := 'Windows';
-  {$ELSE}
-  if IsCustomStyleActive then
-    Result := TStyleManager.ActiveStyle.Name
-  else
-    Result := 'Windows';
-  {$ENDIF}
+  Result := Vcl.ButtonStylesAttributes.GetActiveStyleName(Self);
 end;
 
 function TStyledPanel.AsVCLStyle: Boolean;
@@ -679,12 +825,13 @@ begin
       FStyleFamily := DEFAULT_CLASSIC_FAMILY;
       FStyleClass := DEFAULT_WINDOWS_CLASS;
       FStyleAppearance := DEFAULT_APPEARANCE;
-      ApplyPanelStyle;
     end;
     if AValue then
       StyleElements := StyleElements + [seClient]
     else
       StyleElements := StyleElements - [seClient];
+    FCustomDrawType := False;
+    ApplyPanelStyle;
   end;
 end;
 

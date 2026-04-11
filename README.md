@@ -1,6 +1,6 @@
 ﻿# Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 2.7.0 - 20 Feb 2026**
+**Latest Version 2.7.1 - 11 Apr 2026**
 
 **A collection of tools for markdown files, to edit and view content:**
 
@@ -12,7 +12,7 @@
 
 - No need to built the project with Delphi: an easy Setup is provided.
 
-- Supports Windows Vista, 7, 8, 10 and 11 (for 32 bits and 64 bits).
+- Supports Windows 10 and 11 (for 32 bits and 64 bits).
 
 - Themes (Dark and Light) according to user preferences of Windows Theme
 
@@ -66,7 +66,10 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
-20 Feb 2027: ver. 2.7.0
+11 Apr 2026: ver. 2.7.1
+- Used new "modern" Styles available in Delphi 13.
+
+20 Feb 2026: ver. 2.7.0
 - Fixed saving new file in UTF-8 format.
 
 02 Jan 2026: ver. 2.6.0

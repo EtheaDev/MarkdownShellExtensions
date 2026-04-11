@@ -88,7 +88,7 @@ Type
 
   TStyledButtonComponentEditor = class(TComponentEditor)
   private
-    function GetButton: TControl;
+    function GetControl: TControl;
   public
     function GetVerbCount: Integer; override;
     function GetVerb(Index: Integer): string; override;
@@ -428,7 +428,7 @@ end;
 
 { TStyledButtonComponentEditor }
 
-function TStyledButtonComponentEditor.GetButton: TControl;
+function TStyledButtonComponentEditor.GetControl: TControl;
 var
   LComponent: TPersistent;
 begin
@@ -437,7 +437,9 @@ begin
   if LComponent is TCustomStyledGraphicButton then
     Result := TCustomStyledGraphicButton(LComponent)
   else if LComponent is TCustomStyledButton then
-    Result := TCustomStyledButton(LComponent);
+    Result := TCustomStyledButton(LComponent)
+  else if LComponent is TStyledPanel then
+    Result := TStyledPanel(LComponent);
 end;
 
 procedure TStyledButtonComponentEditor.Edit;
@@ -446,12 +448,23 @@ begin
 end;
 
 procedure TStyledButtonComponentEditor.ExecuteVerb(Index: Integer);
+var
+  LControl: TControl;
 begin
   inherited;
+  LControl := GetControl;
   if Index = 0 then
   begin
-    if EditStyledButton(GetButton) then
-      Designer.Modified;
+    if LControl is TStyledPanel then
+    begin
+      if EditStyledPanel(TStyledPanel(LControl)) then
+        Designer.Modified;
+    end
+    else
+    begin
+      if EditStyledControl(LControl) then
+        Designer.Modified;
+    end;
   end
   else if Index = 1 then
   ShellExecute(0, 'open',
@@ -459,9 +472,18 @@ begin
 end;
 
 function TStyledButtonComponentEditor.GetVerb(Index: Integer): string;
+var
+  LControl: TControl;
 begin
+  inherited;
+  LControl := GetControl;
   if Index = 0 then
-    Result := 'Styled Button Editor...'
+  begin
+    if LControl is TStyledPanel then
+      Result := 'Styled Panel Editor...'
+    else
+      Result := 'Styled Button Editor...';
+  end
   else if Index = 1 then
     Result := Format('Ver. %s - © Ethea S.r.l. - Open Web Help...',[StyledComponentsVersion]);
 end;
@@ -501,7 +523,7 @@ begin
         LNewButton.Name := Designer.UniqueName('Button');
         LNewButton.Caption := 'Button';
       end;
-      if EditStyledButton(LNewButton) then
+      if EditStyledControl(LNewButton) then
       begin
         LToolbar.SetToolbarStyle(LNewButton.StyleFamily,
           LNewButton.StyleClass, LNewButton.StyleAppearance);
@@ -594,7 +616,7 @@ begin
         LNavButton.Name := Designer.UniqueName('Button');
         LNavButton.Caption := 'Button';
       end;
-      if EditStyledButton(LNavButton) then
+      if EditStyledControl(LNavButton) then
       begin
         LDbNavigator.SetDbNavigatorStyle(LNavButton.StyleFamily,
           LNavButton.StyleClass, LNavButton.StyleAppearance);
@@ -1203,8 +1225,8 @@ begin
     TStyledCategoryButtons, 'StyleAppearance', TStyledAppearancePropertyEditor);
   RegisterPropertyEditor(TypeInfo(TStyledButtonAppearance),
     TStyledButtonItem, 'StyleAppearance', TStyledAppearancePropertyEditor);
-  RegisterPropertyEditor(TypeInfo(TStyledPanel),
-    TStyledButtonItem, 'StyleAppearance', TStyledAppearancePropertyEditor);
+  RegisterPropertyEditor(TypeInfo(TStyledButtonAppearance),
+    TStyledPanel, 'StyleAppearance', TStyledAppearancePropertyEditor);
 
   //Property Editor for Icon Value of StyledTaskDialog
   RegisterPropertyEditor(TypeInfo(TTaskDialogIcon),

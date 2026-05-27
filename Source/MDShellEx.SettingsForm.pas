@@ -118,6 +118,7 @@ type
     MenuRoundedCheckBox: TCheckBox;
     EditingOptionsGroupBox: TGroupBox;
     AutoRefreshCheckBox: TCheckBox;
+    SyncScrollCheckBox: TCheckBox;
     ActiveLineColorGroupBox: TGroupBox;
     DarkActiveLineColorColorBox: TColorBox;
     LightActiveLineColorColorBox: TColorBox;
@@ -614,6 +615,12 @@ begin
   else
     AutoRefreshCheckBox.Checked := False;
 
+  SyncScrollCheckBox.Visible := ASettings is TEditorSettings;
+  if SyncScrollCheckBox.Visible then
+    SyncScrollCheckBox.Checked := TEditorSettings(ASettings).SyncScroll
+  else
+    SyncScrollCheckBox.Checked := False;
+
   OrientationRadioGroup.ItemIndex := Ord(ASettings.PDFPageSettings.PrintOrientation);
   OrientationRadioGroupClick(OrientationRadioGroup);
   PaperSizeRadioGroup.ItemIndex := Ord(ASettings.PDFPageSettings.PaperSize);
@@ -675,6 +682,7 @@ begin
   begin
     TEditorSettings(ASettings).DownloadFromWEB := DownloadFromWEBCheckBox.Checked;
     TEditorSettings(ASettings).AutoRefreshWhenEditing := AutoRefreshCheckBox.Checked;
+    TEditorSettings(ASettings).SyncScroll := SyncScrollCheckBox.Checked;
     TEditorSettings(ASettings).DarkActiveLineColor := DarkActiveLineColorColorBox.Selected;
     TEditorSettings(ASettings).LightActiveLineColor := LightActiveLineColorColorBox.Selected;
   end;

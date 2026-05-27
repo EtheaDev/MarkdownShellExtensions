@@ -340,9 +340,9 @@ object frmMain: TfrmMain
     end
     object SettingsToolBar: TStyledToolbar
       AlignWithMargins = True
-      Left = 696
+      Left = 664
       Top = 3
-      Width = 304
+      Width = 336
       Height = 32
       Align = alRight
       ButtonHeight = 32
@@ -371,43 +371,49 @@ object frmMain: TfrmMain
         Grouped = True
         Style = tbsCheck
       end
-      object SepLayoutButtons: TStyledToolButton
+      object btSyncScroll: TStyledToolButton
         Left = 96
+        Top = 0
+        Action = acSyncScroll
+        Style = tbsCheck
+      end
+      object SepLayoutButtons: TStyledToolButton
+        Left = 128
         Top = 0
         Style = tbsSeparator
       end
       object ColorSettingsToolButton: TStyledToolButton
-        Left = 102
+        Left = 134
         Top = 0
         Action = actnSettings
       end
       object EditOptionsToolButton: TStyledToolButton
-        Left = 134
+        Left = 166
         Top = 0
         Action = actnEditOptions
       end
       object PageSetupToolButton: TStyledToolButton
-        Left = 166
+        Left = 198
         Top = 0
         Action = actnPageSetup
       end
       object PrinterSetupToolButton: TStyledToolButton
-        Left = 198
+        Left = 230
         Top = 0
         Action = actnPrinterSetup
       end
       object SepToolButton: TStyledToolButton
-        Left = 230
+        Left = 262
         Top = 0
         Style = tbsSeparator
       end
       object AboutToolButton: TStyledToolButton
-        Left = 236
+        Left = 268
         Top = 0
         Action = acAbout
       end
       object QuitToolButton: TStyledToolButton
-        Left = 268
+        Left = 300
         Top = 0
         Action = acQuit
         ImageName = 'Exit'
@@ -768,6 +774,15 @@ object frmMain: TfrmMain
       ImageName = 'layout_right'
       OnExecute = acLayoutExecute
       OnUpdate = acLayoutUpdate
+    end
+    object acSyncScroll: TAction
+      Category = 'Layout'
+      Caption = 'Sync Scroll'
+      Hint = 'Sync scroll between Editor and HTML Viewer'
+      ImageIndex = 41
+      ImageName = 'attachment'
+      OnExecute = acSyncScrollExecute
+      OnUpdate = acSyncScrollUpdate
     end
   end
   object SaveDialog: TFileSaveDialog
@@ -1201,6 +1216,15 @@ object frmMain: TfrmMain
     Images = VirtualImageList
     Left = 528
     Top = 152
+    object CopyHTMLViewerMenuItem: TMenuItem
+      Action = acEditCopy
+    end
+    object SelectAllHTMLViewerMenuItem: TMenuItem
+      Action = acEditSelectAll
+    end
+    object PopHTMLSepCopy: TMenuItem
+      Caption = '-'
+    end
     object ZoomInMenuItem: TMenuItem
       Action = acZoomIn
     end
@@ -1263,6 +1287,12 @@ object frmMain: TfrmMain
     Enabled = False
     OnTimer = LoadTimerTimer
     Left = 272
+    Top = 352
+  end
+  object SyncScrollTimer: TTimer
+    Interval = 80
+    OnTimer = SyncScrollTimerTimer
+    Left = 400
     Top = 352
   end
   object CheckFileChangedTimer: TTimer

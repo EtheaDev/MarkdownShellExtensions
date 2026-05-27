@@ -162,6 +162,7 @@ type
   private
     FDownloadFromWEB: Boolean;
     FAutoRefreshWhenEditing: Boolean;
+    FSyncScroll: Boolean;
     FLightActiveLineColor: TColor;
     FDarkActiveLineColor: TColor;
     procedure SetDownloadFromWEB(const Value: Boolean);
@@ -170,6 +171,7 @@ type
     procedure ReadSynEditorOptions(
       const ASynEditorOptions: TSynEditorOptionsContainer);
     procedure SetAutoRefreshWhenEditing(const Value: Boolean);
+    procedure SetSyncScroll(const Value: Boolean);
   public
     HistoryFileList: TStrings;
     OpenedFileList: TStrings;
@@ -186,6 +188,7 @@ type
     procedure UpdateOpenedFiles(AFileList: TStrings; const ACurrentFileName: string);
     property DownloadFromWEB: Boolean read FDownloadFromWEB write SetDownloadFromWEB;
     property AutoRefreshWhenEditing: Boolean read FAutoRefreshWhenEditing write SetAutoRefreshWhenEditing;
+    property SyncScroll: Boolean read FSyncScroll write SetSyncScroll;
     property LightActiveLineColor: TColor read FLightActiveLineColor write FLightActiveLineColor;
     property DarkActiveLineColor: TColor read FDarkActiveLineColor write FDarkActiveLineColor;
   end;
@@ -518,6 +521,11 @@ begin
   FAutoRefreshWhenEditing := Value;
 end;
 
+procedure TEditorSettings.SetSyncScroll(const Value: Boolean);
+begin
+  FSyncScroll := Value;
+end;
+
 procedure TEditorSettings.SetDownloadFromWEB(const Value: Boolean);
 begin
   FDownloadFromWEB := Value;
@@ -576,6 +584,7 @@ begin
   begin
     DownloadFromWEB := Boolean(FIniFile.ReadInteger('Global', 'DownloadFromWEB', 0));
     AutoRefreshWhenEditing := Boolean(FIniFile.ReadInteger('Global', 'AutoRefreshWhenEditing', 1));
+    SyncScroll := Boolean(FIniFile.ReadInteger('Global', 'SyncScroll', 1));
 
     if LoadFileList then
     begin
@@ -723,6 +732,7 @@ begin
 
   FIniFile.WriteInteger('Global', 'DownloadFromWEB', Ord(FDownloadFromWEB));
   FIniFile.WriteInteger('Global', 'AutoRefreshWhenEditing', Ord(FAutoRefreshWhenEditing));
+  FIniFile.WriteInteger('Global', 'SyncScroll', Ord(FSyncScroll));
 
   FIniFile.EraseSection(LAST_OPENED_SECTION);
   for I := 0 to HistoryFileList.Count -1 do

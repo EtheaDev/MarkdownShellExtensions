@@ -127,7 +127,7 @@ object MDSettingsForm: TMDSettingsForm
         Left = 10
         Top = 311
         Width = 238
-        Height = 61
+        Height = 82
         Caption = 'Editing Options'
         TabOrder = 3
         object AutoRefreshCheckBox: TCheckBox
@@ -137,6 +137,14 @@ object MDSettingsForm: TMDSettingsForm
           Height = 17
           Caption = 'Autorefresh Preview'
           TabOrder = 0
+        end
+        object SyncScrollCheckBox: TCheckBox
+          Left = 15
+          Top = 47
+          Width = 210
+          Height = 17
+          Caption = 'Sync Editor and Preview scroll'
+          TabOrder = 1
         end
       end
     end

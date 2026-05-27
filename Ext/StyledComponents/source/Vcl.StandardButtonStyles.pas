@@ -732,7 +732,7 @@ begin
     RegisterThemeAttributes('Windows Modern SlateGray',ttDark,clWhite,clWhite,
       htmlToColor('#2a353b'),htmlToColor('#2a353b'),htmlToColor('#7daca8'),
       htmlToColor('#2a353b'),htmlToColor('#7daca8'),btRoundRect);
-    RegisterThemeAttributes('Windows Modern MountainMist',ttDark,clBlack,clBlack,
+    RegisterThemeAttributes('Windows Modern MountainMist',ttLight,clBlack,clBlack,
       htmlToColor('#dadada'),htmlToColor('#dadada'),htmlToColor('#e1edf6'),
       htmlToColor('#b4b4b4'),htmlToColor('#3a93dd'),btRoundRect);
 
@@ -812,7 +812,19 @@ begin
   RegisterThemeAttributes('Win10IDE_Dark',ttDark,clWhite,clWhite,
     htmlToColor('#373737'),htmlToColor('#373737'),htmlToColor('#405560'),
     htmlToColor('#434343'),htmlToColor('#4ab2e9'),btRoundRect, True);
+  RegisterThemeAttributes('Windows Designer Dark',ttDark,clWhite,clWhite,
+    htmlToColor('#373737'),htmlToColor('#373737'),htmlToColor('#405560'),
+    htmlToColor('#434343'),htmlToColor('#4ab2e9'),btRoundRect, True);
+  RegisterThemeAttributes('Windows Designer Dark Modern',ttDark,clWhite,clWhite,
+    htmlToColor('#373737'),htmlToColor('#373737'),htmlToColor('#405560'),
+    htmlToColor('#434343'),htmlToColor('#4ab2e9'),btRoundRect, True);
   RegisterThemeAttributes('Win10IDE_Light',ttLight,clBlack,clBlack,
+    htmlToColor('#fdfdfd'),htmlToColor('#fdfdfd'),htmlToColor('#eef4f9'),
+    htmlToColor('#bbbbbb'),htmlToColor('#0067c0'),btRoundRect, True);
+  RegisterThemeAttributes('Windows Designer Light',ttLight,clBlack,clBlack,
+    htmlToColor('#fdfdfd'),htmlToColor('#fdfdfd'),htmlToColor('#eef4f9'),
+    htmlToColor('#bbbbbb'),htmlToColor('#0067c0'),btRoundRect, True);
+  RegisterThemeAttributes('Windows Designer Light Modern',ttLight,clBlack,clBlack,
     htmlToColor('#fdfdfd'),htmlToColor('#fdfdfd'),htmlToColor('#eef4f9'),
     htmlToColor('#bbbbbb'),htmlToColor('#0067c0'),btRoundRect, True);
   RegisterThemeAttributes('Mountain_Mist',ttLight,clBlack,clBlack,

@@ -31,6 +31,7 @@ interface
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms,
   Dialogs, ComCtrls, StdCtrls, ExtCtrls, ImgList, Contnrs,
+  System.UITypes,
   SynEdit, ActnList, Menus, ToolWin,
   StdActns, SynEditHighlighter,
   MDShellEx.Resources, SynEditPrint, SynEditOptionsDialog, ActnCtrls, ActnMan,
@@ -104,6 +105,8 @@ type
     FHTMLViewer: THTMLViewer;
     FEditorSettings: TEditorSettings;
     FViewerUpdated: Boolean;
+    FSyncingScroll: Boolean;
+    FLastViewerScrollPos: Integer;
     procedure ReadFromFile;
     procedure SaveToFile;
     function GetFileName: string;
@@ -212,6 +215,7 @@ type
     PopHTMLSep: TMenuItem;
     VirtualImageList20: TVirtualImageList;
     LoadTimer: TTimer;
+    SyncScrollTimer: TTimer;
     VirtualImageListToolBar: TVirtualImageList;
     ToolbarActionList: TActionList;
     acHeader1: TAction;
@@ -266,6 +270,8 @@ type
     acLayoutViewer: TAction;
     btLayoutMarkDown: TStyledToolButton;
     btLayoutViewer: TStyledToolButton;
+    acSyncScroll: TAction;
+    btSyncScroll: TStyledToolButton;
     SepLayoutButtons: TStyledToolButton;
     SaveDialogPDF: TFileSaveDialog;
     procedure WMGetMinMaxInfo(var Message: TWMGetMinMaxInfo); message WM_GETMINMAXINFO;
@@ -373,6 +379,13 @@ type
     procedure SVResize(Sender: TObject);
     procedure acLayoutUpdate(Sender: TObject);
     procedure acLayoutExecute(Sender: TObject);
+    procedure acSyncScrollExecute(Sender: TObject);
+    procedure acSyncScrollUpdate(Sender: TObject);
+    procedure SynEditStatusChange(Sender: TObject; Changes: TSynStatusChanges);
+    procedure SyncScrollTimerTimer(Sender: TObject);
+    procedure SyncEditorFromViewer(const AFile: TEditingFile;
+      const AScrollPos: Integer);
+    function GetEditorMaxTopLine(const AEdit: TSynEdit): Integer;
   private
     PageControl: TPageControlEx;
     FEditingInProgress: Boolean;
@@ -467,7 +480,6 @@ uses
   Vcl.Themes
   , System.IOUtils
   , System.StrUtils
-  , System.UITypes
   , Winapi.ShellAPI
   , Winapi.ShLwApi
   , MDShellEx.Misc
@@ -1267,13 +1279,20 @@ end;
 
 procedure TfrmMain.acEditCopyExecute(Sender: TObject);
 begin
-  CurrentEditor.CopyToClipboard;
+  if (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil) and
+    (CurrentEditFile.HTMLViewer.SelLength <> 0) and
+    (CurrentEditFile.HTMLViewer.Focused or not CurrentEditFile.SynEditor.Focused) then
+    CurrentEditFile.HTMLViewer.CopyToClipboard
+  else
+    CurrentEditor.CopyToClipboard;
 end;
 
 procedure TfrmMain.acEditCopyUpdate(Sender: TObject);
 begin
   acEditCopy.Enabled := (CurrentEditFile <> nil) and
-    (CurrentEditFile.SynEditor.SelEnd - CurrentEditFile.SynEditor.SelStart > 0);
+    (((CurrentEditFile.HTMLViewer <> nil) and (CurrentEditFile.HTMLViewer.SelLength <> 0))
+     or
+     (CurrentEditFile.SynEditor.SelEnd - CurrentEditFile.SynEditor.SelStart > 0));
 end;
 
 procedure TfrmMain.acEditCutExecute(Sender: TObject);
@@ -1288,7 +1307,11 @@ end;
 
 procedure TfrmMain.acEditSelectAllExecute(Sender: TObject);
 begin
-  CurrentEditor.SelectAll;
+  if (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil) and
+    CurrentEditFile.HTMLViewer.Focused then
+    CurrentEditFile.HTMLViewer.SelectAll
+  else
+    CurrentEditor.SelectAll;
 end;
 
 procedure TfrmMain.acEditUndoExecute(Sender: TObject);
@@ -1421,6 +1444,136 @@ end;
 procedure TfrmMain.acLayoutUpdate(Sender: TObject);
 begin
   (Sender as TAction).Enabled := CurrentEditFile <> nil;
+end;
+
+procedure TfrmMain.acSyncScrollExecute(Sender: TObject);
+begin
+  FEditorSettings.SyncScroll := not FEditorSettings.SyncScroll;
+  acSyncScroll.Checked := FEditorSettings.SyncScroll;
+end;
+
+procedure TfrmMain.acSyncScrollUpdate(Sender: TObject);
+begin
+  acSyncScroll.Enabled := (CurrentEditFile <> nil) and
+    (FEditorSettings.LayoutMode = lmBoth);
+  acSyncScroll.Checked := FEditorSettings.SyncScroll;
+end;
+
+function TfrmMain.GetEditorMaxTopLine(const AEdit: TSynEdit): Integer;
+begin
+  // "Natural" scroll end: TopLine value at which the last content row is
+  // displayed at the bottom of the editor view. Always use this for sync,
+  // even when overscroll (eoScrollPastEof) is enabled: the HTMLViewer has
+  // no overscroll, so beyond this point we clamp the ratio at 1 and the
+  // viewer simply stays at its own max. With WordWrap, TopLine indexes
+  // display rows, so we use DisplayRowCount (not Lines.Count).
+  Result := AEdit.DisplayRowCount - AEdit.LinesInWindow + 1;
+  if Result < 1 then
+    Result := 1;
+end;
+
+procedure TfrmMain.SynEditStatusChange(Sender: TObject;
+  Changes: TSynStatusChanges);
+var
+  LFile: TEditingFile;
+  LEdit: TSynEdit;
+  LViewer: THtmlViewer;
+  LRatio: Double;
+  LEditMax, LHtmlMax: Integer;
+begin
+  if not (scTopLine in Changes) then
+    Exit;
+  if not FEditorSettings.SyncScroll then
+    Exit;
+  if FEditorSettings.LayoutMode <> lmBoth then
+    Exit;
+  LFile := CurrentEditFile;
+  if (LFile = nil) or (Sender <> LFile.SynEditor) or LFile.FSyncingScroll then
+    Exit;
+  LEdit := LFile.SynEditor;
+  LViewer := LFile.HTMLViewer;
+  if (LViewer = nil) or not LViewer.HandleAllocated then
+    Exit;
+  LEditMax := GetEditorMaxTopLine(LEdit);
+  if LEditMax <= 1 then
+    LRatio := 0
+  else
+    LRatio := (LEdit.TopLine - 1) / (LEditMax - 1);
+  if LRatio < 0 then LRatio := 0
+  else if LRatio > 1 then LRatio := 1;
+  //THtmlViewer.VScrollBarRange is already the max settable VScrollBarPosition
+  //(see THtmlViewer.GetScrollBarRange = FMaxVertical - PaintPanel.Height).
+  LHtmlMax := LViewer.VScrollBarRange;
+  if LHtmlMax < 0 then
+    LHtmlMax := 0;
+  LFile.FSyncingScroll := True;
+  try
+    LViewer.VScrollBarPosition := Round(LRatio * LHtmlMax);
+    //Remember the synced position so the polling timer doesn't see it as
+    //a user-initiated viewer scroll and bounce back.
+    LFile.FLastViewerScrollPos := LViewer.VScrollBarPosition;
+  finally
+    LFile.FSyncingScroll := False;
+  end;
+end;
+
+procedure TfrmMain.SyncEditorFromViewer(const AFile: TEditingFile;
+  const AScrollPos: Integer);
+var
+  LEdit: TSynEdit;
+  LViewer: THtmlViewer;
+  LRange, LRatio: Double;
+  LEditMax: Integer;
+begin
+  if (AFile = nil) or AFile.FSyncingScroll then
+    Exit;
+  if not FEditorSettings.SyncScroll then
+    Exit;
+  if FEditorSettings.LayoutMode <> lmBoth then
+    Exit;
+  LViewer := AFile.HTMLViewer;
+  LEdit := AFile.SynEditor;
+  if (LViewer = nil) or (LEdit = nil) then
+    Exit;
+  //VScrollBarRange is already the max settable VScrollBarPosition.
+  LRange := LViewer.VScrollBarRange;
+  if LRange < 1 then
+    LRatio := 0
+  else
+    LRatio := AScrollPos / LRange;
+  if LRatio < 0 then LRatio := 0
+  else if LRatio > 1 then LRatio := 1;
+  LEditMax := GetEditorMaxTopLine(LEdit);
+  AFile.FSyncingScroll := True;
+  try
+    LEdit.TopLine := 1 + Round(LRatio * (LEditMax - 1));
+  finally
+    AFile.FSyncingScroll := False;
+  end;
+end;
+
+procedure TfrmMain.SyncScrollTimerTimer(Sender: TObject);
+var
+  LFile: TEditingFile;
+  LPos: Integer;
+begin
+  // Poll the active viewer's scroll position. Catches all user-initiated
+  // scrolls (wheel, scrollbar, keyboard) without needing to hook the
+  // viewer's private PaintPanel events.
+  LFile := CurrentEditFile;
+  if (LFile = nil) or (LFile.HTMLViewer = nil) then
+    Exit;
+  if not FEditorSettings.SyncScroll then
+    Exit;
+  if FEditorSettings.LayoutMode <> lmBoth then
+    Exit;
+  if LFile.FSyncingScroll then
+    Exit;
+  LPos := LFile.HTMLViewer.VScrollBarPosition;
+  if LPos = LFile.FLastViewerScrollPos then
+    Exit;
+  LFile.FLastViewerScrollPos := LPos;
+  SyncEditorFromViewer(LFile, LPos);
 end;
 
 procedure TfrmMain.acLinkExecute(Sender: TObject);
@@ -1651,6 +1804,7 @@ begin
     LEditor.Visible := False;
     LEditor.OnChange := SynEditChange;
     LEditor.OnEnter := SynEditEnter;
+    LEditor.OnStatusChange := SynEditStatusChange;
     LEditor.MaxUndo := 5000;
     LEditor.Align := alClient;
     LEditor.Parent := LTabSheet;

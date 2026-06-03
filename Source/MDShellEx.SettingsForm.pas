@@ -119,6 +119,7 @@ type
     EditingOptionsGroupBox: TGroupBox;
     AutoRefreshCheckBox: TCheckBox;
     SyncScrollCheckBox: TCheckBox;
+    RestoreLastSessionCheckBox: TCheckBox;
     ActiveLineColorGroupBox: TGroupBox;
     DarkActiveLineColorColorBox: TColorBox;
     LightActiveLineColorColorBox: TColorBox;
@@ -621,6 +622,12 @@ begin
   else
     SyncScrollCheckBox.Checked := False;
 
+  RestoreLastSessionCheckBox.Visible := ASettings is TEditorSettings;
+  if RestoreLastSessionCheckBox.Visible then
+    RestoreLastSessionCheckBox.Checked := TEditorSettings(ASettings).RestoreLastSession
+  else
+    RestoreLastSessionCheckBox.Checked := False;
+
   OrientationRadioGroup.ItemIndex := Ord(ASettings.PDFPageSettings.PrintOrientation);
   OrientationRadioGroupClick(OrientationRadioGroup);
   PaperSizeRadioGroup.ItemIndex := Ord(ASettings.PDFPageSettings.PaperSize);
@@ -683,6 +690,7 @@ begin
     TEditorSettings(ASettings).DownloadFromWEB := DownloadFromWEBCheckBox.Checked;
     TEditorSettings(ASettings).AutoRefreshWhenEditing := AutoRefreshCheckBox.Checked;
     TEditorSettings(ASettings).SyncScroll := SyncScrollCheckBox.Checked;
+    TEditorSettings(ASettings).RestoreLastSession := RestoreLastSessionCheckBox.Checked;
     TEditorSettings(ASettings).DarkActiveLineColor := DarkActiveLineColorColorBox.Selected;
     TEditorSettings(ASettings).LightActiveLineColor := LightActiveLineColorColorBox.Selected;
   end;

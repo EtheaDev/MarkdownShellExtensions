@@ -45,6 +45,7 @@ uses
   MDShellEx.Settings in 'MDShellEx.Settings.pas',
   MDShellEx.SettingsForm in 'MDShellEx.SettingsForm.pas' {MDSettingsForm},
   MDShellEx.Registry in 'MDShellEx.Registry.pas',
+  MDShellEx.SingleInstance in 'MDShellEx.SingleInstance.pas',
   vmHtmlToPdf in 'vmHtmlToPdf.pas',
   GitHubAPI in 'GitHubAPI.pas' {fmEditorOptionsDialog},
   Vcl.StyledTaskDialogFormUnit in '..\Ext\StyledComponents\source\Vcl.StyledTaskDialogFormUnit.pas' {StyledTaskDialogForm},
@@ -52,11 +53,26 @@ uses
 
 {$R *.res}
 
+var
+  LFileParam: string;
 begin
+  // Single instance: if a file was passed on the command line and another
+  // MDTextEditor instance is already running, forward the file to it and
+  // exit. Launching without arguments always starts a new instance; whether
+  // that new instance restores the previous session is controlled by the
+  // user preference "Remember current session at next run".
+  if (ParamCount >= 1) and IsAnotherInstanceRunning then
+  begin
+    LFileParam := ParamStr(1);
+    if FileExists(LFileParam) and
+       SendFileToExistingInstance(ExpandFileName(LFileParam)) then
+      Exit;
+  end;
+
   Application.Initialize;
   Application.MainFormOnTaskBar := True;
   Application.ActionUpdateDelay := 50;
-  Application.Title := Title_MDViewer+'- © 2021-2026 Ethea S.r.l.';
+  Application.Title := Title_MDViewer+'- Â© 2021-2026 Ethea S.r.l.';
   //Uses System Style for border / shadow of Forms
   TStyleManager.FormBorderStyle := TStyleManager.TFormBorderStyle.fbsSystemStyle;
   with TSplashForm.Create(nil) do

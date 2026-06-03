@@ -41,14 +41,14 @@ object MDSettingsForm: TMDSettingsForm
       object RenderingGroupBox: TGroupBox
         Left = 10
         Top = 104
-        Width = 238
-        Height = 89
+        Width = 260
+        Height = 73
         Caption = 'Images loading options'
         TabOrder = 1
         object DownloadFromWebCheckBox: TCheckBox
           Left = 15
-          Top = 52
-          Width = 156
+          Top = 47
+          Width = 230
           Height = 17
           Caption = 'Download from WEB'
           TabOrder = 1
@@ -56,7 +56,7 @@ object MDSettingsForm: TMDSettingsForm
         object RescalingImageCheckBox: TCheckBox
           Left = 15
           Top = 24
-          Width = 156
+          Width = 230
           Height = 17
           Caption = 'Rescaling to viewer size'
           TabOrder = 0
@@ -65,7 +65,7 @@ object MDSettingsForm: TMDSettingsForm
       object MarkdownGroupBox: TGroupBox
         Left = 10
         Top = 16
-        Width = 238
+        Width = 260
         Height = 82
         Caption = 'Markdown processor options'
         TabOrder = 0
@@ -92,15 +92,15 @@ object MDSettingsForm: TMDSettingsForm
       object RoundedButtonsGroupBox: TGroupBox
         AlignWithMargins = True
         Left = 10
-        Top = 208
-        Width = 238
+        Top = 183
+        Width = 260
         Height = 97
         Caption = 'Rounded Buttons'
         TabOrder = 2
         object ToolbarRoundedCheckBox: TCheckBox
           Left = 15
           Top = 24
-          Width = 185
+          Width = 230
           Height = 17
           Caption = 'Apply to Toolbars'
           TabOrder = 0
@@ -108,7 +108,7 @@ object MDSettingsForm: TMDSettingsForm
         object ButtonsRoundedCheckBox: TCheckBox
           Left = 15
           Top = 47
-          Width = 185
+          Width = 230
           Height = 17
           Caption = 'Apply to Buttons'
           TabOrder = 1
@@ -116,7 +116,7 @@ object MDSettingsForm: TMDSettingsForm
         object MenuRoundedCheckBox: TCheckBox
           Left = 15
           Top = 70
-          Width = 185
+          Width = 230
           Height = 17
           Caption = 'Apply to Menu Buttons'
           TabOrder = 2
@@ -125,15 +125,15 @@ object MDSettingsForm: TMDSettingsForm
       object EditingOptionsGroupBox: TGroupBox
         AlignWithMargins = True
         Left = 10
-        Top = 311
-        Width = 238
-        Height = 82
+        Top = 285
+        Width = 260
+        Height = 105
         Caption = 'Editing Options'
         TabOrder = 3
         object AutoRefreshCheckBox: TCheckBox
           Left = 15
           Top = 24
-          Width = 185
+          Width = 230
           Height = 17
           Caption = 'Autorefresh Preview'
           TabOrder = 0
@@ -141,10 +141,18 @@ object MDSettingsForm: TMDSettingsForm
         object SyncScrollCheckBox: TCheckBox
           Left = 15
           Top = 47
-          Width = 210
+          Width = 230
           Height = 17
           Caption = 'Sync Editor and Preview scroll'
           TabOrder = 1
+        end
+        object RestoreLastSessionCheckBox: TCheckBox
+          Left = 15
+          Top = 70
+          Width = 230
+          Height = 17
+          Caption = 'Remember current session at next run'
+          TabOrder = 2
         end
       end
     end
@@ -547,6 +555,8 @@ object MDSettingsForm: TMDSettingsForm
           OnClick = SynEditClick
           OnKeyUp = SynEditKeyUp
           CodeFolding.GutterShapeSize = 11
+          CodeFolding.IndentGuidesColor = clBlack
+          CodeFolding.IndentGuides = False
           UseCodeFolding = False
           Gutter.Font.Charset = DEFAULT_CHARSET
           Gutter.Font.Color = clWindowText
@@ -554,8 +564,10 @@ object MDSettingsForm: TMDSettingsForm
           Gutter.Font.Name = 'Consolas'
           Gutter.Font.Style = []
           Gutter.Font.Quality = fqClearTypeNatural
+          Gutter.Width = 0
           Gutter.Bands = <>
           ScrollbarAnnotations = <>
+          FontSmoothing = fsmNone
         end
         object ActiveLineColorGroupBox: TGroupBox
           Left = 0
@@ -815,8 +827,6 @@ object MDSettingsForm: TMDSettingsForm
       end>
     TabOrder = 2
     OnButtonClicked = MenuButtonGroupButtonClicked
-    ExplicitLeft = -2
-    ExplicitTop = 35
   end
   object TitlePanel: TPanel
     Left = 0

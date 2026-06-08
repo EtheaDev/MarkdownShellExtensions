@@ -67,6 +67,8 @@ uses
   , Vcl.StyledButtonGroup
   , Vcl.StyledCategoryButtons
   , PageControlHook
+  , MarkdownUtils
+  , MDCodeHighlightEmitter
   ;
 
 const
@@ -126,7 +128,8 @@ type
       const AEditorSettings: TEditorSettings);
     destructor Destroy; override;
     procedure ShowMarkDownAsHTML(const ASettings: TEditorSettings;
-      const AReloadImages: Boolean);
+      const AReloadImages: Boolean;
+      const ACodeBlockEmitter: TBlockEmitter = nil);
     property HTMLViewer: THTMLViewer read FHTMLViewer write SetHTMLViewer;
     property FileName: string read GetFileName write SetFileName; //with full path
     property Name: string read GetName; //only name of file
@@ -393,6 +396,7 @@ type
     MinFormWidth, MinFormHeight, MaxFormWidth, MaxFormHeight: Integer;
     FProcessingFiles: Boolean;
     FEditorSettings: TEditorSettings;
+    FCodeHighlightEmitter: TCodeHighlightEmitterBase;
     CurrentDir: string;
     EditFileList: TObjectList;
     fSearchFromCaret: boolean;
@@ -416,6 +420,7 @@ type
     procedure Drop(const FileNames: array of string);
     function GetMarkdownHelpFileName: TFileName;
     procedure CloseSplitViewMenu;
+    procedure UpdateCodeHighlightTheme;
     procedure UpdateHighlighters;
     procedure UpdateApplicationLayout(const ALayoutMode: TLayoutMode);
     procedure UpdateFromSettings(AEditor: TSynEdit);
@@ -501,7 +506,6 @@ uses
   , SynPDF
   , vmHtmlToPdf
   , MarkdownProcessor
-  , MarkdownUtils
   , uLogExcept
   , Vcl.StyledTaskDialog
   , RegularExpressions
@@ -540,7 +544,8 @@ end;
 { TEditingFile }
 
 procedure TEditingFile.ShowMarkDownAsHTML(const ASettings: TEditorSettings;
-  const AReloadImages: Boolean);
+  const AReloadImages: Boolean;
+  const ACodeBlockEmitter: TBlockEmitter = nil);
 var
   LStream: TStringStream;
   LOldPos: Integer;
@@ -550,7 +555,7 @@ begin
     if AReloadImages then
       HtmlViewer.clear;
     FMarkDownFile := TMarkDownFile.Create(SynEditor.Lines.Text,
-      ASettings.ProcessorDialect, True);
+      ASettings.ProcessorDialect, True, ACodeBlockEmitter);
     //Load HTML content into HTML-Viewer
     LOldPos := HtmlViewer.VScrollBarPosition;
     HtmlViewer.DefFontSize := ASettings.HTMLFontSize;
@@ -819,6 +824,7 @@ begin
   FreeAndNil(SynEditPrint);
   FreeAndNil(FEditorSettings);
   FreeAndNil(FEditorOptions);
+  FreeAndNil(FCodeHighlightEmitter);
   inherited;
 end;
 
@@ -958,7 +964,8 @@ begin
     FSplitterMoved := False;
     //Second handling: reload content
     LEditingFile := TEditingFile(TSplitter(Sender).Tag);
-    LEditingFile.ShowMarkDownAsHTML(FEditorSettings, True);
+    UpdateCodeHighlightTheme;
+    LEditingFile.ShowMarkDownAsHTML(FEditorSettings, True, FCodeHighlightEmitter);
     var LContainerWidth := ClientWidth - catMenuItems.Width;
     FEditorSettings.ViewerPercentSize := Round(
       CurrentEditFile.HTMLViewer.Width * 100 / LContainerWidth);
@@ -1193,6 +1200,9 @@ begin
   FEditorOptions := TSynEditorOptionsContainer.create(self);
   FEditorSettings := TEditorSettings.CreateSettings(nil, FEditorOptions);
   dmResources.Settings := FEditorSettings;
+  //Emitter that colorizes fenced code blocks in the HTML preview
+  //(nil when syntax highlighting is disabled at compile time).
+  FCodeHighlightEmitter := CreateCodeHighlightEmitter;
 
   {$IFNDEF NO_VCL_STYLES}
   if not IsStyleHookRegistered(TCustomSynEdit, TScrollingStyleHook) then
@@ -1851,7 +1861,8 @@ begin
         StatusBar.Panels[STATUSBAR_MESSAGE].Text := CurrentEditFile.FileName;
 
         //Show HTML content of MarkDown
-        CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings, AReloadImages);
+        UpdateCodeHighlightTheme;
+        CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings, AReloadImages, FCodeHighlightEmitter);
       finally
         Screen.Cursor := crDefault;
       end;
@@ -2215,14 +2226,19 @@ begin
   SaveDialog.FileName := ChangeFileExt(CurrentEditFile.FileName, '.htm');
   if SaveDialog.Execute then
   begin
-    LStream := TStringStream.Create(
-      CurrentEditFile.HTMLViewer.Text,
-      TEncoding.UTF8);
+    Screen.Cursor := crHourGlass;
     try
-      LStream.SaveToFile(SaveDialog.FileName);
-      FileSavedAskToOpen(SaveDialog.FileName);
+      LStream := TStringStream.Create(
+        CurrentEditFile.HTMLViewer.Text,
+        TEncoding.UTF8);
+      try
+        LStream.SaveToFile(SaveDialog.FileName);
+        FileSavedAskToOpen(SaveDialog.FileName);
+      finally
+        LStream.Free;
+      end;
     finally
-      LStream.Free;
+      Screen.Cursor := crDefault;
     end;
   end;
 end;
@@ -2368,6 +2384,19 @@ begin
   FEditorSettings.ReadSettings(ASynEditor.Highlighter, self.FEditorOptions);
 end;
 
+procedure TfrmMain.UpdateCodeHighlightTheme;
+begin
+  if FCodeHighlightEmitter = nil then
+    Exit;
+  //Keep the code-block colorizer aligned with the current theme and HTML font.
+  FCodeHighlightEmitter.SetTheme(
+    FEditorSettings.UseDarkStyle,
+    StyleServices.GetSystemColor(clWindow),
+    StyleServices.GetSystemColor(clWindowText),
+    FEditorSettings.HTMLFontName,
+    FEditorSettings.HTMLFontSize);
+end;
+
 procedure TfrmMain.UpdateHighlighters;
 var
   LEditingFile: TEditingFile;
@@ -2460,7 +2489,8 @@ begin
   else
     LValue := -1;
   FEditorSettings.HTMLFontSize := FEditorSettings.HTMLFontSize + LValue;
-  CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings, False);
+  UpdateCodeHighlightTheme;
+  CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings, False, FCodeHighlightEmitter);
 end;
 
 procedure TfrmMain.RecentPopupMenuPopup(Sender: TObject);

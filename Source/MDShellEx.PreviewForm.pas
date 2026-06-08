@@ -44,6 +44,7 @@ uses
   SVGIconImageList, SVGIconImageListBase, SVGIconImage, Vcl.VirtualImageList,
   Vcl.OleCtrls, SHDocVw,
   MDShellEx.Resources, HTMLUn2, HtmlView,
+  MDCodeHighlightEmitter,
   UPreviewContainer,
   Vcl.ButtonStylesAttributes, Vcl.StyledButton,
   Vcl.StyledToolbar, Vcl.StyledButtonGroup;
@@ -85,6 +86,7 @@ type
     FFileName: string;
     FPreviewSettings: TPreviewSettings;
     FMarkDownFile: TMarkDownFile;
+    FCodeHighlightEmitter: TCodeHighlightEmitterBase;
     FAllegatiButtons: TObjectList<TStyledToolButton>;
 
     class var FExtensions: TDictionary<TSynCustomHighlighterClass, TStrings>;
@@ -233,6 +235,9 @@ var
 begin
   inherited;
   TLogPreview.Add('TFrmEditor.FormCreate');
+  //Optional syntax-highlighting emitter for fenced code blocks (nil when the
+  //MD_SYNTAX_HIGHLIGHTING define is off).
+  FCodeHighlightEmitter := CreateCodeHighlightEmitter;
   FileVersionStr := GetCurrentVersion(GetModuleLocation());
   FSimpleText := Format(StatusBar.SimpleText,
     [FileVersionStr, {$IFDEF WIN32}32{$ELSE}64{$ENDIF}]);
@@ -247,6 +252,7 @@ procedure TFrmPreview.FormDestroy(Sender: TObject);
 begin
   HideAboutForm;
   SaveSettings;
+  FCodeHighlightEmitter.Free;
   TLogPreview.Add('TFrmEditor.FormDestroy');
   inherited;
 end;
@@ -358,8 +364,17 @@ begin
   try
     if AReloadImages then
       HtmlViewer.clear;
+    if FCodeHighlightEmitter <> nil then
+    begin
+      if FPreviewSettings.UseDarkStyle then
+        FCodeHighlightEmitter.SetTheme(True, HtmlViewer.DefBackground, clWhite,
+          ASettings.HTMLFontName, ASettings.HTMLFontSize)
+      else
+        FCodeHighlightEmitter.SetTheme(False, HtmlViewer.DefBackground, clBlack,
+          ASettings.HTMLFontName, ASettings.HTMLFontSize);
+    end;
     FMarkDownFile := TMarkDownFile.Create(SynEdit.Lines.Text,
-      ASettings.ProcessorDialect, True);
+      ASettings.ProcessorDialect, True, FCodeHighlightEmitter);
 
     //Carica il contenuto HTML trasformato dentro l'HTML-Viewer
     LOldPos := HtmlViewer.VScrollBarPosition;

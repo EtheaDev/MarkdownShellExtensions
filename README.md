@@ -1,6 +1,6 @@
 ﻿# Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 2.7.3 - 03 Jun 2026**
+**Latest Version 2.8.0 - 08 Jun 2026**
 
 **A collection of tools for markdown files, to edit and view content:**
 
@@ -66,6 +66,9 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+08 Jun 2026: ver. 2.8.0
+- Added syntax highlighting of fenced code blocks (```delphi, ```json, ...), based on the language, like GitHub, both in the Editor preview and in the Explorer Preview Panel.
+
 03 Jun 2026: ver. 2.7.3
 - Added single-instance behavior: opening a markdown file now reuses the running editor instead of starting a new one.
 - Added Settings option to remember and reopen files from the last session.

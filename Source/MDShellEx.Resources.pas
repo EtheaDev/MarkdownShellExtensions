@@ -68,12 +68,14 @@ type
     FMarkDownContent: string;
     FProcessorDialect: TMarkdownProcessorDialect;
     FHTML: string;
+    FCodeBlockEmitter: TBlockEmitter;
     procedure SetMarkDownContent(const AValue: string);
     function GetDefaultCSS: string;
   public
     constructor Create(const AMarkDownContent: string;
       const AProcessorDialect: TMarkdownProcessorDialect;
-      const AParseImmediately: Boolean = True);
+      const AParseImmediately: Boolean = True;
+      const ACodeBlockEmitter: TBlockEmitter = nil);
 
     procedure Clear;
     procedure Parse;
@@ -562,9 +564,11 @@ end;
 
 constructor TMarkDownFile.Create(const AMarkDownContent: string;
   const AProcessorDialect: TMarkdownProcessorDialect;
-  const AParseImmediately: Boolean = True);
+  const AParseImmediately: Boolean = True;
+  const ACodeBlockEmitter: TBlockEmitter = nil);
 begin
   Clear;
+  FCodeBlockEmitter := ACodeBlockEmitter;
   FProcessorDialect := AProcessorDialect;
   MarkDownContent := AMarkDownContent;
   if AParseImmediately then
@@ -574,38 +578,41 @@ end;
 function TMarkDownFile.GetDefaultCSS: string;
 begin
   Result :=
-    '<style type="text/css">'#10+
-    'code{'#10+
-    '  font-family: "Consolas", monospace;'#10+
-    '}'#10+
-    'pre{'#10+
-    '  border: 1px solid #ddd;'#10+
-    '  border-left: 3px solid #f36d33;'#10+
-    '  overflow: auto;'#10+
-    '  padding: 1em 1.5em;'#10+
-    '  display: block;'#10+
-    '}'#10+
-    'Blockquote{'#10+
-    '  border-left: 3px solid #d0d0d0;'#10+
-    '  padding-left: 0.5em;'#10+
-    '  margin-left:1em;'#10+
-    '}'#10+
-    'Blockquote p{'#10+
-    '  margin: 0;'#10+
-    '}'#10+
-    'table{'#10+
-    '  border:1px solid;'#10+
-    '  border-collapse:collapse;'#10+
-    '}'#10+
+    '<style type="text/css">'+sLineBreak+
+    'body{'+sLineBreak+
+    '  font-family: Arial, Helvetica, sans-serif;'+sLineBreak+
+    '}'+sLineBreak+
+    'code{'+sLineBreak+
+    '  font-family: "Consolas", monospace;'+sLineBreak+
+    '}'+sLineBreak+
+    'pre{'+sLineBreak+
+    '  border: 1px solid #ddd;'+sLineBreak+
+    '  border-left: 3px solid #f36d33;'+sLineBreak+
+    '  overflow: auto;'+sLineBreak+
+    '  padding: 1em 1.5em;'+sLineBreak+
+    '  display: block;'+sLineBreak+
+    '}'+sLineBreak+
+    'Blockquote{'+sLineBreak+
+    '  border-left: 3px solid #d0d0d0;'+sLineBreak+
+    '  padding-left: 0.5em;'+sLineBreak+
+    '  margin-left:1em;'+sLineBreak+
+    '}'+sLineBreak+
+    'Blockquote p{'+sLineBreak+
+    '  margin: 0;'+sLineBreak+
+    '}'+sLineBreak+
+    'table{'+sLineBreak+
+    '  border:1px solid;'+sLineBreak+
+    '  border-collapse:collapse;'+sLineBreak+
+    '}'+sLineBreak+
     'th{'+
-    '  padding:5px;'#10+
-    '  border:1px solid;'#10+
-    '}'#10+
-    'td{'#10+
-    '  padding:5px;'#10+
-    '  border:1px solid;'#10+
-    '}'#10+
-    '</style>'#10;
+    '  padding:5px;'+sLineBreak+
+    '  border:1px solid;'+sLineBreak+
+    '}'+sLineBreak+
+    'td{'+sLineBreak+
+    '  padding:5px;'+sLineBreak+
+    '  border:1px solid;'+sLineBreak+
+    '}'+sLineBreak+
+    '</style>'+sLineBreak;
 end;
 
 procedure TMarkDownFile.Parse;
@@ -615,6 +622,11 @@ begin
   LMDProcessor := TMarkdownProcessor.CreateDialect(FProcessorDialect);
   try
     LMDProcessor.AllowUnsafe := False;
+    //Optional syntax-highlighting emitter for fenced code blocks.
+    //NB: the caller owns the emitter, so we detach it before freeing the
+    //processor (TConfiguration.Destroy frees its codeBlockEmitter).
+    if FCodeBlockEmitter <> nil then
+      LMDProcessor.Config.codeBlockEmitter := FCodeBlockEmitter;
     //Convert MD To HTML
     FHTML := GetDefaultCSS+LMDProcessor.process(FMarkDownContent);
     {$IFDEF DEBUG}
@@ -627,6 +639,8 @@ begin
     {$ENDIF}
     FParsed := True;
   finally
+    if FCodeBlockEmitter <> nil then
+      LMDProcessor.Config.codeBlockEmitter := nil;
     LMDProcessor.Free;
   end;
 end;

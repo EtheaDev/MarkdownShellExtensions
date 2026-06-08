@@ -6,6 +6,9 @@ object dmResources: TdmResources
   object SynXMLSyn: TSynXMLSyn
     Brackets = '<>()[]'
     DefaultFilter = 'MarkDown File (*.md)|*.md'
+    Options.AutoDetectEnabled = False
+    Options.AutoDetectLineLimit = 0
+    Options.Visible = False
     WantBracesParsed = False
     Left = 32
     Top = 16
@@ -13,6 +16,9 @@ object dmResources: TdmResources
   object SynXMLSynDark: TSynXMLSyn
     Brackets = '<>()[]'
     DefaultFilter = 'MarkDown File (*.md)|*.md'
+    Options.AutoDetectEnabled = False
+    Options.AutoDetectLineLimit = 0
+    Options.Visible = False
     ElementAttri.Foreground = 14198787
     AttributeAttri.Foreground = 14198787
     NamespaceAttributeAttri.Foreground = 8454143

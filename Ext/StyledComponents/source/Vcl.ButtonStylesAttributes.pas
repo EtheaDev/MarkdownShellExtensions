@@ -56,7 +56,7 @@ uses
 
 const
   /// <summary>Current version of the StyledComponents library</summary>
-  StyledComponentsVersion = '4.2.0';
+  StyledComponentsVersion = '4.2.1';
   /// <summary>Default corner radius for rounded buttons in pixels</summary>
   DEFAULT_RADIUS = 6;
   /// <summary>Resource name for the Windows shield admin icon</summary>
@@ -725,12 +725,15 @@ begin
   {$ELSE}
   Result := TStyleManager.ActiveStyle.Name;
   {$ENDIF}
+  //Map IDE-only "Designer" styles
   if (Result = '') or
-    (Result = 'Windows Designer Dark') or
-    (Result = 'Windows Designer Modern Dark') or
-    (Result = 'Win10IDE_Dark') or
-    (Result = 'Win10IDE_Light') or
-    (Result = 'Mountain_Mist' ) then
+     (Result = 'Windows Designer') or
+     (Result = 'Windows Designer Dark') or
+     (Result = 'Windows Designer Modern') or
+     (Result = 'Windows Designer Dark Modern') or
+     (Result = 'Win10IDE_Dark') or
+     (Result = 'Win10IDE_Light') or
+     (Result = 'Mountain_Mist' ) then
     Result := 'Windows';
 end;
 

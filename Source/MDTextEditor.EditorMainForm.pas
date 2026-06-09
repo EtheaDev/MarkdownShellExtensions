@@ -457,7 +457,6 @@ type
     function CanAcceptFileName(const AFileName: string): Boolean;
     function AcceptedExtensions: string;
     procedure SplitterMoved(Sender: TObject);
-    procedure WriteSettingsToIni;
     procedure ConfirmChanges(EditingFile: TEditingFile);
     procedure HtmlViewerHotSpotClick(Sender: TObject; const ASource: ThtString;
       var Handled: Boolean);
@@ -2278,7 +2277,7 @@ procedure TfrmMain.SetSynEditPrintProperties(SynEditPrint : TSynEditPrint);
 begin
   SynEditPrint.SynEdit := CurrentEditor;
   SynEditPrint.Title := CurrentEditFile.FFileName;
-  SynEditPrint.Highlighter := dmResources.SynXMLSyn;
+  SynEditPrint.Highlighter := dmResources.SynMarkdownSyn;
 end;
 
 procedure TfrmMain.actnEditOptionsExecute(Sender: TObject);
@@ -2378,10 +2377,16 @@ begin
   if ASynEditor = nil then
     Exit;
   LBackgroundColor := StyleServices.GetSystemColor(clWindow);
-  ASynEditor.Highlighter := dmResources.GetSynHighlighter(
-    FEditorSettings.UseDarkStyle, LBackgroundColor);
-  //Assign custom colors to the Highlighter
-  FEditorSettings.ReadSettings(ASynEditor.Highlighter, self.FEditorOptions);
+  if FEditorSettings.HighlightMarkdownText then
+  begin
+    ASynEditor.Highlighter := dmResources.GetSynHighlighter(
+      FEditorSettings.UseDarkStyle, LBackgroundColor);
+    //Assign custom colors to the Highlighter
+    FEditorSettings.ReadSettings(ASynEditor.Highlighter, self.FEditorOptions);
+  end
+  else
+    //Markdown highlighting disabled: unhook the highlighter (plain text).
+    ASynEditor.Highlighter := nil;
 end;
 
 procedure TfrmMain.UpdateCodeHighlightTheme;
@@ -2639,21 +2644,23 @@ begin
     SV.Open;
 end;
 
-procedure TfrmMain.WriteSettingsToIni;
-begin
-  if CurrentEditor <> nil then
-    FEditorSettings.WriteSettings(CurrentEditor.Highlighter, FEditorOptions)
-  else
-    FEditorSettings.WriteSettings(nil, FEditorOptions);
-end;
-
 procedure TfrmMain.actnSettingsExecute(Sender: TObject);
+var
+  LHighlighter: TSynCustomHighlighter;
 begin
+  //Pass a fully-colored highlighter to the Settings dialog so colors can be
+  //previewed/edited even when markdown highlighting is currently disabled
+  //(in that case the editor's own Highlighter is nil).
+  LHighlighter := dmResources.GetSynHighlighter(FEditorSettings.UseDarkStyle,
+    StyleServices.GetSystemColor(clWindow));
+  FEditorSettings.ReadSettings(LHighlighter, FEditorOptions);
   if ShowSettings(DialogPosRect,
     Title_MDViewer,
-    CurrentEditor, FEditorSettings, True) then
+    CurrentEditor, LHighlighter, FEditorSettings, True) then
   begin
-    WriteSettingsToIni;
+    //Persist the (possibly edited) highlighter colors from LHighlighter, not
+    //from the editor whose Highlighter may be unhooked.
+    FEditorSettings.WriteSettings(LHighlighter, FEditorOptions);
     UpdateFromSettings(CurrentEditor);
     UpdateMDViewer(True);
     UpdateHighlighters;

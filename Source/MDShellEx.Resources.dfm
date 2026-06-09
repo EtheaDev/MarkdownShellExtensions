@@ -3,36 +3,11 @@ object dmResources: TdmResources
   OnDestroy = DataModuleDestroy
   Height = 339
   Width = 341
-  object SynXMLSyn: TSynXMLSyn
-    Brackets = '<>()[]'
-    DefaultFilter = 'MarkDown File (*.md)|*.md'
-    Options.AutoDetectEnabled = False
-    Options.AutoDetectLineLimit = 0
-    Options.Visible = False
-    WantBracesParsed = False
+  object SynMarkdownSyn: TSynMarkdownSyn
     Left = 32
     Top = 16
   end
-  object SynXMLSynDark: TSynXMLSyn
-    Brackets = '<>()[]'
-    DefaultFilter = 'MarkDown File (*.md)|*.md'
-    Options.AutoDetectEnabled = False
-    Options.AutoDetectLineLimit = 0
-    Options.Visible = False
-    ElementAttri.Foreground = 14198787
-    AttributeAttri.Foreground = 14198787
-    NamespaceAttributeAttri.Foreground = 8454143
-    AttributeValueAttri.Foreground = 14408667
-    NamespaceAttributeValueAttri.Foreground = 8454143
-    TextAttri.Foreground = 15263976
-    CDATAAttri.Foreground = clSkyBlue
-    EntityRefAttri.Foreground = 16744576
-    ProcessingInstructionAttri.Background = clWindow
-    ProcessingInstructionAttri.Foreground = clSilver
-    CommentAttri.Foreground = 5373864
-    DocTypeAttri.Foreground = 9750039
-    SymbolAttri.Foreground = 6008319
-    WantBracesParsed = False
+  object SynMarkdownSynDark: TSynMarkdownSyn
     Left = 105
     Top = 16
   end

@@ -146,7 +146,6 @@
         </DCCReference>
         <DCCReference Include="MDShellEx.Registry.pas"/>
         <DCCReference Include="MDShellEx.SingleInstance.pas"/>
-        <DCCReference Include="..\Ext\MarkDownHelpViewer\Source\Components\MDCodeHighlightEmitter.pas"/>
         <DCCReference Include="vmHtmlToPdf.pas"/>
         <DCCReference Include="GitHubAPI.pas">
             <Form>fmEditorOptionsDialog</Form>

@@ -497,7 +497,7 @@ end;
 
 procedure TFrmPreview.ToolButtonSettingsClick(Sender: TObject);
 begin
-  if ShowSettings(DialogPosRect, Title_SVGPreview, SynEdit, FPreviewSettings, True) then
+  if ShowSettings(DialogPosRect, Title_SVGPreview, SynEdit, SynEdit.Highlighter, FPreviewSettings, True) then
   begin
     FPreviewSettings.WriteSettings(SynEdit.Highlighter, nil);
     UpdateFromSettings(True);

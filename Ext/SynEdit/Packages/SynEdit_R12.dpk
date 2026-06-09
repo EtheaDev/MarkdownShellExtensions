@@ -25,7 +25,7 @@ package SynEdit_R12;
 {$IMAGEBASE $400000}
 {$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'TurboPack SynEdit Delphi runtime package'}
+{$DESCRIPTION 'SynEdit component suite runtime'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
 
@@ -145,6 +145,7 @@ contains
   SynSpellCheck in '..\Source\SynSpellCheck.pas',
   SynUnicode in '..\Source\SynUnicode.pas',
   SynURIOpener in '..\Source\SynURIOpener.pas',
+  SynHighlighterMarkdown in '..\Source\SynHighlighterMarkdown.pas',
   SynEditHighlighterOptions in '..\Source\SynEditHighlighterOptions.pas'; //Ethea
 
 end.

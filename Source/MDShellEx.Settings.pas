@@ -164,6 +164,7 @@ type
     FAutoRefreshWhenEditing: Boolean;
     FSyncScroll: Boolean;
     FRestoreLastSession: Boolean;
+    FHighlightMarkdownText: Boolean;
     FLightActiveLineColor: TColor;
     FDarkActiveLineColor: TColor;
     procedure SetDownloadFromWEB(const Value: Boolean);
@@ -174,6 +175,7 @@ type
     procedure SetAutoRefreshWhenEditing(const Value: Boolean);
     procedure SetSyncScroll(const Value: Boolean);
     procedure SetRestoreLastSession(const Value: Boolean);
+    procedure SetHighlightMarkdownText(const Value: Boolean);
   public
     HistoryFileList: TStrings;
     OpenedFileList: TStrings;
@@ -192,6 +194,7 @@ type
     property AutoRefreshWhenEditing: Boolean read FAutoRefreshWhenEditing write SetAutoRefreshWhenEditing;
     property SyncScroll: Boolean read FSyncScroll write SetSyncScroll;
     property RestoreLastSession: Boolean read FRestoreLastSession write SetRestoreLastSession;
+    property HighlightMarkdownText: Boolean read FHighlightMarkdownText write SetHighlightMarkdownText;
     property LightActiveLineColor: TColor read FLightActiveLineColor write FLightActiveLineColor;
     property DarkActiveLineColor: TColor read FDarkActiveLineColor write FDarkActiveLineColor;
   end;
@@ -534,6 +537,11 @@ begin
   FRestoreLastSession := Value;
 end;
 
+procedure TEditorSettings.SetHighlightMarkdownText(const Value: Boolean);
+begin
+  FHighlightMarkdownText := Value;
+end;
+
 procedure TEditorSettings.SetDownloadFromWEB(const Value: Boolean);
 begin
   FDownloadFromWEB := Value;
@@ -594,6 +602,7 @@ begin
     AutoRefreshWhenEditing := Boolean(FIniFile.ReadInteger('Global', 'AutoRefreshWhenEditing', 1));
     SyncScroll := Boolean(FIniFile.ReadInteger('Global', 'SyncScroll', 1));
     RestoreLastSession := Boolean(FIniFile.ReadInteger('Global', 'RestoreLastSession', 1));
+    HighlightMarkdownText := Boolean(FIniFile.ReadInteger('Global', 'HighlightMarkdownText', 1));
 
     if LoadFileList then
     begin
@@ -743,6 +752,7 @@ begin
   FIniFile.WriteInteger('Global', 'AutoRefreshWhenEditing', Ord(FAutoRefreshWhenEditing));
   FIniFile.WriteInteger('Global', 'SyncScroll', Ord(FSyncScroll));
   FIniFile.WriteInteger('Global', 'RestoreLastSession', Ord(FRestoreLastSession));
+  FIniFile.WriteInteger('Global', 'HighlightMarkdownText', Ord(FHighlightMarkdownText));
 
   FIniFile.EraseSection(LAST_OPENED_SECTION);
   for I := 0 to HistoryFileList.Count -1 do

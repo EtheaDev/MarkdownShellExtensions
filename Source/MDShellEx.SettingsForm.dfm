@@ -331,7 +331,7 @@ object MDSettingsForm: TMDSettingsForm
         Left = 193
         Top = 0
         Width = 4
-        Height = 401
+        Height = 351
         MinSize = 100
         ExplicitLeft = 143
         ExplicitHeight = 366
@@ -569,17 +569,27 @@ object MDSettingsForm: TMDSettingsForm
           ScrollbarAnnotations = <>
           FontSmoothing = fsmNone
         end
+      end
+      object TopTextColorPanel: TPanel
+        Left = 0
+        Top = 0
+        Width = 650
+        Height = 50
+        Align = alTop
+        BevelOuter = bvLowered
+        TabOrder = 2
         object ActiveLineColorGroupBox: TGroupBox
-          Left = 0
-          Top = 354
-          Width = 453
-          Height = 47
-          Align = alBottom
+          Left = 169
+          Top = 1
+          Width = 480
+          Height = 48
+          Align = alClient
           Caption = 'Active Line Color of Editor'
-          TabOrder = 2
+          TabOrder = 0
           object DarkActiveLineColorColorBox: TColorBox
-            Left = 2
-            Top = 17
+            AlignWithMargins = True
+            Left = 5
+            Top = 20
             Width = 174
             Height = 22
             Hint = 'Active Line Color for Dark Theme'
@@ -591,8 +601,9 @@ object MDSettingsForm: TMDSettingsForm
             OnSelect = ColorBoxSelect
           end
           object LightActiveLineColorColorBox: TColorBox
-            Left = 176
-            Top = 17
+            AlignWithMargins = True
+            Left = 185
+            Top = 20
             Width = 174
             Height = 22
             Hint = 'Active Line Color for Light Theme'
@@ -602,6 +613,27 @@ object MDSettingsForm: TMDSettingsForm
             DropDownCount = 20
             TabOrder = 1
             OnSelect = ColorBoxSelect
+          end
+        end
+        object HighlighTextGroupBox: TGroupBox
+          Left = 1
+          Top = 1
+          Width = 168
+          Height = 48
+          Align = alLeft
+          Caption = 'Higlight Text Color'
+          TabOrder = 1
+          object HighlightMarkdownTextCheckBox: TCheckBox
+            AlignWithMargins = True
+            Left = 22
+            Top = 20
+            Width = 141
+            Height = 23
+            Margins.Left = 20
+            Align = alClient
+            Caption = 'Activate Highlight'
+            TabOrder = 0
+            OnClick = HighlightMarkdownTextCheckBoxClick
           end
         end
       end
@@ -982,7 +1014,7 @@ object MDSettingsForm: TMDSettingsForm
           '65v12.5c0,1.4,1.1,2.5,2.5,2.5H90V80z"/>'#13#10'</svg>'#13#10
       end>
     Scaled = True
-    Left = 384
-    Top = 420
+    Left = 392
+    Top = 324
   end
 end

@@ -35,7 +35,7 @@ uses
   , Vcl.ImgList
   , Vcl.Controls
   , System.ImageList
-  , SynHighlighterXML
+  , SynHighlighterMarkdown
   , SynEditOptionsDialog
   , SynEditPrint
   , SynEditCodeFolding
@@ -86,8 +86,8 @@ type
   end;
 
   TdmResources = class(TDataModule)
-    SynXMLSyn: TSynXMLSyn;
-    SynXMLSynDark: TSynXMLSyn;
+    SynMarkdownSyn: TSynMarkdownSyn;
+    SynMarkdownSynDark: TSynMarkdownSyn;
     SVGIconImageCollection: TSVGIconImageCollection;
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
@@ -160,41 +160,44 @@ end;
 function TdmResources.GetSynHighlighter(
   const ADarkStyle: boolean;
   const ABackgroundColor: TColor): TSynCustomHighlighter;
+var
+  LSyn: TSynMarkdownSyn;
+  I: Integer;
+
+  procedure SetFg(const AAttri: TSynHighlighterAttributes;
+    const ALight, ADark: TColor);
+  begin
+    if ADarkStyle then
+      AAttri.Foreground := ADark
+    else
+      AAttri.Foreground := ALight;
+  end;
+
 begin
   if ADarkStyle then
-  begin
-    Result := dmResources.SynXMLSynDark;
-    SynXMLSynDark.ElementAttri.Background := ABackgroundColor;
-    SynXMLSynDark.AttributeAttri.Background := ABackgroundColor;
-    SynXMLSynDark.NamespaceAttributeAttri.Background := ABackgroundColor;
-    SynXMLSynDark.AttributeValueAttri.Background := ABackgroundColor;
-    SynXMLSynDark.NamespaceAttributeValueAttri.Background := ABackgroundColor;
-    SynXMLSynDark.TextAttri.Background := ABackgroundColor;
-    SynXMLSynDark.CDATAAttri.Background := ABackgroundColor;
-    SynXMLSynDark.EntityRefAttri.Background := ABackgroundColor;
-    SynXMLSynDark.ProcessingInstructionAttri.Background := ABackgroundColor;
-    SynXMLSynDark.CommentAttri.Background := ABackgroundColor;
-    SynXMLSynDark.DocTypeAttri.Background := ABackgroundColor;
-    SynXMLSynDark.SpaceAttri.Background := ABackgroundColor;
-    SynXMLSynDark.SymbolAttri.Background := ABackgroundColor;
-  end
+    LSyn := dmResources.SynMarkdownSynDark
   else
-  begin
-    Result := dmResources.SynXMLSyn;
-    SynXMLSyn.ElementAttri.Background := ABackgroundColor;
-    SynXMLSyn.AttributeAttri.Background := ABackgroundColor;
-    SynXMLSyn.NamespaceAttributeAttri.Background := ABackgroundColor;
-    SynXMLSyn.AttributeValueAttri.Background := ABackgroundColor;
-    SynXMLSyn.NamespaceAttributeValueAttri.Background := ABackgroundColor;
-    SynXMLSyn.TextAttri.Background := ABackgroundColor;
-    SynXMLSyn.CDATAAttri.Background := ABackgroundColor;
-    SynXMLSyn.EntityRefAttri.Background := ABackgroundColor;
-    SynXMLSyn.ProcessingInstructionAttri.Background := ABackgroundColor;
-    SynXMLSyn.CommentAttri.Background := ABackgroundColor;
-    SynXMLSyn.DocTypeAttri.Background := ABackgroundColor;
-    SynXMLSyn.SpaceAttri.Background := ABackgroundColor;
-    SynXMLSyn.SymbolAttri.Background := ABackgroundColor;
-  end;
+    LSyn := dmResources.SynMarkdownSyn;
+  //Align every token attribute background to the editor background so the
+  //markdown highlighter blends with the current theme (idempotent).
+  for I := 0 to LSyn.AttrCount - 1 do
+    LSyn.Attribute[I].Background := ABackgroundColor;
+  //Theme-aware foreground palette (light / dark), idempotent: keeps good
+  //contrast on both light and dark editor backgrounds.
+  SetFg(LSyn.HeadingAttri,         clWebMediumBlue, clWebCornflowerBlue);
+  SetFg(LSyn.EmphasisAttri,        clWebPurple,     clWebOrchid);
+  SetFg(LSyn.StrongAttri,          clWebPurple,     clWebOrchid);
+  SetFg(LSyn.CodeAttri,            clWebFirebrick,  clWebSandyBrown);
+  SetFg(LSyn.LinkAttri,            clWebRoyalBlue,  clWebDeepSkyBlue);
+  SetFg(LSyn.ListAttri,            clWebTeal,       clWebMediumAquamarine);
+  SetFg(LSyn.BlockQuoteAttri,      clWebDimGray,    clWebDarkGray);
+  SetFg(LSyn.DeleteAttri,          clWebDimGray,    clWebDarkGray);
+  SetFg(LSyn.EntityReferenceAttri, clWebSeaGreen,   clWebDarkSeaGreen);
+  SetFg(LSyn.HtmlTagAttri,         clWebDarkViolet, clWebOrchid);
+  SetFg(LSyn.HtmlAttrNametAttri,   clWebMediumBlue, clWebLightBlue);
+  SetFg(LSyn.HtmlAttrValueAttri,   clWebCrimson,    clWebSandyBrown);
+  SetFg(LSyn.HtmlCommentAttri,     clWebGreen,      clWebMediumSeaGreen);
+  Result := LSyn;
 end;
 
 procedure TdmResources.HtmlViewerHotSpotClick(Sender: TObject;

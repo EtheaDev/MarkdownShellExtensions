@@ -120,14 +120,17 @@ type
     AutoRefreshCheckBox: TCheckBox;
     SyncScrollCheckBox: TCheckBox;
     RestoreLastSessionCheckBox: TCheckBox;
-    ActiveLineColorGroupBox: TGroupBox;
-    DarkActiveLineColorColorBox: TColorBox;
-    LightActiveLineColorColorBox: TColorBox;
     tsUpdates: TTabSheet;
     UpdateGroupBox: TGroupBox;
     AutoUpdateCheckBox: TCheckBox;
     CheckNDaysLabel: TLabel;
     CheckNDaysSpinEdit: TSpinEdit;
+    TopTextColorPanel: TPanel;
+    ActiveLineColorGroupBox: TGroupBox;
+    DarkActiveLineColorColorBox: TColorBox;
+    LightActiveLineColorColorBox: TColorBox;
+    HighlighTextGroupBox: TGroupBox;
+    HighlightMarkdownTextCheckBox: TCheckBox;
     procedure BoxElementsClick(Sender: TObject);
     procedure cbForegroundClick(Sender: TObject);
     procedure cbBackgroundClick(Sender: TObject);
@@ -149,9 +152,11 @@ type
       State: TOwnerDrawState);
     procedure OrientationRadioGroupClick(Sender: TObject);
     procedure AutoUpdateCheckBoxClick(Sender: TObject);
+    procedure HighlightMarkdownTextCheckBoxClick(Sender: TObject);
   private
     FHighlighter: TSynCustomHighlighter;
     FSourceSynEdit: TSynEdit;
+    FSourceHighlighter: TSynCustomHighlighter;
     FFileName: string;
     FAboutForm: TFrmAbout;
     FTitle: string;
@@ -168,7 +173,6 @@ type
     function GetForeGroundColor: TColor;
     procedure AddElements;
     procedure RefreshMap;
-    procedure CloneSynEdit(Source, Dest : TSynEdit );
     procedure ChangeAllDefaultColors(const OldForeground, NewForeground,
       OldBackGround, NewBackGround: TColor);
     function GetCurrentIsWhiteSpace: Boolean;
@@ -188,6 +192,7 @@ type
 function ShowSettings(const AParentRect: TRect;
   const ATitle: string;
   const ASourceSynEdit: TSynEdit;
+  const ASourceHighlighter: TSynCustomHighlighter;
   const ASettings: TSettings;
   AFromPreview: Boolean): Boolean;
 
@@ -206,6 +211,7 @@ uses
 function ShowSettings(const AParentRect: TRect;
   const ATitle: string;
   const ASourceSynEdit: TSynEdit;
+  const ASourceHighlighter: TSynCustomHighlighter;
   const ASettings: TSettings; AFromPreview: Boolean): Boolean;
 type
   TSynCustomHighlighterClass = class of TSynCustomHighlighter;
@@ -235,18 +241,25 @@ begin
     StatusBar.SimpleText := FFileName;
 
     FSourceSynEdit := ASourceSynEdit;
+    FSourceHighlighter := ASourceHighlighter;
     if Assigned(FSourceSynEdit) then
     begin
       SynEdit.Color := FSourceSynEdit.Color;
       SynEdit.Font.Assign(FSourceSynEdit.Font);
       SynEdit.Gutter.Assign(FSourceSynEdit.Gutter);
       SynEdit.ActiveLineColor := FSourceSynEdit.ActiveLineColor;
+      SynEdit.Text := FSourceSynEdit.Text;
+    end;
+    if Assigned(FSourceHighlighter) then
+    begin
+      //Use the highlighter passed explicitly (not the one hooked to the editor,
+      //which may be nil when markdown highlighting is disabled), so the color
+      //preview always works.
       HighLightSettingsClass := TSynCustomHighlighterClass(
-        FSourceSynEdit.Highlighter.ClassType);
+        FSourceHighlighter.ClassType);
       FHighlighter := HighLightSettingsClass.Create(nil);
+      FHighlighter.Assign(FSourceHighlighter);
       SynEdit.Highlighter := FHighlighter;
-      CloneSynEdit(ASourceSynEdit,SynEdit);
-      SynEdit.Text := ASourceSynEdit.Text;
       AddElements;
     end;
     try
@@ -575,6 +588,11 @@ begin
   Result := FHighlighter.WhitespaceAttribute.Foreground;
 end;
 
+procedure TMDSettingsForm.HighlightMarkdownTextCheckBoxClick(Sender: TObject);
+begin
+  UpdateGUI;
+end;
+
 procedure TMDSettingsForm.ChangePage(AIndex: Integer);
 begin
   pc.ActivePageIndex := AIndex;
@@ -586,6 +604,7 @@ begin
     MenuButtonGroup.items.Delete(5);
   ChangePage(ASettings.ActivePageIndex);
   MenuButtonGroup.ItemIndex := pc.ActivePageIndex +1;
+
   SettingsImageList.FixedColor := ASettings.ButtonTextColor;
   SVGIconPosition.FixedColor := ASettings.ButtonTextColor;
   FFileName := ASettings.SettingsFileName;
@@ -599,6 +618,7 @@ begin
   HTMLUpDown.Position := ASettings.HTMLFontSize;
 
   ProcessorDialectComboBox.ItemIndex := ord(ASettings.ProcessorDialect);
+  HighlightMarkdownTextCheckBox.Checked := TEditorSettings(ASettings).HighlightMarkdownText;
   ToolbarRoundedCheckBox.Checked := TEditorSettings(ASettings).ToolbarDrawRounded;
   ButtonsRoundedCheckBox.Checked := TEditorSettings(ASettings).ButtonDrawRounded;
   MenuRoundedCheckBox.Checked := TEditorSettings(ASettings).MenuDrawRounded;
@@ -667,6 +687,10 @@ end;
 procedure TMDSettingsForm.UpdateGUI;
 begin
   CheckNDaysSpinEdit.Enabled := AutoUpdateCheckBox.Checked;
+  paLeft.Visible := HighlightMarkdownTextCheckBox.Checked;
+  VertSplitter.Visible := HighlightMarkdownTextCheckBox.Checked;
+  VertSplitter.Left := paLeft.Left+1;
+  paAttributesContainer.Visible := HighlightMarkdownTextCheckBox.Checked;
 end;
 
 procedure TMDSettingsForm.UpdateSettings(ASettings: TSettings);
@@ -687,6 +711,7 @@ begin
   ASettings.RescalingImage := RescalingImageCheckBox.Checked;
   if ASettings is TEditorSettings then
   begin
+    TEditorSettings(ASettings).HighlightMarkdownText := HighlightMarkdownTextCheckBox.Checked;
     TEditorSettings(ASettings).DownloadFromWEB := DownloadFromWEBCheckBox.Checked;
     TEditorSettings(ASettings).AutoRefreshWhenEditing := AutoRefreshCheckBox.Checked;
     TEditorSettings(ASettings).SyncScroll := SyncScrollCheckBox.Checked;
@@ -793,17 +818,11 @@ end;
 
 procedure TMDSettingsForm.ExitFromSettings(Sender: TObject);
 begin
-  //Salva i parametri su file
-  if Assigned(FSourceSynEdit) and Assigned(SynEdit) then
-    CloneSynEdit(SynEdit, FSourceSynEdit);
+  //Copy the edited colors back into the source highlighter (the shared
+  //instance), not into the editor SynEdit whose highlighter may be unhooked.
+  if Assigned(FSourceHighlighter) and Assigned(FHighlighter) then
+    FSourceHighlighter.Assign(FHighlighter);
   ModalResult := mrOk;
-end;
-
-procedure TMDSettingsForm.CloneSynEdit(Source, Dest: TSynEdit);
-begin
-  Dest.Highlighter.Assign(Source.Highlighter);
-  Dest.Font.Assign(Source.Font);
-  Dest.Color := Source.Color;
 end;
 
 end.

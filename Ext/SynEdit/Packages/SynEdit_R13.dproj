@@ -221,6 +221,7 @@
             <Form>$IFNDEF CPUX64</Form>
         </DCCReference>
         <DCCReference Include="..\Source\SynURIOpener.pas"/>
+        <DCCReference Include="..\Source\SynHighlighterMarkdown.pas"/>
         <DCCReference Include="..\Source\SynEditHighlighterOptions.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

@@ -69,13 +69,15 @@ type
     FProcessorDialect: TMarkdownProcessorDialect;
     FHTML: string;
     FCodeBlockEmitter: TBlockEmitter;
+    FAllowUnsafe: Boolean;
     procedure SetMarkDownContent(const AValue: string);
     function GetDefaultCSS: string;
   public
     constructor Create(const AMarkDownContent: string;
       const AProcessorDialect: TMarkdownProcessorDialect;
       const AParseImmediately: Boolean = True;
-      const ACodeBlockEmitter: TBlockEmitter = nil);
+      const ACodeBlockEmitter: TBlockEmitter = nil;
+      const AAllowUnsafe: Boolean = False);
 
     procedure Clear;
     procedure Parse;
@@ -568,11 +570,13 @@ end;
 constructor TMarkDownFile.Create(const AMarkDownContent: string;
   const AProcessorDialect: TMarkdownProcessorDialect;
   const AParseImmediately: Boolean = True;
-  const ACodeBlockEmitter: TBlockEmitter = nil);
+  const ACodeBlockEmitter: TBlockEmitter = nil;
+  const AAllowUnsafe: Boolean = False);
 begin
   Clear;
   FCodeBlockEmitter := ACodeBlockEmitter;
   FProcessorDialect := AProcessorDialect;
+  FAllowUnsafe := AAllowUnsafe;
   MarkDownContent := AMarkDownContent;
   if AParseImmediately then
     Parse;
@@ -624,7 +628,9 @@ var
 begin
   LMDProcessor := TMarkdownProcessor.CreateDialect(FProcessorDialect);
   try
-    LMDProcessor.AllowUnsafe := False;
+    //Safe mode by default: native HTML (script/iframe/object...) is neutralized.
+    //Set to True only when the user explicitly allows unsafe HTML in Settings.
+    LMDProcessor.AllowUnsafe := FAllowUnsafe;
     //Optional syntax-highlighting emitter for fenced code blocks.
     //NB: the caller owns the emitter, so we detach it before freeing the
     //processor (TConfiguration.Destroy frees its codeBlockEmitter).

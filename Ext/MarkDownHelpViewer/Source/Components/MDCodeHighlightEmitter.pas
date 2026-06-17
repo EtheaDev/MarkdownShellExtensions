@@ -48,8 +48,6 @@ unit MDCodeHighlightEmitter;
 
 interface
 
-{$I MDSyntaxHighlight.inc}
-
 uses
   System.Classes
   , Vcl.Graphics

@@ -85,6 +85,25 @@ class function TTable.ProcTable(var L: TLine): string;
 | Left         |    Center     |        Right |
 | Second row   |  **strong**   |     *italic* |
 *)
+
+  //Emit the inline markdown of a single cell in isolation, so that inline
+  //constructs (emphasis, subscript ~, strike ~~, code...) cannot span across
+  //cell/row boundaries (e.g. a lone '~' matching a '~' in another cell).
+  function EmitCell(const ACell: string): string;
+  var
+    LCell: TStringBuilder;
+  begin
+    if not Assigned(Emitter) then
+      Exit(ACell);
+    LCell := TStringBuilder.Create;
+    try
+      Emitter.recursiveEmitLine(LCell, ACell, 0, mtNONE);
+      Result := LCell.ToString;
+    finally
+      LCell.Free;
+    end;
+  end;
+
 var
   cell,outs,t,t2:string;
   orig:TLine;
@@ -111,7 +130,7 @@ begin
       col:=0;
       for cell in tsl do
       begin
-        t2:=t2+'    <th'+ColAlign[col]+trim(cell)+'</th>'#10;
+        t2:=t2+'    <th'+ColAlign[col]+EmitCell(trim(cell))+'</th>'#10;
         inc(col);
       end;
       first:=false;
@@ -121,7 +140,7 @@ begin
       col:=0;
       for cell in tsl do
       begin
-        t2:=t2+'    <td'+ColAlign[col]+trim(cell)+'</td>'#10;
+        t2:=t2+'    <td'+ColAlign[col]+EmitCell(trim(cell))+'</td>'#10;
         inc(col);
       end;
     end;
@@ -133,7 +152,7 @@ begin
     orig:=orig.next;
   end;
   t:='<table>'#10;
-  t:=t+outs+'</table>'#10;
+  t:=t+outs+'</table>'#10+'<br/>'#10;
   tsl.free;
   ColAlign.free;
   ProcTable:=t;
@@ -143,36 +162,62 @@ class procedure TTable.emitTableLines(out_: TStringBuilder; lines: TLine);
 var line:TLine;
 begin
   line := lines;
-  if Assigned(Emitter) then Emitter.recursiveEmitLine(out_, ProcTable(line), 0, mtNONE);
+  //ProcTable already emits each cell's inline markdown in isolation and builds
+  //the literal <table>/<tr>/<td> structure, so append it as-is. (Emitting the
+  //whole table through recursiveEmitLine would let inline tokens span cells.)
+  out_.Append(ProcTable(line));
 end;
 
 class function TTable.hasFormatChars(L: Tline): integer;
 var
   i,j:integer;
+  sepCount: integer;
+  hasDash: boolean;
 begin
-  result:=0;Cols:=0;
+  Cols:=0;
   if not Assigned(L) or L.isEmpty then exit(0);
   i:=L.leading+1;
   j:=Length(L.value)-L.trailing;
-  if i>4 then exit(0); // more of 4 spaces of identation
+  if i>4 then exit(0); // more than 4 spaces of indentation
+
+  // Skip edge pipes for internal separator counting
   if L.value[i]='|' then inc(i);
   if L.value[j]='|' then dec(j);
+
+  sepCount := 0;
+  hasDash := false;
+
   while (i<=j) do
   begin
     if not CharInSet(L.value[i], [' ','|','-',':']) then
       exit(0);
-    if L.value[i]='|' then inc(result);
+    if L.value[i]='|' then inc(sepCount);
+    if L.value[i]='-' then hasDash := true;
     inc(i);
   end;
-  Cols:=result;
+
+  // Must have at least one dash to be a format row
+  if not hasDash then exit(0);
+
+  // Store internal separator count for row checks
+  Cols := sepCount;
+
+  // Return positive value even for single-column (0 internal separators)
+  if sepCount = 0 then
+    result := 1
+  else
+    result := sepCount;
 end;
 
 class function TTable.isRow(L: Tline): boolean;
 var
   c:integer;
+  s:string;
 begin
-  c:=ColCount(L);
-  exit((c>0) and (c<=Cols))
+  c := ColCount(L);
+  s := Trim(L.value);
+  // Must contain a pipe somewhere and match the format's separator count
+  exit((Pos('|', s) > 0) and (c = Cols));
 end;
 
 class function TTable.ColCount(L: Tline): integer;

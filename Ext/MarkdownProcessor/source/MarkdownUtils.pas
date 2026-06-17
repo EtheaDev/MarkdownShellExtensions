@@ -2316,6 +2316,8 @@ begin
         out_.append('&gt;');
       '+':
         out_.append('%2b');
+      ' ':
+        out_.append('%20');
     else
       out_.append(c);
     end;
@@ -2387,7 +2389,10 @@ class function THTML.isUnsafeHtmlElement(s: String): boolean;
 var
   ht: THTMLElement;
 begin
-  ht := THTMLElement(StringToEnum(TypeInfo(THTMLElement), s, ord(heNONE)));
+  //THTMLElement values are prefixed with 'he' (e.g. hescript): prepend it so the
+  //tag name actually matches, like isHtmlBlockElement does. Without this the lookup
+  //always returns heNONE and safe mode never escapes any unsafe element.
+  ht := THTMLElement(StringToEnum(TypeInfo(THTMLElement), 'he' + s, ord(heNONE)));
   result := ht in UNSAFE_ELEMENTS;
 end;
 

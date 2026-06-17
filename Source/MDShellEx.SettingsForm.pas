@@ -112,6 +112,7 @@ type
     MarkdownGroupBox: TGroupBox;
     ProcessorDialectComboBox: TComboBox;
     ProcessorDialectLabel: TLabel;
+    AllowUnsafeHTMLCheckBox: TCheckBox;
     RoundedButtonsGroupBox: TGroupBox;
     ToolbarRoundedCheckBox: TCheckBox;
     ButtonsRoundedCheckBox: TCheckBox;
@@ -618,6 +619,7 @@ begin
   HTMLUpDown.Position := ASettings.HTMLFontSize;
 
   ProcessorDialectComboBox.ItemIndex := ord(ASettings.ProcessorDialect);
+  AllowUnsafeHTMLCheckBox.Checked := ASettings.AllowUnsafeHTML;
   HighlightMarkdownTextCheckBox.Checked := TEditorSettings(ASettings).HighlightMarkdownText;
   ToolbarRoundedCheckBox.Checked := TEditorSettings(ASettings).ToolbarDrawRounded;
   ButtonsRoundedCheckBox.Checked := TEditorSettings(ASettings).ButtonDrawRounded;
@@ -706,6 +708,7 @@ begin
   ASettings.HTMLFontSize := HTMLUpDown.Position;
 
   ASettings.ProcessorDialect := TMarkdownProcessorDialect(ProcessorDialectComboBox.ItemIndex);
+  ASettings.AllowUnsafeHTML := AllowUnsafeHTMLCheckBox.Checked;
 
   ASettings.StyleName := SelectedStyleName;
   ASettings.RescalingImage := RescalingImageCheckBox.Checked;

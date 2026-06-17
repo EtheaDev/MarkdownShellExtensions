@@ -554,7 +554,7 @@ begin
     if AReloadImages then
       HtmlViewer.clear;
     FMarkDownFile := TMarkDownFile.Create(SynEditor.Lines.Text,
-      ASettings.ProcessorDialect, True, ACodeBlockEmitter);
+      ASettings.ProcessorDialect, True, ACodeBlockEmitter, ASettings.AllowUnsafeHTML);
     //Load HTML content into HTML-Viewer
     LOldPos := HtmlViewer.VScrollBarPosition;
     HtmlViewer.DefFontSize := ASettings.HTMLFontSize;
@@ -1572,6 +1572,10 @@ begin
   // Poll the active viewer's scroll position. Catches all user-initiated
   // scrolls (wheel, scrollbar, keyboard) without needing to hook the
   // viewer's private PaintPanel events.
+  //Skip while files are being added/removed: CurrentEditFile may resolve to
+  //a partially destroyed object during teardown.
+  if FProcessingFiles then
+    Exit;
   LFile := CurrentEditFile;
   if (LFile = nil) or (LFile.HTMLViewer = nil) then
     Exit;
@@ -1917,6 +1921,10 @@ procedure TfrmMain.CheckFileChangedTimerTimer(Sender: TObject);
 var
   LFileAge: TDateTime;
 begin
+  //Skip while files are being added/removed: iterating EditFileList and
+  //showing a modal dialog here would race with the teardown in progress.
+  if FProcessingFiles then
+    Exit;
   CheckFileChangedTimer.Enabled := False;
   Try
     //Check if opened files are changed on Disk
@@ -2034,36 +2042,55 @@ end;
 
 procedure TfrmMain.RemoveEditingFile(EditingFile: TEditingFile);
 var
-  i : integer;
   pos : integer;
+  LTabSheet: TTabSheet;
+  LWasProcessing: Boolean;
 begin
-  pos := -1;
-  for i := 0 to EditFileList.Count -1 do
-  begin
-    if EditFileList.Items[i] = EditingFile then
-    begin
-      pos := i;
-      break;
-    end;
-  end;
+  pos := EditFileList.IndexOf(EditingFile);
   if pos = -1 then
     raise EComponentError.Create(CLOSING_PROBLEMS);
 
-  //Confirm save changes
+  //Confirm save changes (may raise Abort: do this before touching anything)
   ConfirmChanges(EditingFile);
 
-  //Delete the file from the Opened-List
-  EditFileList.Delete(pos);
+  //Prevent re-entrant handlers (SyncScroll timer, OnChange/OnStatusChange)
+  //from dereferencing the object we are about to destroy. Save/restore the
+  //flag so we don't clobber a caller (e.g. acCloseAllExecute) that set it.
+  LWasProcessing := FProcessingFiles;
+  FProcessingFiles := True;
+  try
+    LTabSheet := EditingFile.TabSheet;
 
-  //Delete the TabSheet
-  PageControl.Pages[pos].Free;
+    //Clear the back-pointer: CurrentEditFile can no longer resolve the dying
+    //object (TEditingFile(0) = nil, which every call site already handles).
+    if Assigned(LTabSheet) then
+      LTabSheet.Tag := 0;
 
-  //Activate the previous page and call "change" of pagecontrol
-  if pos > 0 then
-    PageControl.ActivePageIndex := pos-1;
+    //Move the active page BEFORE destroying, so the PageControl does not
+    //auto-select / fire OnChange against the dying tab.
+    if Assigned(LTabSheet) and (PageControl.ActivePage = LTabSheet) then
+    begin
+      if pos > 0 then
+        PageControl.ActivePageIndex := pos - 1
+      else if PageControl.PageCount > 1 then
+        PageControl.ActivePageIndex := 1;
+    end;
 
-  //Force "change" of Page
-  PageControl.OnChange(PageControl);
+    //Free the object FIRST (OwnsObjects=True -> Free on Delete -> frees
+    //SynEditor/HTMLViewer while their parent TabSheet is still alive, so they
+    //cleanly detach from it)...
+    EditFileList.Delete(pos);
+    //...THEN free the now-empty TabSheet. Order matters: TWinControl.Destroy
+    //frees its child controls, so freeing the TabSheet first would destroy
+    //SynEditor/HTMLViewer and TEditingFile.Destroy would then double-free them.
+    LTabSheet.Free;
+  finally
+    FProcessingFiles := LWasProcessing;
+  end;
+
+  //Refresh the now-current page.
+  if Assigned(PageControl.OnChange) then
+    PageControl.OnChange(PageControl);
 end;
 
 procedure TfrmMain.acCloseAllUpdate(Sender: TObject);

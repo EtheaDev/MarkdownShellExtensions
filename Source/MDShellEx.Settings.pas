@@ -99,6 +99,7 @@ type
     FMenuDrawRounded: Boolean;
     FLayoutMode: TLayoutMode;
     FViewerPercentSize: word;
+    FAllowUnsafeHTML: Boolean;
     function GetUseDarkStyle: Boolean;
     function GetThemeSectionName: string;
     function GetButtonTextColor: TColor;
@@ -151,6 +152,11 @@ type
     property LayoutMode: TLayoutMode read FLayoutMode write FLayoutMode;
     property ViewerPercentSize: word read FViewerPercentSize write SetViewerPercentSize;
     property DaysForNextCheck: Integer read FDaysForNextCheck write SetDaysForNextCheck;
+    //When True the markdown processor lets native HTML (e.g. <script>, <iframe>,
+    //<object>) from the .md file pass through to the HTML output. Default False
+    //(safe mode): such tags are neutralized into entities. NB: this is unrelated
+    //to DownloadFromWEB, which controls loading of remote image resources.
+    property AllowUnsafeHTML: Boolean read FAllowUnsafeHTML write FAllowUnsafeHTML;
   end;
 
   TPreviewSettings = class(TSettings)
@@ -373,6 +379,7 @@ begin
   FToolbarDrawRounded := FIniFile.ReadBool('Global', 'ToolbarDrawRounded', false);
   FButtonDrawRounded := FIniFile.ReadBool('Global', 'ButtonDrawRounded', false);
   FMenuDrawRounded := FIniFile.ReadBool('Global', 'MenuDrawRounded', false);
+  FAllowUnsafeHTML := FIniFile.ReadBool('Global', 'AllowUnsafeHTML', false);
 //Select Style by default on Actual Windows Theme
   if FThemeSelection = tsAsWindows then
   begin
@@ -454,6 +461,7 @@ begin
   FIniFile.WriteBool('Global', 'ToolbarDrawRounded', ToolbarDrawRounded);
   FIniFile.WriteBool('Global', 'ButtonDrawRounded', ButtonDrawRounded);
   FIniFile.WriteBool('Global', 'MenuDrawRounded', MenuDrawRounded);
+  FIniFile.WriteBool('Global', 'AllowUnsafeHTML', FAllowUnsafeHTML);
 
   if ASynEditHighilighter <> nil then
   begin

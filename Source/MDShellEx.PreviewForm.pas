@@ -374,7 +374,7 @@ begin
           ASettings.HTMLFontName, ASettings.HTMLFontSize);
     end;
     FMarkDownFile := TMarkDownFile.Create(SynEdit.Lines.Text,
-      ASettings.ProcessorDialect, True, FCodeHighlightEmitter);
+      ASettings.ProcessorDialect, True, FCodeHighlightEmitter, ASettings.AllowUnsafeHTML);
 
     //Carica il contenuto HTML trasformato dentro l'HTML-Viewer
     LOldPos := HtmlViewer.VScrollBarPosition;

@@ -40,7 +40,7 @@ object MDSettingsForm: TMDSettingsForm
       ImageName = 'eye-settings'
       object RenderingGroupBox: TGroupBox
         Left = 10
-        Top = 104
+        Top = 132
         Width = 260
         Height = 73
         Caption = 'Images loading options'
@@ -66,7 +66,7 @@ object MDSettingsForm: TMDSettingsForm
         Left = 10
         Top = 16
         Width = 260
-        Height = 82
+        Height = 110
         Caption = 'Markdown processor options'
         TabOrder = 0
         object ProcessorDialectLabel: TLabel
@@ -88,11 +88,25 @@ object MDSettingsForm: TMDSettingsForm
             'DaringFireball'
             'CommonMark')
         end
+        object AllowUnsafeHTMLCheckBox: TCheckBox
+          Left = 15
+          Top = 75
+          Width = 235
+          Height = 17
+          Hint =
+            'When enabled, native HTML in the markdown (e.g. <script>, <ifra' +
+            'me>, <object>) is passed through to the preview instead of bein' +
+            'g neutralized. Leave off unless you trust the file.'
+          Caption = 'Allow unsafe HTML (script, iframe...)'
+          ParentShowHint = False
+          ShowHint = True
+          TabOrder = 1
+        end
       end
       object RoundedButtonsGroupBox: TGroupBox
         AlignWithMargins = True
         Left = 10
-        Top = 183
+        Top = 211
         Width = 260
         Height = 97
         Caption = 'Rounded Buttons'
@@ -125,7 +139,7 @@ object MDSettingsForm: TMDSettingsForm
       object EditingOptionsGroupBox: TGroupBox
         AlignWithMargins = True
         Left = 10
-        Top = 285
+        Top = 313
         Width = 260
         Height = 105
         Caption = 'Editing Options'

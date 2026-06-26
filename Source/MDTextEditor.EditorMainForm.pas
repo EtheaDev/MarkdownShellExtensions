@@ -345,6 +345,14 @@ type
       MousePos: TPoint; var Handled: Boolean);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure acZoomExecute(Sender: TObject);
+    //Applies a net zoom delta to the HTML viewer (changes HTMLFontSize and
+    //reloads). Guarded against re-entrancy (see ApplyViewerZoom body).
+    procedure ApplyViewerZoom(const ADelta: Integer);
+    //Deferred HTML-viewer zoom: reloading the viewer content cannot be done
+    //inside the WM_MOUSEWHEEL handler (it rebuilds the viewer while the wheel
+    //message is still being dispatched to it -> External Exception), so the
+    //wheel handler posts this message and the zoom runs after the dispatch.
+    procedure WMHtmlViewerZoom(var Message: TMessage); message WM_APP + 124;
     procedure acEditCopyUpdate(Sender: TObject);
     procedure acSaveHTMLFileExecute(Sender: TObject);
     procedure acSavePDFFileExecute(Sender: TObject);
@@ -845,7 +853,9 @@ begin
     end
     else if CurrentEditFile.HTMLViewer.Focused then
     begin
-      acZoomOut.Execute;
+      //Defer: reloading the viewer inside its own wheel message causes an
+      //External Exception (see WMHtmlViewerZoom). WParam 0 = zoom out.
+      PostMessage(Handle, WM_APP + 124, 0, 0);
       Handled := True;
     end;
   end;
@@ -863,7 +873,9 @@ begin
     end
     else if CurrentEditFile.HTMLViewer.Focused then
     begin
-      acZoomIn.Execute;
+      //Defer: reloading the viewer inside its own wheel message causes an
+      //External Exception (see WMHtmlViewerZoom). WParam 1 = zoom in.
+      PostMessage(Handle, WM_APP + 124, 1, 0);
       Handled := True;
     end;
   end;
@@ -2220,17 +2232,18 @@ begin
 end;
 
 procedure TfrmMain.SetEditorFontSize(const Value: Integer);
-var
-  LScaleFactor: Single;
 begin
   if (CurrentEditor <> nil) and (Value >= MinfontSize) and (Value <= MaxfontSize) then
   begin
-    if FEditorFontSize <> 0 then
-      LScaleFactor := CurrentEditor.Font.Height / FEditorFontSize
-    else
-      LScaleFactor := 1;
+    //Set the point size at the current monitor DPI and let TFont compute the
+    //pixel height (this matches how TSynEditorOptionsContainer.AssignTo applies
+    //the font). The previous code derived Font.Height multiplying by
+    //Self.ScaleFactor ON TOP of the DPI already encoded in the
+    //Font.Height/FEditorFontSize ratio, so on high-DPI monitors it produced a
+    //font scaled by ~ScaleFactor^2 - a giant font that flashed for a frame
+    //before the following AssignTo corrected it.
     CurrentEditor.Font.PixelsPerInch := Self.PixelsPerInch;
-    CurrentEditor.Font.Height := Round(Value * LScaleFactor * Self.ScaleFactor);
+    CurrentEditor.Font.Size := Value;
     FEditorSettings.MDFontSize := Value;
   end;
   FEditorFontSize := Value;
@@ -2332,10 +2345,18 @@ begin
   FEditorSettings.MDFontName := FEditorOptions.Font.Name;
   EditorFontSize := FEditorOptions.Font.Size;
 
+  //Apply the font to ALL editors FIRST, before touching any HTMLViewer.
+  //Updating a viewer (DefFontSize) can reload its images, and
+  //HtmlViewerImageRequest pumps the queue (Application.ProcessMessages):
+  //that repaints the visible editor. If its font were still the transient
+  //pre-AssignTo value, it would flash oversized for a frame. Setting every
+  //editor font up-front guarantees the editor is already final at that point.
+  for i := 0 to EditFileList.Count -1 do
+    FEditorOptions.AssignTo(TEditingFile(EditFileList.items[i]).SynEditor);
+
   for i := 0 to EditFileList.Count -1 do
   begin
     EditingFile := TEditingFile(EditFileList.items[i]);
-    FEditorOptions.AssignTo(EditingFile.SynEditor);
     EditingFile.HTMLViewer.DefFontName := FEditorSettings.HTMLFontName;
     EditingFile.HTMLViewer.DefFontSize := FEditorSettings.HTMLFontSize;
     EditingFile.HTMLViewer.DefBackground := StyleServices.GetSystemColor(clWindow);
@@ -2512,17 +2533,55 @@ begin
   end;
 end;
 
+procedure TfrmMain.ApplyViewerZoom(const ADelta: Integer);
+begin
+  //Re-entrancy guard: ShowMarkDownAsHTML reloads the viewer, whose image
+  //loading pumps the message queue (Application.ProcessMessages in
+  //HtmlViewerImageRequest). A queued zoom (or a timer) must not re-enter the
+  //render, otherwise the shared, non-reentrant code-highlight emitter
+  //(TSynExporterHTML + cached highlighters) gets its highlighter freed while
+  //still in use -> Access/External Exception.
+  if (CurrentEditFile = nil) or (ADelta = 0) or FProcessingFiles then
+    Exit;
+  FEditorSettings.HTMLFontSize := FEditorSettings.HTMLFontSize + ADelta;
+  if FEditorSettings.HTMLFontSize < 1 then
+    FEditorSettings.HTMLFontSize := 1;
+  UpdateCodeHighlightTheme;
+  FProcessingFiles := True;
+  try
+    CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings, False, FCodeHighlightEmitter);
+  finally
+    FProcessingFiles := False;
+  end;
+end;
+
 procedure TfrmMain.acZoomExecute(Sender: TObject);
-var
-  LValue: Integer;
 begin
   if Sender = acZoomIn then
-    LValue := 1
+    ApplyViewerZoom(1)
   else
-    LValue := -1;
-  FEditorSettings.HTMLFontSize := FEditorSettings.HTMLFontSize + LValue;
-  UpdateCodeHighlightTheme;
-  CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings, False, FCodeHighlightEmitter);
+    ApplyViewerZoom(-1);
+end;
+
+procedure TfrmMain.WMHtmlViewerZoom(var Message: TMessage);
+var
+  LMsg: TMsg;
+  LDelta: Integer;
+begin
+  //Runs after the WM_MOUSEWHEEL dispatch has fully returned, so reloading the
+  //HTML viewer is now safe. Coalesce all the wheel notches still queued into a
+  //single net delta, so the expensive reload runs once instead of once per
+  //notch (and there is no queued zoom left to re-enter during image loading).
+  if Message.WParam <> 0 then
+    LDelta := 1
+  else
+    LDelta := -1;
+  while PeekMessage(LMsg, Handle, WM_APP + 124, WM_APP + 124, PM_REMOVE) do
+    if LMsg.wParam <> 0 then
+      Inc(LDelta)
+    else
+      Dec(LDelta);
+  ApplyViewerZoom(LDelta);
 end;
 
 procedure TfrmMain.RecentPopupMenuPopup(Sender: TObject);

@@ -184,6 +184,11 @@ end;
 destructor TSynHighlightBlockEmitter.Destroy;
 begin
   FLangMap.Free;
+  //Detach the exporter from its highlighter while the cached highlighters are
+  //still alive, then free them, then the exporter. Avoids the exporter holding
+  //a dangling highlighter reference (see SetTheme note).
+  if Assigned(FExporter) then
+    FExporter.Highlighter := nil;
   FHighlighters.Free;
   FExporter.Free;
   inherited;
@@ -442,6 +447,14 @@ begin
   FFontSize := AFontSize;
   //Token colors depend on the theme: drop cached highlighters so they get
   //recreated (and re-adjusted) on next use.
+  //IMPORTANT: detach the exporter from its current highlighter BEFORE freeing
+  //the cached highlighters. TSynCustomExporter.SetHighlighter keeps a raw
+  //reference and never nulls it when the highlighter is destroyed (it has no
+  //Notification handler), so clearing the cache while the exporter still points
+  //to one of these instances leaves a dangling pointer: the next emitBlock ->
+  //SetHighlighter would dereference it (FreeNotification on freed memory) and
+  //raise an Access/External Violation (reliably on Win64).
+  FExporter.Highlighter := nil;
   FHighlighters.Clear;
 end;
 

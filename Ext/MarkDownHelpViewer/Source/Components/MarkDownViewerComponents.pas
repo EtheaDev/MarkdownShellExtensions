@@ -72,6 +72,7 @@ Type
     FHTMLContent: TStringList;
     FCssStyle: TStringList;
     FProcessorDialect: TMarkdownProcessorDialect;
+    FAllowUnsafe: Boolean;
     FRescalingImage: Boolean;
     FStream: TMemoryStream;
     FImageRequest: TGetImageEvent;
@@ -132,7 +133,8 @@ Type
       const IsHTMLContent: Boolean = False);
     function TransformContent(const AMarkdownContent: string;
       AProcessorDialect: TMarkdownProcessorDialect = mdCommonMark;
-      const ACssStyle: string = ''): string;
+      const ACssStyle: string = '';
+      const AAllowUnsafe: Boolean = False): string;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure RefreshViewer(const AReloadImages, ARescalingImage: Boolean;
@@ -143,6 +145,9 @@ Type
     property CssStyle: TStringList read FCssStyle write SetCssStyle stored IsCssStyleStored;
     property FileName: TFileName read FFileName write SetFileName;
     property ProcessorDialect: TMarkdownProcessorDialect read FProcessorDialect write SetProcessorDialect default mdCommonMark;
+    //When True, native HTML (script/iframe/object...) in the markdown is passed
+    //through to the output; default False (safe mode: such tags are escaped).
+    property AllowUnsafe: Boolean read FAllowUnsafe write FAllowUnsafe default False;
     property RescalingImage: Boolean read FRescalingImage write SetRescalingImage default False;
     property HtmlContent: TStringList read FHTMLContent write SetHTMLContent stored IsHtmlContentStored;
     property MarkdownContent: TStringList read FMarkdownContent write SetMarkdownContent;
@@ -185,6 +190,7 @@ Type
     property CssStyle;
     property FileName;
     property ProcessorDialect;
+    property AllowUnsafe;
     property RescalingImage;
     property HtmlContent;
     property MarkdownContent;
@@ -230,6 +236,9 @@ var
   LExt: string;
   LFileName: TFileName;
 begin
+  Result := False;
+  if Length(AFileExt) = 0 then
+    Exit;
   LExt := ExtractFileExt(AFileName);
   if LExt = '' then
     LFileName := AFileName+AFileExt[0]
@@ -264,6 +273,10 @@ function GetMarkdownDefaultCSS: string;
 begin
   Result :=
     '<style type="text/css">'+sLineBreak+
+    'img{'+sLineBreak+
+    '  max-width: 100%;'+sLineBreak+
+    '  height: auto;'+sLineBreak+
+    '}'+sLineBreak+
     'code{'+sLineBreak+
     '  font-family: "Consolas", monospace;'+sLineBreak+
     '}'+sLineBreak+
@@ -297,38 +310,87 @@ begin
     '</style>'+sLineBreak;
 end;
 
+//True when the buffer is a valid UTF-8 sequence: it is how UTF-8 is told from
+//ANSI in a file without BOM.
+//NB: the previous implementation obtained the same result by letting
+//TStreamReader raise EEncodingError on an invalid UTF-8 file and then reading
+//the file a second time as ANSI. That worked, but it drove normal control flow
+//with an exception and read the file twice; here the encoding is decided up
+//front, on the bytes already in memory.
+function IsValidUTF8(const ABytes: TBytes): Boolean;
+var
+  I, LLen, LTrailing: Integer;
+  B: Byte;
+begin
+  LLen := Length(ABytes);
+  I := 0;
+  while I < LLen do
+  begin
+    B := ABytes[I];
+    if B < $80 then
+      LTrailing := 0
+    else if (B and $E0) = $C0 then
+      LTrailing := 1
+    else if (B and $F0) = $E0 then
+      LTrailing := 2
+    else if (B and $F8) = $F0 then
+      LTrailing := 3
+    else
+      Exit(False);
+    //The sequence must fit in the buffer...
+    if I + LTrailing >= LLen then
+      Exit(False);
+    //...and every continuation byte must be 10xxxxxx
+    while LTrailing > 0 do
+    begin
+      Inc(I);
+      if (ABytes[I] and $C0) <> $80 then
+        Exit(False);
+      Dec(LTrailing);
+    end;
+    Inc(I);
+  end;
+  Result := True;
+end;
+
 function TryLoadTextFile(const AFileName : TFileName): string;
 var
-  LStream: TStream;
-  LStreamReader: TStreamReader;
+  LStream: TFileStream;
+  LBytes: TBytes;
+  LEncoding: TEncoding;
+  LPreambleLen: Integer;
 begin
+  //NB: the content is decoded in a single pass. Reading it line by line and
+  //concatenating (Result := Result + ...) was quadratic in the file size, and
+  //an ANSI file was read twice (once to fail, once through the fallback).
   Result := '';
   LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
-    try
-      LStreamReader := TStreamReader.Create(LStream, TEncoding.UTF8);
-      try
-        while not LStreamReader.EndOfStream do
-          Result := Result + LStreamReader.ReadLine + sLineBreak;
-      finally
-        FreeAndNil(LStreamReader);
-      end;
-    except
-      On E: EEncodingError do
-      begin
-        LStream.Position := 0;
-        LStreamReader := TStreamReader.Create(LStream, TEncoding.ANSI);
-        try
-          while not LStreamReader.EndOfStream do
-            Result := Result + LStreamReader.ReadLine + sLineBreak;
-        finally
-          FreeAndNil(LStreamReader);
-        end;
-      end;
-    end;
+    SetLength(LBytes, LStream.Size);
+    if Length(LBytes) > 0 then
+      LStream.ReadBuffer(LBytes[0], Length(LBytes));
   finally
     FreeAndNil(LStream);
   end;
+  if Length(LBytes) = 0 then
+    Exit;
+
+  //A BOM, when present, decides the encoding
+  LEncoding := nil;
+  LPreambleLen := TEncoding.GetBufferEncoding(LBytes, LEncoding);
+  if LPreambleLen = 0 then
+  begin
+    if IsValidUTF8(LBytes) then
+      LEncoding := TEncoding.UTF8
+    else
+      LEncoding := TEncoding.ANSI;
+  end;
+  Result := LEncoding.GetString(LBytes, LPreambleLen, Length(LBytes) - LPreambleLen);
+
+  //Rebuilding the text line by line always added a final line break: it is
+  //preserved here, because the last markdown block can be closed by it.
+  if (Result <> '') and (Result[Length(Result)] <> #10) then
+    Result := Result + sLineBreak;
 end;
 
 procedure SaveUTF8File(const AFileName: TFileName;
@@ -407,12 +469,23 @@ begin
 end;
 
 procedure TCustomMarkdownViewer.ReadLines(Reader: TReader);
+var
+  LOldMDChange: TNotifyEvent;
 begin
-  Reader.ReadListBegin;
-  FMarkdownContent.Clear;
-  while not Reader.EndOfList do
-    FMarkdownContent.Add(Reader.ReadString);
-  Reader.ReadListEnd;
+  //OnChange is suspended while reading: every Add would otherwise trigger a
+  //full markdown transformation. The content is transformed once by
+  //LoadFromString below.
+  LOldMDChange := FMarkdownContent.OnChange;
+  FMarkdownContent.OnChange := nil;
+  try
+    Reader.ReadListBegin;
+    FMarkdownContent.Clear;
+    while not Reader.EndOfList do
+      FMarkdownContent.Add(Reader.ReadString);
+    Reader.ReadListEnd;
+  finally
+    FMarkdownContent.OnChange := LOldMDChange;
+  end;
   LoadFromString(FMarkdownContent.Text, False);
 end;
 
@@ -541,12 +614,23 @@ end;
 
 procedure TCustomMarkdownViewer.LoadFromFile(const AFileName: TFileName);
 var
+  I: Integer;
   LExt: string;
   LIsHTMLContent: Boolean;
 begin
   //Load file
+  //NB: ExtractFileExt returns the extension *with* the dot ('.html'), so it
+  //must be compared against AHTMLFileExt and not against 'HTML'/'HTM'.
   LExt := ExtractFileExt(AFileName);
-  LIsHTMLContent := SameText(LExt, 'HTML') or SameText(LExt, 'HTM');
+  LIsHTMLContent := False;
+  for I := Low(AHTMLFileExt) to High(AHTMLFileExt) do
+  begin
+    if SameText(LExt, AHTMLFileExt[I]) then
+    begin
+      LIsHTMLContent := True;
+      Break;
+    end;
+  end;
   LoadFromString(TryLoadTextFile(AFileName), LIsHTMLContent);
 end;
 
@@ -558,17 +642,36 @@ end;
 
 procedure TCustomMarkdownViewer.LoadFromString(const AValue: string;
   const IsHTMLContent: Boolean = False);
+var
+  LOldMDChange, LOldHTMLChange: TNotifyEvent;
 begin
   //Load file
-  if not IsHTMLContent then
-  begin
-    FMarkdownContent.Text := AValue;
-  end
-  else
-  begin
-    //Do not trasform content
-    FHTMLContent.Text := AValue;
-    FMarkdownContent.Text := '';
+  //The OnChange handlers are suspended while both contents are assigned:
+  //TStrings.SetTextStr always fires OnChange (even when assigning an empty
+  //string), so leaving them active would transform/render the content once per
+  //assignment and - for HTML input - MDContentChanged would overwrite the HTML
+  //just assigned with the transformation of an empty markdown. A single
+  //RefreshViewer is performed below.
+  LOldMDChange := FMarkdownContent.OnChange;
+  LOldHTMLChange := FHTMLContent.OnChange;
+  FMarkdownContent.OnChange := nil;
+  FHTMLContent.OnChange := nil;
+  try
+    if not IsHTMLContent then
+    begin
+      FMarkdownContent.Text := AValue;
+      FHTMLContent.Text := TransformContent(FMarkdownContent.Text,
+        FProcessorDialect, FCssStyle.Text, FAllowUnsafe);
+    end
+    else
+    begin
+      //Do not trasform content
+      FMarkdownContent.Text := '';
+      FHTMLContent.Text := AValue;
+    end;
+  finally
+    FMarkdownContent.OnChange := LOldMDChange;
+    FHTMLContent.OnChange := LOldHTMLChange;
   end;
   //Load html content into HtmlViewer, reset scrollbar position
   RefreshViewer(True, FRescalingImage, False);
@@ -577,7 +680,7 @@ end;
 procedure TCustomMarkdownViewer.MDContentChanged(Sender: TObject);
 begin
   //Transform content into HtmlViewer
-  FHTMLContent.Text := TransformContent(FMarkdownContent.Text, FProcessorDialect, FCssStyle.Text);
+  FHTMLContent.Text := TransformContent(FMarkdownContent.Text, FProcessorDialect, FCssStyle.Text, FAllowUnsafe);
 end;
 
 procedure TCustomMarkdownViewer.RefreshViewer(
@@ -586,12 +689,14 @@ procedure TCustomMarkdownViewer.RefreshViewer(
 var
   LOldPos: Integer;
 begin
+  //NB: read the scroll position *before* Clear, which resets it to zero:
+  //reading it afterwards would always restore the top of the document.
+  LOldPos := Self.VScrollBarPosition;
   if AReloadImages then
     Self.Clear;
   if FHTMLContent.Text = '' then
     Exit;
   //Load HTML content into HTML-Viewer
-  LOldPos := Self.VScrollBarPosition;
   try
     inherited LoadFromString(FHTMLContent.Text);
   finally
@@ -711,7 +816,8 @@ end;
 
 function TCustomMarkdownViewer.TransformContent(const AMarkdownContent: string;
   AProcessorDialect: TMarkdownProcessorDialect = mdCommonMark;
-  const ACssStyle: string = ''): string;
+  const ACssStyle: string = '';
+  const AAllowUnsafe: Boolean = False): string;
 var
   LMarkdownProcessor: TMarkdownProcessor;
   LBackground: TColor;
@@ -721,6 +827,8 @@ begin
   //Transform file Markdown in HTML using TMarkdownProcessor
   LMarkdownProcessor := TMarkdownProcessor.CreateDialect(AProcessorDialect);
   Try
+    //Safe mode by default: native HTML is neutralized unless AllowUnsafe is set.
+    LMarkdownProcessor.AllowUnsafe := AAllowUnsafe;
     //Optional syntax highlighting of fenced code blocks. The caller owns the
     //emitter, so we detach it before freeing the processor (TConfiguration
     //frees its codeBlockEmitter).
@@ -787,13 +895,17 @@ var
         begin
           if BmpRGBA[X].A <> 0 then
           begin
+            //Un-premultiply: the channel is <= alpha, so the result fits a byte
             PngRGB^.B := Round(BmpRGBA[X].B / BmpRGBA[X].A * 255);
             PngRGB^.R := Round(BmpRGBA[X].R / BmpRGBA[X].A * 255);
             PngRGB^.G := Round(BmpRGBA[X].G / BmpRGBA[X].A * 255);
           end else begin
-            PngRGB^.B := Round(BmpRGBA[X].B * 255);
-            PngRGB^.R := Round(BmpRGBA[X].R * 255);
-            PngRGB^.G := Round(BmpRGBA[X].G * 255);
+            //Fully transparent pixel: the color channels carry no information.
+            //NB: the previous "Round(channel * 255)" could reach 65025 and
+            //overflow the byte (range error with {$R+}).
+            PngRGB^.B := 0;
+            PngRGB^.R := 0;
+            PngRGB^.G := 0;
           end;
         end;
         Inc(PngRGB);
@@ -872,7 +984,16 @@ begin
       LScaledImage.Free;
     end;
   except
-    //don't raise any error
+    //An image that cannot be decoded must not break the rendering of the whole
+    //document, so no error is raised. It is reported to the debug output,
+    //otherwise the failure would be completely invisible.
+    on E: Exception do
+    begin
+      {$IFDEF DEBUG}
+      OutputDebugString(PChar(Format('MDViewer - image "%s": %s (%s)',
+        [AFileName, E.Message, E.ClassName])));
+      {$ENDIF}
+    end;
   end;
 end;
 

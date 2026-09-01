@@ -147,29 +147,48 @@ begin
   try
     TLogPreview.Add('TComMDThumbnailProvider.GetThumbnail start');
     hBitmap := 0;
+    bitmapType := WTSAT_ARGB;
     if (cx = 0) then
     begin
       Result := S_FALSE;
       Exit;
     end;
-    bitmapType := WTSAT_ARGB;
     AStream := TIStreamAdapter.Create(FIStream);
     try
       TLogPreview.Add('TComMDThumbnailProvider.GetThumbnail LoadFromStream');
       FSVG.Source := GetSVGIcon;
-      TLogPreview.Add('TComMDThumbnailProvider.FSVG.Source '+FSVG.Source);
+      //NB: only the size is logged, not the SVG itself. The icon is the same
+      //for every markdown file, so dumping its source at each thumbnail filled
+      //the log with the same few KB over and over: in a run with 47 thumbnails
+      //it accounted for 91% of the file, making the log useless exactly when
+      //browsing a folder with many files - which is when it is needed most.
+      TLogPreview.Add(Format('TComMDThumbnailProvider.FSVG.Source: %d chars, theme: %s',
+        [Length(FSVG.Source), BoolToStr(FLightTheme, True)]));
       LBitmap := TBitmap.Create;
-      LBitmap.PixelFormat := pf32bit;
-      if FLightTheme then
-        LAntiAliasColor := clWhite
-      else
-        LAntiAliasColor := clWebDarkSlategray;
-      LBitmap.Canvas.Brush.Color := ColorToRGB(LAntiAliasColor);
-      LBitmap.SetSize(cx, cx);
-      TLogPreview.Add('TComMDThumbnailProvider.PaintTo start');
-      FSVG.PaintTo(LBitmap.Canvas.Handle, TRectF.Create(0, 0, cx, cx));
-      TLogPreview.Add('TComMDThumbnailProvider.PaintTo end');
-      hBitmap := LBitmap.Handle;
+      try
+        LBitmap.PixelFormat := pf32bit;
+        if FLightTheme then
+          LAntiAliasColor := clWhite
+        else
+          LAntiAliasColor := clWebDarkSlategray;
+        LBitmap.Canvas.Brush.Color := ColorToRGB(LAntiAliasColor);
+        LBitmap.SetSize(cx, cx);
+        //Apply the anti-alias background: setting Brush.Color alone paints
+        //nothing, the canvas has to be filled
+        LBitmap.Canvas.FillRect(Rect(0, 0, cx, cx));
+        TLogPreview.Add('TComMDThumbnailProvider.PaintTo start');
+        FSVG.PaintTo(LBitmap.Canvas.Handle, TRectF.Create(0, 0, cx, cx));
+        TLogPreview.Add('TComMDThumbnailProvider.PaintTo end');
+        //NB: ReleaseHandle, not Handle. The caller (Explorer) takes ownership
+        //of hBitmap and destroys it: handing out Handle would leave the
+        //TBitmap owning the same GDI object, and freeing it would delete the
+        //bitmap a second time. Before this, the TBitmap was simply never freed
+        //- so every thumbnail leaked an object and its GDI resources inside
+        //explorer.exe, which lives for the whole user session.
+        hBitmap := LBitmap.ReleaseHandle;
+      finally
+        LBitmap.Free;
+      end;
     finally
       AStream.Free;
     end;

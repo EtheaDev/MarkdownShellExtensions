@@ -1,4 +1,4 @@
-{******************************************************************************}
+﻿{******************************************************************************}
 {                                                                              }
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
@@ -44,7 +44,6 @@ uses
   SynEditOptionsDialog in 'SynEditOptionsDialog.pas' {fmEditorOptionsDialog},
   MDShellEx.Settings in 'MDShellEx.Settings.pas',
   MDShellEx.SettingsForm in 'MDShellEx.SettingsForm.pas' {MDSettingsForm},
-  MDShellEx.Registry in 'MDShellEx.Registry.pas',
   MDShellEx.SingleInstance in 'MDShellEx.SingleInstance.pas',
   vmHtmlToPdf in 'vmHtmlToPdf.pas',
   GitHubAPI in 'GitHubAPI.pas' {fmEditorOptionsDialog},
@@ -80,10 +79,13 @@ begin
     Show;
     Update;
     Application.HelpFile := '';
-    Application.CreateForm(TdmResources, dmResources);
-  Application.CreateForm(TfrmMain, frmMain);
-  Application.CreateForm(TPageSetupDlg, PageSetupDlg);
-  Application.OnException := frmMain.ManageExceptions;
+    //NB: dmResources is not created here any more. It is a shared instance
+    //owned by MDShellEx.Resources, created on first use and freed when that
+    //unit is finalized, so that the editor and the shell extension follow the
+    //same lifetime rule.
+    Application.CreateForm(TfrmMain, frmMain);
+    Application.CreateForm(TPageSetupDlg, PageSetupDlg);
+    Application.OnException := frmMain.ManageExceptions;
     Hide;
   Finally
     Free;

@@ -514,7 +514,9 @@ begin
     end;
   end;
 
-  FIniFile.WriteInteger('PDFPageSettins', 'Orientation', Ord(PDFPageSettings.PrintOrientation));
+  //NB: the key name must match the one used by ReadSettings ('PrintOrientation'),
+  //otherwise the page orientation is never restored.
+  FIniFile.WriteInteger('PDFPageSettins', 'PrintOrientation', Ord(PDFPageSettings.PrintOrientation));
   FIniFile.WriteInteger('PDFPageSettins', 'PaperSize', Ord(PDFPageSettings.PaperSize));
   FIniFile.WriteFloat('PDFPageSettins', 'MarginTop', PDFPageSettings.MarginTop);
   FIniFile.WriteFloat('PDFPageSettins', 'MarginBottom', PDFPageSettings.MarginBottom);
@@ -617,6 +619,11 @@ end;
 
 function TEditorSettings.IsTimeToCheckNewVersion: Boolean;
 begin
+  //NB: a negative number of days means "never check". Without this guard the
+  //comparison was always true and the setting produced the opposite of what it
+  //promised: a check at every startup.
+  if FDaysForNextCheck < 0 then
+    Exit(False);
   Result := Now() > FVersionCheckTime + FDaysForNextCheck;
   if Result then
     FVersionCheckTime := Now(); //Update Next time for check

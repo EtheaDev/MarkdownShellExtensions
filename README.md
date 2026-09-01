@@ -1,6 +1,6 @@
 ﻿# Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 2.8.3 - 06 Jul 2026**
+**Latest Version 2.8.4 - 01 Sep 2026**
 
 **A collection of tools for markdown files, to edit and view content:**
 
@@ -66,6 +66,17 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+01 Sep 2026: ver. 2.8.4
+- Fixed memory and GDI resource leak in the Thumbnail provider: the bitmap was never released, leaking resources in the Explorer process for every generated thumbnail.
+- Fixed the shared resources data module of the shell extension: with two preview handlers alive in the same process, one could free the resources still in use by the other.
+- Fixed preview sizing on high-DPI and multi-monitor setups: the preview now uses the rectangle provided by the host (as required by the IPreviewHandler contract) instead of GetWindowRect, and re-layouts when the DPI changes.
+- Fixed preview of ANSI-encoded markdown files (empty preview); exceptions are no longer silently discarded.
+- Removed Application.ProcessMessages during image loading inside the DLL (it pumped the Explorer message queue) and added reentrancy guards.
+- Fixed the PDF page orientation setting, written and read with different INI keys.
+- Fixed the version check: MDTextEditor declared a wrong version in the binary VERSIONINFO and proposed an update to an already installed version; the check now runs in background at startup and can be disabled.
+- Remote images: no temporary files left behind.
+- Code cleanup: removed unused units, classes and methods, and reduced the size of the thumbnail log.
+
 06 Jul 2026: ver. 2.8.3
 - Added a configurable HTML stylesheet (CSS) in Settings (Preview page), with CSS syntax highlighting: you can customize how the markdown preview is rendered.
 - Large images now fit the page width by default (img max-width).
@@ -80,7 +91,7 @@ To manually install the SVGShellExtensions.dll follow these steps:
 
 17 Jun 2026: ver. 2.8.1
 - Fixed tables: inline constructs no longer span cells
-- Updated Markdown Support Test.md file 
+- Updated Markdown Support Test.md file
 - Added Allow Unsafe HTML CheckBox into Settings
 
 09 Jun 2026: ver. 2.8.0

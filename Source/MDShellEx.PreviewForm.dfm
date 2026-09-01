@@ -146,7 +146,7 @@ inherited FrmPreview: TFrmPreview
     Panels = <>
     ParentFont = True
     SimplePanel = True
-    SimpleText = ' Markdown file Preview - %s (%dbit)- Copyright '#169' 2021-2025 - Ethea S.r.l.'
+    SimpleText = ' Markdown file Preview - %s (%dbit)- Copyright '#169' 2021-2026 - Ethea S.r.l.'
     UseSystemFont = False
   end
   object PanelBottom: TPanel

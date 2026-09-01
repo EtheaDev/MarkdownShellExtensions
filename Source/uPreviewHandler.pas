@@ -291,7 +291,8 @@ end;
 function TComPreviewHandler.SetRect(var prc: TRect): HRESULT;
 var
   LNewPPI: Integer;
-  LRect: TRect;
+  LRect, LNewBounds: TRect;
+  LDpiChanged: Boolean;
 begin
   LNewPPI := GetDpiForWindow(FParentWindow);
 
@@ -300,14 +301,33 @@ begin
     ' prc.Height: '+prc.Height.ToString+
     ' GetDpiForWindow: '+LNewPPI.ToString);
 
-  GetWindowRect(FParentWindow, LRect);
-  TLogPreview.Add('SetRect'+GetRect(LRect,' - GetWindowRect'));
+  //Same rule as SetWindow: prc is the authoritative area, GetWindowRect is
+  //only the fallback for an empty prc
+  if not prc.IsEmpty then
+    LNewBounds := TRect.Create(0, 0, prc.Width, prc.Height)
+  else
+  begin
+    GetWindowRect(FParentWindow, LRect);
+    TLogPreview.Add('SetRect: prc vuoto, uso la Window'+GetRect(LRect,' - GetWindowRect'));
+    LNewBounds := TRect.Create(0, 0, LRect.Width, LRect.Height);
+  end;
 
-  //Bounds is calculated on Windows Rect
-  TLogPreview.Add('SetRect: Imposto Bounds dalla Window'+GetRect(LRect, ' LRect'));
-  Bounds := TRect.Create(0,0,LRect.Width,LRect.Height);
+  LDpiChanged := LNewPPI <> FCurrentPPI;
   FCurrentPPI := LNewPPI;
   TLogPreview.Add('FCurrentPPI := LNewPPI: '+LNewPPI.ToString);
+
+  if (LNewBounds = FBounds) and LDpiChanged then
+  begin
+    //NB: the rectangle has not changed but the DPI has - moving the window to
+    //a monitor with different scaling. Assigning Bounds would return
+    //immediately (the setter exits when the value is unchanged), leaving the
+    //content laid out for the previous DPI, so the update is forced here.
+    TLogPreview.Add('SetRect: rettangolo invariato ma DPI cambiato, forzo il re-layout');
+    UpdateContainerBoundsRect;
+  end
+  else
+    Bounds := LNewBounds;
+
   Result := S_OK;
   TLogPreview.Add('SetRect Done');
 end;
@@ -354,8 +374,25 @@ begin
   ' Height: '+LMonitor.Height.ToString+
   ' PPI: '+LMonitor.PixelsPerInch.ToString);
 
-  TLogPreview.Add('SetWindow: Imposto Bounds'+GetRect(LRect, ' LRect'));
-  Bounds := TRect.Create(0,0,LRect.Width,LRect.Height);
+  //NB: prc is the area the host assigns to the preview, expressed in the
+  //parent's client coordinates, and it is the authoritative value: the
+  //IPreviewHandler contract says so. GetWindowRect returns the whole parent
+  //window in this process's coordinate space, which is not the same thing -
+  //with a DPI-awareness mismatch between window and monitor (here 192 vs 168)
+  //the two differ by that very ratio, and the document ends up laid out ~12%
+  //narrower than the pane, which reads as a wrong right margin.
+  //GetWindowRect stays as the fallback for the first call, where the host
+  //passes an empty prc.
+  if not prc.IsEmpty then
+  begin
+    TLogPreview.Add('SetWindow: Imposto Bounds da prc'+GetRect(prc, ' prc'));
+    Bounds := TRect.Create(0, 0, prc.Width, prc.Height);
+  end
+  else
+  begin
+    TLogPreview.Add('SetWindow: prc vuoto, uso la Window'+GetRect(LRect, ' LRect'));
+    Bounds := TRect.Create(0, 0, LRect.Width, LRect.Height);
+  end;
 
   Result := S_OK;
 (*

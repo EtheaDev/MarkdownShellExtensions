@@ -217,7 +217,12 @@ begin
         LFileName := format('"%s"',[FFileName]);
         TLogPreview.Add(Format('TMDContextMenuHandler: Command: %s FileName %s',
           [LCommand, LFileName]));
-        if (FFileName <> '') and FileExists(FFileName) then
+        //NB: the key can exist with an empty default value. Without this check
+        //the empty command reached ShellExecute, which then did nothing while
+        //the user got no feedback at all.
+        if LCommand = '' then
+          EditorNotFound
+        else if (FFileName <> '') and FileExists(FFileName) then
         begin
           TLogPreview.Add(Format('TMDContextMenuHandler: ShellExecute: %s for file %s',
             [LCommand, LFileName]));

@@ -34,7 +34,6 @@ uses
   ComServ,
   MDShellEx.Main in 'MDShellEx.Main.pas',
   MDShellEx.Misc in 'MDShellEx.Misc.pas',
-  MDShellEx.Registry in 'MDShellEx.Registry.pas',
   uLogExcept in 'uLogExcept.pas',
   uStreamPreviewHandler in 'uStreamPreviewHandler.pas',
   uCommonPreviewHandler in 'uCommonPreviewHandler.pas',

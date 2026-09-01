@@ -95,6 +95,8 @@ resourcestring
   FILE_CHANGED_RELOAD = 'File "%s" Date/Time changed! Do you want to reload it?';
   CREATE_NEW_FILE = 'Create new file';
   CONFIRM_CREATE_NEW_FILE = 'The file "%s" doesn''t exists! Do you want to create it now?';
+  //Was hard-coded at the raise site, so it could not be localized like the rest
+  EXTENSION_NOT_ACCEPTED = 'Cannot open file with extensions different from "%s"';
 
 type
   TEditingFile = class
@@ -554,29 +556,29 @@ procedure TEditingFile.ShowMarkDownAsHTML(const ASettings: TEditorSettings;
   const AReloadImages: Boolean;
   const ACodeBlockEmitter: TBlockEmitter = nil);
 var
-  LStream: TStringStream;
   LOldPos: Integer;
 begin
   Screen.Cursor := crHourGlass;
   try
+    //NB: read the scroll position *before* Clear, which resets it to zero:
+    //reading it afterwards always restored the top of the document, so while
+    //editing the preview jumped back up at every refresh.
+    LOldPos := HtmlViewer.VScrollBarPosition;
     if AReloadImages then
       HtmlViewer.clear;
     FMarkDownFile := TMarkDownFile.Create(SynEditor.Lines.Text,
       ASettings.ProcessorDialect, True, ACodeBlockEmitter, ASettings.AllowUnsafeHTML,
       ASettings.CustomCSS);
     //Load HTML content into HTML-Viewer
-    LOldPos := HtmlViewer.VScrollBarPosition;
     HtmlViewer.DefFontSize := ASettings.HTMLFontSize;
     HtmlViewer.DefFontName := ASettings.HTMLFontName;
-    LStream := TStringStream.Create(FMarkDownFile.HTML, TEncoding.UTF8);
-    try
-      HtmlViewer.LoadFromString(LStream.DataString);
-      HtmlViewer.VScrollBarPosition := LOldPos;
-      HtmlViewer.Refresh;
-      dmResources.StopLoadingImages(False);
-    finally
-      LStream.Free;
-    end;
+    //NB: LoadFromString directly. Wrapping the HTML in a TStringStream only to
+    //read back DataString meant encoding the whole document to UTF-8 and
+    //decoding it into the very string it started from.
+    HtmlViewer.LoadFromString(FMarkDownFile.HTML);
+    HtmlViewer.VScrollBarPosition := LOldPos;
+    HtmlViewer.Refresh;
+    dmResources.StopLoadingImages(False);
     FViewerUpdated := True;
   finally
     Screen.Cursor := crDefault;
@@ -745,7 +747,7 @@ begin
     if FileExists(FileName) then
     begin
       if not CanAcceptFileName(FileName) then
-        raise Exception.CreateFmt('Cannot open file with extensions different from "%s"',
+        raise Exception.CreateFmt(EXTENSION_NOT_ACCEPTED,
           [AcceptedExtensions]);
 
       //looking for the file already opened
@@ -1019,7 +1021,8 @@ end;
 procedure TfrmMain.SVResize(Sender: TObject);
 begin
   StyledToolbar.Margins.Left :=
-    Round(SV.Width - (SV_COLLAPSED_WIDTH * ScaleFactor) + (3 * ScaleFactor));
+    Round(SV.Width - (SV_COLLAPSED_WIDTH * ScaleFactor)
+      + (3 * ScaleFactor));
 end;
 
 procedure TfrmMain.DestroyWindowHandle;
@@ -1221,6 +1224,10 @@ begin
   FEditorOptions := TSynEditorOptionsContainer.create(self);
   FEditorSettings := TEditorSettings.CreateSettings(nil, FEditorOptions);
   dmResources.Settings := FEditorSettings;
+  //The editor can afford to pump the message queue while loading images: it
+  //keeps the UI responsive and lets ESC interrupt the loading. The shell
+  //extension leaves this off (it would pump Explorer's queue).
+  dmResources.PumpMessagesWhileLoading := True;
   //Emitter that colorizes fenced code blocks in the HTML preview
   //(nil when syntax highlighting is disabled at compile time).
   FCodeHighlightEmitter := CreateCodeHighlightEmitter;
@@ -1879,6 +1886,12 @@ begin
     if (CurrentEditFile.HTMLViewer.Visible) then
     begin
       Screen.Cursor := crHourGlass;
+      //NB: FProcessingFiles is raised for the whole rendering, not only read on
+      //entry. Image loading pumps the message queue, so a click on another tab,
+      //the refresh timer or the mouse wheel could re-enter here while the first
+      //render is still running - and the shared code-highlight emitter is not
+      //reentrant. ApplyViewerZoom already used the flag this way.
+      FProcessingFiles := True;
       try
         UpdateTabsheetImage(pageControl.ActivePage, CurrentEditor.Modified,
           CurrentEditFile.ImageName);
@@ -1889,6 +1902,7 @@ begin
         UpdateCodeHighlightTheme;
         CurrentEditFile.ShowMarkDownAsHTML(FEditorSettings, AReloadImages, FCodeHighlightEmitter);
       finally
+        FProcessingFiles := False;
         Screen.Cursor := crDefault;
       end;
     end
@@ -2722,12 +2736,20 @@ begin
     InitDialog(SaveDialog, InitialDir);
     InitPDFDialog(SaveDialogPDF, InitialDir);
 
-    //Check for new version available
+    //Check for new version available.
+    //NB: the HTTP call runs in background. Performing it here, inside an
+    //action-update handler, used to freeze the UI at startup whenever the
+    //network was slow or unreachable.
     if FEditorSettings.IsTimeToCheckNewVersion then
-    begin
-      if AcceptNewSetup(False) then
-        ShowAboutForm(DialogPosRect, Title_MDViewer, True);
-    end;
+      CheckNewSetupAsync(
+        procedure(ACurrentVersion, ANewVersion: string)
+        begin
+          if StyledMessageDlg(Format(NewVersionAvailable,
+            [ACurrentVersion, ANewVersion]),
+            TMsgDlgType.mtWarning,
+            [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo, TMsgDlgBtn.mbCancel], 0) = mrYes then
+            ShowAboutForm(DialogPosRect, Title_MDViewer, True);
+        end);
   end;
   LoadTimer.Enabled := True;
 end;
@@ -2802,7 +2824,8 @@ end;
 procedure TfrmMain.AdjustCompactWidth;
 begin
   //Change size of compact view because Scrollbars appears
-  if (Height / ScaleFactor) > 880 then
+  var LHeight := Height / ScaleFactor;
+  if LHeight > 620 then
     SV.CompactWidth := Round(SV_COLLAPSED_WIDTH * ScaleFactor)
   else
     SV.CompactWidth := Round(SV_COLLAPSED_WIDTH_WITH_SCROLLBARS * ScaleFactor);

@@ -66,7 +66,6 @@ const
     const PathWithWildCards: string;
     FileAttrib: Integer = SysUtils.faArchive or SysUtils.faReadOnly );
   function  GetModuleLocation: string;
-  function TryLoadTextFile(const AFileName: TFileName): string;
   function FileWithExtExists(var AFileName: TFileName; const AFileExt: array of string): boolean;
   function GetFileMasks(const AFileExt: array of string;
     const ASeparator: Char = ';'): string;
@@ -225,38 +224,10 @@ begin
   Finalize_GDI;
 end;
 
-function TryLoadTextFile(const AFileName: TFileName): string;
-var
-  LStringStream: TStringStream;
-begin
-  //Try to load Text File into Stream using UTF8 encoding
-  try
-    LStringStream := TStringStream.Create('',TEncoding.UTF8);
-    try
-      //Load File into Stream
-      LStringStream.LoadFromFile(AFileName);
-      //Assign Content to Result string
-      Result := LStringStream.DataString;
-    finally
-      LStringStream.Free;
-    end;
-  except
-    On E: EEncodingError do
-    begin
-      LStringStream := TStringStream.Create('',TEncoding.ANSI);
-      try
-        //Load File into Stream
-        LStringStream.LoadFromFile(AFileName);
-        //Assign Content to Result string
-        Result := LStringStream.DataString;
-      finally
-        LStringStream.Free;
-      end;
-    end
-    else
-      raise;
-  end;
-end;
+//NB: TryLoadTextFile used to be declared and implemented here, and called by
+//nobody. The files are loaded by TEditingFile.LoadFromFile in the editor and by
+//TFrmPreview.LoadFromFile in the preview, both through TStrings with their own
+//ANSI fallback.
 
 function FileWithExtExists(var AFileName: TFileName; const AFileExt: array of string): boolean;
 var

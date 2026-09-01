@@ -123,28 +123,27 @@ procedure TPreviewContainer.SetBoundsRectAndPPI(const ARect: TRect;
   AOldPPI, ANewPPI: Integer);
 var
   Lmsg: string;
-  LActualMonitor, LMainMonitor: TMonitor;
-  LScaleFactor: Double;
-  I: Integer;
+  LActualMonitor: TMonitor;
 begin
+  //NB: no rescaling here any more.
+  //It used to multiply the rectangle by (current monitor PPI / primary monitor
+  //PPI) whenever the preview was on a non-primary monitor. That was a second
+  //DPI correction stacked on a base size that was already wrong, because
+  //SetWindow/SetRect derived it from GetWindowRect instead of from the prc the
+  //host provides. Now that the base comes from prc - already in the right
+  //coordinate space for this window - no further correction applies, and the
+  //two adjustments no longer fight each other when moving between monitors
+  //with different scaling.
+  //It also wrote into ARect, which is declared const: TRect.Width is a property
+  //with a setter, so the compiler accepts it and the write reached the caller's
+  //FBounds, corrupting the value that TComPreviewHandler.SetBounds compares
+  //against on the next call.
   LActualMonitor := Screen.MonitorFromWindow(Self.Handle);
-  LMainMonitor := LActualMonitor;
-  for I := 0 to Screen.MonitorCount do
-  begin
-    LMainMonitor := Screen.Monitors[I];
-    if LMainMonitor.Primary then
-      Break;
-  end;
-
-  if LMainMonitor <> LActualMonitor then
-  begin
-    LScaleFactor := LActualMonitor.PixelsPerInch / LMainMonitor.PixelsPerInch;
-    ARect.Width := Round(ARect.Width * LScaleFactor);
-    ARect.Height := Round(ARect.Height * LScaleFactor);
-  end;
 
   Lmsg := 'TPreviewContainer.SetBoundsRect:'+
   ' Visible: '+Self.Visible.Tostring+slineBreak+
+    ' Monitor PPI: '+LActualMonitor.PixelsPerInch.ToString+
+    ' Primary: '+LActualMonitor.Primary.ToString+slineBreak+
     ' ANewPPI = AOldPPI'+slineBreak+
     ' Form.CurrentPPI:'+Self.CurrentPPI.ToString+slineBreak+
     ' Form.Scaled:'+Self.Scaled.ToString+slineBreak+

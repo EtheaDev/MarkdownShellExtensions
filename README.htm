@@ -37,7 +37,7 @@ td{
 }
 </style>
 <h1>Markdown Editor and Shell Extensions <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg" alt="License"/></a></h1>
-<p><strong>Latest Version 2.8.3 - 06 Jul 2026</strong></p>
+<p><strong>Latest Version 2.8.4 - 01 Sep 2026</strong></p>
 <p><strong>A collection of tools for markdown files, to edit and view content:</strong></p>
 <ul>
 <li><p>A <strong>Markdown Text Editor</strong> to manually edit a markdown file, with instant preview of the output in a HTML Viewer.</p>
@@ -88,6 +88,18 @@ td{
 </li>
 </ol>
 <h2>Release Notes</h2>
+<p>01 Sep 2026: ver. 2.8.4</p>
+<ul>
+<li>Fixed memory and GDI resource leak in the Thumbnail provider: the bitmap was never released, leaking resources in the Explorer process for every generated thumbnail.</li>
+<li>Fixed the shared resources data module of the shell extension: with two preview handlers alive in the same process, one could free the resources still in use by the other.</li>
+<li>Fixed preview sizing on high-DPI and multi-monitor setups: the preview now uses the rectangle provided by the host (as required by the IPreviewHandler contract) instead of GetWindowRect, and re-layouts when the DPI changes.</li>
+<li>Fixed preview of ANSI-encoded markdown files (empty preview); exceptions are no longer silently discarded.</li>
+<li>Removed Application.ProcessMessages during image loading inside the DLL (it pumped the Explorer message queue) and added reentrancy guards.</li>
+<li>Fixed the PDF page orientation setting, written and read with different INI keys.</li>
+<li>Fixed the version check: MDTextEditor declared a wrong version in the binary VERSIONINFO and proposed an update to an already installed version; the check now runs in background at startup and can be disabled.</li>
+<li>Remote images: no temporary files left behind.</li>
+<li>Code cleanup: removed unused units, classes and methods, and reduced the size of the thumbnail log.</li>
+</ul>
 <p>06 Jul 2026: ver. 2.8.3</p>
 <ul>
 <li>Added a configurable HTML stylesheet (CSS) in Settings (Preview page), with CSS syntax highlighting: you can customize how the markdown preview is rendered.</li>

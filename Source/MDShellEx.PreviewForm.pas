@@ -87,6 +87,9 @@ type
     FPreviewSettings: TPreviewSettings;
     FMarkDownFile: TMarkDownFile;
     FCodeHighlightEmitter: TCodeHighlightEmitterBase;
+    //True while the HTML viewer is being loaded: see the guard in
+    //ShowMarkDownAsHTML
+    FRendering: Boolean;
     FAllegatiButtons: TObjectList<TStyledToolButton>;
 
     class var FExtensions: TDictionary<TSynCustomHighlighterClass, TStrings>;
@@ -159,7 +162,10 @@ constructor TFrmPreview.Create(AOwner: TComponent);
 begin
   inherited;
   FPreviewSettings := TPreviewSettings.CreateSettings(SynEdit.Highlighter);
-  dmResources := TdmResources.Create(nil);
+  //NB: the data module is no longer created here. It is a shared instance
+  //owned by MDShellEx.Resources, created on first use: creating and destroying
+  //it per preview form meant that, with two handlers alive in the same
+  //Explorer process, one could free the module the other was still using.
   dmResources.Settings := FPreviewSettings;
   FAllegatiButtons := TObjectList<TStyledToolButton>.Create(True);
 end;
@@ -167,8 +173,11 @@ end;
 destructor TFrmPreview.Destroy;
 begin
   FreeAndNil(FAllegatiButtons);
+  //The shared data module survives this form: it must not be left pointing at
+  //the settings object we are about to free.
+  if dmResourcesCreated and (dmResources.Settings = FPreviewSettings) then
+    dmResources.Settings := nil;
   FreeAndNil(FPreviewSettings);
-  FreeAndNil(dmResources);
   inherited;
 end;
 
@@ -277,36 +286,44 @@ begin
 end;
 
 procedure TFrmPreview.LoadFromFile(const AFileName: string);
-var
-  LOutStream: TStringStream;
 begin
   TLogPreview.Add('TFrmEditor.LoadFromFile Init');
   FFileName := AFileName;
-  LOutStream := TStringStream.Create('', TEncoding.UTF8);
+  //NB: the ANSI fallback was missing here (the editor has it). TStrings raises
+  //EEncodingError on a file that is not valid UTF-8, so an ANSI markdown file
+  //made the preview fail and show an empty pane.
   try
     SynEdit.Lines.LoadFromFile(AFileName, TEncoding.UTF8);
-    HtmlViewer.ServerRoot := ExtractFilePath(FFileName);
-    ShowMarkDownAsHTML(FPreviewSettings, True);
-  finally
-    LOutStream.Free;
+  except
+    on E: EEncodingError do
+      SynEdit.Lines.LoadFromFile(AFileName, TEncoding.ANSI);
   end;
+  HtmlViewer.ServerRoot := ExtractFilePath(FFileName);
+  ShowMarkDownAsHTML(FPreviewSettings, True);
   TLogPreview.Add('TFrmEditor.LoadFromFile Done');
 end;
 
 procedure TFrmPreview.LoadFromStream(const AStream: TStream);
-var
-  LStringStream: TStringStream;
 begin
   TLogPreview.Add('TFrmEditor.LoadFromStream Init');
+  //Same ANSI fallback as LoadFromFile. NB: the stream has to be rewound before
+  //reading it a second time.
   AStream.Position := 0;
-  LStringStream := TStringStream.Create('',TEncoding.UTF8);
   try
     SynEdit.Lines.LoadFromStream(AStream, TEncoding.UTF8);
-    HtmlViewer.ServerRoot := ExtractFilePath(GetModuleLocation);
-    ShowMarkDownAsHTML(FPreviewSettings, True);
-  finally
-    LStringStream.Free;
+  except
+    on E: EEncodingError do
+    begin
+      AStream.Position := 0;
+      SynEdit.Lines.LoadFromStream(AStream, TEncoding.ANSI);
+    end;
   end;
+  //Loaded from a stream: there is no document folder, so relative images
+  //cannot be resolved. ServerRoot is left empty on purpose - it used to point
+  //at the folder of the DLL, where an "images/logo.png" in the document would
+  //pick up whatever happened to sit next to the library.
+  HtmlViewer.ServerRoot := '';
+  ShowMarkDownAsHTML(FPreviewSettings, True);
   TLogPreview.Add('TFrmEditor.LoadFromStream Done');
 end;
 
@@ -358,10 +375,19 @@ end;
 procedure TFrmPreview.ShowMarkDownAsHTML(const ASettings: TSettings;
   const AReloadImages: Boolean);
 var
-  LStream: TStringStream;
   LOldPos: Integer;
 begin
+  //Re-entrancy guard: the code-highlight emitter is shared and not reentrant,
+  //so a second rendering started while the first is still running (a modal
+  //settings dialog, a resize, a zoom) would free a highlighter still in use.
+  if FRendering then
+    Exit;
+  FRendering := True;
   try
+  try
+    //NB: read the scroll position *before* Clear, which resets it to zero:
+    //reading it afterwards always restored the top of the document.
+    LOldPos := HtmlViewer.VScrollBarPosition;
     if AReloadImages then
       HtmlViewer.clear;
     if FCodeHighlightEmitter <> nil then
@@ -378,20 +404,23 @@ begin
       ASettings.CustomCSS);
 
     //Carica il contenuto HTML trasformato dentro l'HTML-Viewer
-    LOldPos := HtmlViewer.VScrollBarPosition;
     HtmlViewer.DefFontSize := ASettings.HTMLFontSize;
     HtmlViewer.DefFontName := ASettings.HTMLFontName;
-    LStream := TStringStream.Create(FMarkDownFile.HTML, TEncoding.UTF8);
-    try
-      HtmlViewer.LoadFromStream(LStream);
-      HtmlViewer.VScrollBarPosition := LOldPos;
-      HtmlViewer.Visible := True;
-    finally
-      LStream.Free;
-    end;
+    //NB: LoadFromString directly. Wrapping the HTML in a TStringStream only to
+    //hand it over meant encoding the whole document to UTF-8 and decoding it
+    //back into the very string it started from.
+    HtmlViewer.LoadFromString(FMarkDownFile.HTML);
+    HtmlViewer.VScrollBarPosition := LOldPos;
+    HtmlViewer.Visible := True;
   except
+    //An exception escaping a preview handler would hit Explorer, so it is not
+    //re-raised. It is logged though: this unit uses TLogPreview everywhere
+    //else, and a failed preview was otherwise completely invisible.
     on E: Exception do
-      ; //non solleva eccezioni
+      TLogPreview.Add(E);
+  end;
+  finally
+    FRendering := False;
   end;
 end;
 

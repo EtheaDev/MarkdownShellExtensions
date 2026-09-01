@@ -101,10 +101,19 @@ procedure HideAboutForm;
 function AcceptNewSetup(const AShowMsg: Boolean): Boolean;
 function GetCurrentVersion(const AApplicationExeName: TFileName): string;
 
+//Automatic (startup) check for a new version. The HTTP call runs in a
+//background task and AOnNewVersionAvailable is invoked in the main thread only
+//when a newer version exists, receiving current and new version.
+//Failures are silent by design: an automatic check must not interrupt the user
+//with an error dialog. Use AcceptNewSetup for the manual check, where a
+//blocking call and a retry dialog are what the user asked for.
+procedure CheckNewSetupAsync(const AOnNewVersionAvailable: TProc<string, string>);
+
 implementation
 
 uses
   Winapi.ShellApi
+  , System.Threading
   , Winapi.Windows
   , Vcl.Dialogs
   , Vcl.Graphics
@@ -193,6 +202,44 @@ begin
   else if AShowMsg then
     StyledMessageDlg(Format(NewVersionNotAvailable,
       [LCurrentVersion]), TMsgDlgType.mtInformation, [TMsgDlgBtn.mbOK], 0);
+end;
+
+procedure CheckNewSetupAsync(const AOnNewVersionAvailable: TProc<string, string>);
+begin
+  if not Assigned(AOnNewVersionAvailable) then
+    Exit;
+  TTask.Run(
+    procedure
+    var
+      LClient: TGitHubHttpClient;
+      LCurrentVersion, LNewVersion: string;
+      LAvailable: Boolean;
+    begin
+      LNewVersion := '';
+      LCurrentVersion := GetCurrentVersion(Application.ExeName);
+      //A dedicated client: _HttpClient belongs to the main thread, which uses
+      //it for the manual check and for the setup download.
+      LClient := TGitHubHttpClient.Create(nil);
+      try
+        try
+          LAvailable := LClient.IsNewVersionAvailable(LCurrentVersion,
+            GIT_HUB_URL, LNewVersion);
+        except
+          //No network, proxy, timeout, unexpected answer: an automatic check
+          //stays silent. The user can always check manually from the About box.
+          LAvailable := False;
+        end;
+      finally
+        LClient.Free;
+      end;
+      if LAvailable and not Application.Terminated then
+        TThread.Queue(nil,
+          procedure
+          begin
+            if not Application.Terminated then
+              AOnNewVersionAvailable(LCurrentVersion, LNewVersion);
+          end);
+    end);
 end;
 
 function GetAboutForm: TFrmAbout;

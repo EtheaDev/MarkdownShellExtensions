@@ -1,6 +1,6 @@
 ﻿# Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**Latest Version 2.8.4 - 01 Sep 2026**
+**Latest Version 2.8.5 - 03 Sep 2026**
 
 **A collection of tools for markdown files, to edit and view content:**
 
@@ -66,6 +66,15 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+03 Sep 2026: ver. 2.8.5
+- Fixed an Access Violation when downloading a new setup right after the automatic version check: the shared HTTP client was created only by the manual check, so the automatic path reached the download with no client at all.
+- A missing setup file name or project URL is now reported with a clear message instead of an assertion, which is compiled out of release builds.
+- Web help and repository are now kept distinct: the documentation points to https://ethea.it/docs/markdowntools/, while the Issues button and the new-version check point to GitHub.
+- Markdown Text Editor: fixed two memory-management defects on the file-opening error path.
+- Markdown Text Editor: closing with unsaved changes can now be cancelled.
+- Markdown Text Editor: "Save All" no longer stops at the first file that cannot be saved; all the failures are reported together at the end.
+- Markdown Text Editor: removed the Help button from the error dialog, which did nothing because no help file is configured.
+
 01 Sep 2026: ver. 2.8.4
 - Fixed memory and GDI resource leak in the Thumbnail provider: the bitmap was never released, leaking resources in the Explorer process for every generated thumbnail.
 - Fixed the shared resources data module of the shell extension: with two preview handlers alive in the same process, one could free the resources still in use by the other.

@@ -2,12 +2,12 @@
     <PropertyGroup>
         <ProjectGuid>{F66FDAC8-4D87-47B8-8DCF-1ED4293C6C67}</ProjectGuid>
         <MainSource>SVGIconImageListRestClient.dpk</MainSource>
-        <ProjectVersion>20.2</ProjectVersion>
+        <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
-        <TargetedPlatforms>1741843</TargetedPlatforms>
+        <TargetedPlatforms>1741971</TargetedPlatforms>
         <AppType>Package</AppType>
         <ProjectName Condition="'$(ProjectName)'==''">SVGIconImageListRestClient</ProjectName>
     </PropertyGroup>
@@ -201,7 +201,7 @@
                 <Platform value="Android64">True</Platform>
                 <Platform value="iOSDevice64">True</Platform>
                 <Platform value="iOSSimARM64">True</Platform>
-                <Platform value="Linux64">False</Platform>
+                <Platform value="Linux64">True</Platform>
                 <Platform value="OSX64">True</Platform>
                 <Platform value="OSXARM64">True</Platform>
                 <Platform value="Win32">True</Platform>

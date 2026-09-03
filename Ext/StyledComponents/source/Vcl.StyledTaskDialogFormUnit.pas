@@ -202,6 +202,9 @@ type
   protected
     procedure WndProc(var Message: TMessage); override;
     procedure TimerEvent(Sender: TObject);
+    /// <summary>Window the dialog is positioned relative to (popup parent,
+    /// else active form, else the application window)</summary>
+    function GetReferenceWnd: HWND; virtual;
   	function GetScaleFactor: Single; virtual;
     class function CanUseAnimations: Boolean; virtual; abstract;
     function GetButtonsHeight: Integer; virtual;
@@ -1628,6 +1631,18 @@ begin
   UpdateButtonStyle(CloseButton);
 end;
 
+function TStyledTaskDialogForm.GetReferenceWnd: HWND;
+begin
+  //Prefer the popup parent (the form that launched the dialog), then the active
+  //form, then the application window, so positioning has a real reference window.
+  if Assigned(PopupParent) and PopupParent.HandleAllocated then
+    Result := PopupParent.Handle
+  else if Assigned(Screen.ActiveForm) and Screen.ActiveForm.HandleAllocated then
+    Result := Screen.ActiveForm.Handle
+  else
+    Result := Application.Handle;
+end;
+
 procedure TStyledTaskDialogForm.SetPosition(const X, Y: Integer);
 var
   Rect: TRect;
@@ -1637,10 +1652,10 @@ var
 begin
   LX := X;
   LY := Y;
-  //The dialog form is created with Owner=nil, so an Assert(Owner is TForm) would
-  //fail (Debug) or TForm(nil).Handle would be a nil dereference (Release). This
-  //routine does not need Owner: use the form's own window to find the monitor.
-  LHandle := MonitorFromWindow(Self.Handle, MONITOR_DEFAULTTONEAREST);
+  //Resolve the monitor from the reference window (the caller's form), not from
+  //the dialog's own window: the latter defaults to the primary monitor, which
+  //would place explicit coordinates on the wrong monitor on a multi-monitor desktop.
+  LHandle := MonitorFromWindow(GetReferenceWnd, MONITOR_DEFAULTTONEAREST);
   LMonitorInfo.cbSize := SizeOf(LMonitorInfo);
   if GetMonitorInfo(LHandle, {$IFNDEF CLR}@{$ENDIF}LMonitorInfo) then
     with LMonitorInfo do
@@ -1688,6 +1703,13 @@ begin
       LParentControl := LParentControl.Parent;
     end;
   end;
+  //Fall back to the active form, then the main form, so poOwnerFormCenter
+  //(tfPositionRelativeToWindow) and multi-monitor centering resolve to the form
+  //the dialog was launched from rather than defaulting to the primary monitor.
+  if not Assigned(LOwnerForm) then
+    LOwnerForm := Screen.ActiveForm;
+  if not Assigned(LOwnerForm) then
+    LOwnerForm := Application.MainForm;
 
   if ATaskDialog.UseAnimations then
   begin
@@ -1697,13 +1719,13 @@ begin
         ['Skia.Vcl.StyledTaskDialogAnimatedUnit'])
     else
     begin
-      LForm := _AnimatedTaskDialogFormClass.Create(nil);
+      LForm := _AnimatedTaskDialogFormClass.Create(LOwnerForm);
       TStyledTaskDialogForm(LForm).AnimationLoop := ATaskDialog.UseAnimationLoop;
       TStyledTaskDialogForm(LForm).AnimationInverse := ATaskDialog.UseAnimationInverse;
     end;
   end
   else
-    LForm := _TaskDialogFormClass.Create(nil);
+    LForm := _TaskDialogFormClass.Create(LOwnerForm);
   try
     LForm.PopupParent := LOwnerForm;
     //Call event handler OnDialogConstructed

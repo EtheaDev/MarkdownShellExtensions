@@ -2,7 +2,7 @@
     <PropertyGroup>
         <ProjectGuid>{F225ABEA-5266-44BB-BA7E-D81C77A0F0A1}</ProjectGuid>
         <MainSource>SVGMagicPackage.dpk</MainSource>
-        <ProjectVersion>20.2</ProjectVersion>
+        <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
@@ -145,6 +145,11 @@
                 <WelcomePageFolder/>
             </Delphi.Personality>
             <Platforms>
+                <Platform value="Android">False</Platform>
+                <Platform value="Android64">False</Platform>
+                <Platform value="iOSDevice64">False</Platform>
+                <Platform value="iOSSimARM64">False</Platform>
+                <Platform value="Linux64">False</Platform>
                 <Platform value="Win32">True</Platform>
                 <Platform value="Win64">True</Platform>
                 <Platform value="Win64x">True</Platform>

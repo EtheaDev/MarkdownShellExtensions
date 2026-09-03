@@ -97,6 +97,7 @@ resourcestring
   CONFIRM_CREATE_NEW_FILE = 'The file "%s" doesn''t exists! Do you want to create it now?';
   //Was hard-coded at the raise site, so it could not be localized like the rest
   EXTENSION_NOT_ACCEPTED = 'Cannot open file with extensions different from "%s"';
+  FILES_NOT_SAVED = 'The following files could not be saved:%s';
 
 type
   TEditingFile = class
@@ -459,6 +460,7 @@ type
     procedure SynEditChange(Sender: TObject);
     procedure SynEditEnter(Sender: TObject);
     procedure UpdateHighlighter(ASynEditor: TSynEdit);
+    procedure ApplyStyleToGutter(AGutter: TSynGutter);
     procedure SetEditorFontSize(const Value: Integer);
     procedure LoadOpenedFiles;
     procedure SetHTMLFontSize(const Value: Integer);
@@ -740,6 +742,7 @@ var
   EditingFile: TEditingFile;
   I, J: Integer;
   LErrorMsg: string;
+  LCreated: Boolean;
 begin
   Screen.Cursor := crHourGlass;
   Try
@@ -753,6 +756,7 @@ begin
       //looking for the file already opened
       EditingFile := nil;
       I := -1;
+      LCreated := False;
       for J := 0 to EditFileList.Count -1 do
       begin
         if SameText(FileName, TEditingFile(EditFileList.Items[J]).FileName) then
@@ -768,6 +772,7 @@ begin
         if not Assigned(EditingFile) then
         begin
           EditingFile := TEditingFile.Create(FileName, FEditorSettings);
+          LCreated := True;
           //Add file to list
           I := AddEditingFile(EditingFile);
         end;
@@ -777,10 +782,19 @@ begin
 
         Result := True;
       Except
-        if I >= 0 then
-          RemoveEditingFile(EditingFile)
-        else
-          EditingFile.Free;
+        //NB: clean up only what this call actually created.
+        //"I >= 0" alone was ambiguous in both directions: it was also >= 0 for
+        //a file that was already open, so a failing reload closed the user's
+        //existing tab; and when AddEditingFile raised, I was still -1 while the
+        //object had already been put into the owning EditFileList, making
+        //EditingFile.Free a second free.
+        if LCreated then
+        begin
+          if I >= 0 then
+            RemoveEditingFile(EditingFile)
+          else
+            EditingFile.Free;
+        end;
         raise;
       End;
       AddOpenedFile(FileName);
@@ -1128,7 +1142,20 @@ begin
     begin
       LEditingFile := TEditingFile(PageControl.Pages[I].Tag);
       //Confirm save changes
-      ConfirmChanges(LEditingFile);
+      //NB: ConfirmChanges raises EAbort when the user chooses Cancel. Catching
+      //it here and refusing the close is what makes that button mean anything:
+      //before, the button did not exist and the Abort branch was unreachable.
+      //Returning caNone also leaves the settings untouched, which is right -
+      //the session is not over.
+      try
+        ConfirmChanges(LEditingFile);
+      except
+        on EAbort do
+        begin
+          Action := caNone;
+          Exit;
+        end;
+      end;
       LFileList.Add(LEditingFile.FileName);
     end;
     if CurrentEditFile <> nil then
@@ -1285,12 +1312,16 @@ begin
   EditingFile := TEditingFile.Create(LNewFileName, FEditorSettings);
   Try
     AddEditingFile(EditingFile);
-    if EditingFile.SynEditor.CanFocus then
-      EditingFile.SynEditor.SetFocus;
   Except
+    //NB: ownership passes to EditFileList only when AddEditingFile succeeds,
+    //so freeing here is correct exactly in the failure case. SetFocus moved
+    //out of the Try: it runs after the transfer, and a failure there must not
+    //free an object the owning list already holds.
     EditingFile.Free;
     raise;
   End;
+  if Assigned(EditingFile.SynEditor) and EditingFile.SynEditor.CanFocus then
+    EditingFile.SynEditor.SetFocus;
 end;
 
 procedure TfrmMain.acSearchUpdate(Sender: TObject);
@@ -1802,12 +1833,8 @@ var
   LFEViewer: THtmlViewer;
   LSplitter: TSplitter;
 begin
-  //Add file to opened-list
-  Result := EditFileList.Add(EditingFile);
   //Create the Tabsheet page associated to the file
   LTabSheet := nil;
-  LEditor := nil;
-  LFEViewer := nil;
   Try
     LTabSheet := TTabSheet.Create(self);
     LTabSheet.PageControl := PageControl;
@@ -1869,11 +1896,25 @@ begin
     UpdateFromSettings(LEditor);
     UpdateHighlighter(LEditor);
   Except
+    //NB: LEditor, LFEViewer and LSplitter are all parented to LTabSheet, and
+    //TWinControl.Destroy destroys its child controls regardless of ownership
+    //(verified: a child created with Create(nil) but Parent set is destroyed
+    //too). So LTabSheet.Free already destroys all three, and the LEditor.Free
+    //and LFEViewer.Free that used to follow operated on dangling pointers.
+    //EditingFile is deliberately not touched here: it is not in EditFileList
+    //yet, so the caller remains its sole owner and can free it exactly once.
+    EditingFile.SynEditor := nil;
+    EditingFile.HTMLViewer := nil;
+    EditingFile.Splitter := nil;
+    EditingFile.TabSheet := nil;
     LTabSheet.Free;
-    LEditor.Free;
-    LFEViewer.Free;
     raise;
   End;
+
+  //Everything succeeded: from now on EditFileList owns the object.
+  //NB: the insertion used to happen before the Try, so any failure left a
+  //dangling entry in an owning list while the caller freed the object too.
+  Result := EditFileList.Add(EditingFile);
 end;
 
 procedure TfrmMain.UpdateMDViewer(const AReloadImages: Boolean);
@@ -2011,6 +2052,9 @@ begin
 end;
 
 procedure TfrmMain.WMCopyData(var Msg: TWMCopyData);
+const
+  //A Windows path with the \\?\ prefix can reach 32767 characters.
+  MAX_COPYDATA_BYTES = (32767 + 1) * SizeOf(Char);
 var
   LFileName: string;
   LChars: Integer;
@@ -2023,9 +2067,20 @@ begin
     Exit;
 
   // Payload is a null-terminated PChar (UnicodeString). cbData is in bytes.
+  //NB: cbData is chosen by the sender and used to be taken on trust. For a
+  //cross-process WM_COPYDATA the kernel does copy cbData bytes into this
+  //process, so this was not an out-of-bounds read; but an absurd value still
+  //meant an absurd allocation, and a payload that is not really terminated
+  //left trailing garbage in the file name. So: bound the size, then cut at
+  //the first #0 instead of trusting the declared length.
+  if Msg.CopyDataStruct.cbData > MAX_COPYDATA_BYTES then
+    Exit;
   LChars := (Msg.CopyDataStruct.cbData div SizeOf(Char));
   if LChars > 0 then Dec(LChars); // drop the trailing #0
   SetString(LFileName, PChar(Msg.CopyDataStruct.lpData), LChars);
+  LChars := Pos(#0, LFileName);
+  if LChars > 0 then
+    SetLength(LFileName, LChars - 1);
 
   if FileExists(LFileName) then
   begin
@@ -2064,10 +2119,15 @@ var
   LConfirm: integer;
 begin
   //Confirm save changes
-  if EditingFile.SynEditor.Modified then
+  //NB: SynEditor is assigned inside AddEditingFile, so the failure path
+  //OpenFile -> except -> RemoveEditingFile can reach here with it still nil.
+  if Assigned(EditingFile.SynEditor) and EditingFile.SynEditor.Modified then
   begin
+    //NB: mbCancel added. The Abort branch below existed but was unreachable
+    //without it, so closing with unsaved changes could not be called off: the
+    //user could only decide, file by file, whether to save.
     LConfirm := StyledMessageDlg(Format(CONFIRM_CHANGES,[EditingFile.FileName]),
-      mtWarning, [mbYes, mbNo], 0);
+      mtWarning, [mbYes, mbNo, mbCancel], 0);
     if LConfirm = mrYes then
       EditingFile.SaveToFile
     else if LConfirm = mrCancel then
@@ -2154,11 +2214,13 @@ end;
 function TfrmMain.ModifiedCount: integer;
 var
   i : integer;
+  LEditFile: TEditingFile;
 begin
   Result := 0;
   for i := 0 to EditFileList.Count -1 do
   begin
-    if TEditingFile(EditFileList.items[i]).SynEditor.Modified then
+    LEditFile := TEditingFile(EditFileList.items[i]);
+    if Assigned(LEditFile.SynEditor) and LEditFile.SynEditor.Modified then
     begin
       Inc(Result);
     end;
@@ -2168,14 +2230,31 @@ end;
 procedure TfrmMain.acSaveAllExecute(Sender: TObject);
 var
   i : integer;
+  LEditFile: TEditingFile;
+  LErrors: TStringList;
 begin
-  for i := 0 to EditFileList.Count -1 do
-  with TEditingFile(EditFileList.items[i]) do
-  begin
-    if SynEditor.Modified then
+  //NB: a single failing file must not abort the loop, otherwise every modified
+  //file after it silently stays unsaved while the error dialog names only one.
+  //Collect the failures and report them together at the end.
+  LErrors := TStringList.Create;
+  try
+    for i := 0 to EditFileList.Count -1 do
     begin
-      SaveToFile;
+      LEditFile := TEditingFile(EditFileList.items[i]);
+      if Assigned(LEditFile.SynEditor) and LEditFile.SynEditor.Modified then
+      begin
+        try
+          LEditFile.SaveToFile;
+        except
+          on E: Exception do
+            LErrors.Add(Format('%s: %s', [LEditFile.FileName, E.Message]));
+        end;
+      end;
     end;
+    if LErrors.Count > 0 then
+      raise Exception.CreateFmt(FILES_NOT_SAVED, [sLineBreak + LErrors.Text]);
+  finally
+    LErrors.Free;
   end;
 end;
 
@@ -2442,6 +2521,34 @@ begin
   UpdateApplicationLayout(FEditorSettings.LayoutMode);
 end;
 
+//SynEdit is NOT VCL-style aware: SynEdit.pas never consults StyleServices,
+//and TSynGutter.Create leaves Color at the raw clBtnFace system colour,
+//BorderColor at clWindow and the gutter font at its default. Under a dark
+//style the gutter therefore stayed light grey with dark numbers, while the
+//text area looked right only because UpdateHighlighter stamps
+//StyleServices.GetSystemColor(clWindow) onto every highlighter attribute.
+//This does the same job for the gutter, resolving each colour the gutter
+//actually paints with:
+//  SynEdit.pas:2468               Gutter.Color (flat background)
+//  SynEdit.pas:2462-2463          GradientStartColor/GradientEndColor
+//  SynEditMiscClasses.pas:2386    Gutter.BorderColor
+//  SynEditMiscClasses.pas:2297    Gutter.Font.Color, when UseFontStyle is
+//                                 True; otherwise the editor font is used
+//                                 (SynEditMiscClasses.pas:2302), which is
+//                                 why InitEditorOptions styles that too.
+//No user preference is being overridden: the settings never stored any of
+//these colours.
+procedure TfrmMain.ApplyStyleToGutter(AGutter: TSynGutter);
+begin
+  if AGutter = nil then
+    Exit;
+  AGutter.Color := StyleServices.GetSystemColor(clBtnFace);
+  AGutter.BorderColor := StyleServices.GetSystemColor(clWindow);
+  AGutter.Font.Color := StyleServices.GetSystemColor(clWindowText);
+  AGutter.GradientStartColor := StyleServices.GetSystemColor(clWindow);
+  AGutter.GradientEndColor := StyleServices.GetSystemColor(clBtnFace);
+end;
+
 procedure TfrmMain.UpdateHighlighter(ASynEditor: TSynEdit);
 var
   LBackgroundColor: TColor;
@@ -2458,7 +2565,17 @@ begin
   end
   else
     //Markdown highlighting disabled: unhook the highlighter (plain text).
+    //NB: with no highlighter the text background comes from the editor's own
+    //Color, which is styled in InitEditorOptions - otherwise the text area
+    //itself would stay light under a dark style.
     ASynEditor.Highlighter := nil;
+  //NB: the highlighter attributes cover the text area only, so the gutter
+  //needs the active style applied to it explicitly - and it must happen on
+  //both branches above. Done here as well as in InitEditorOptions because
+  //UpdateHighlighters refreshes every open editor without going through the
+  //options container.
+  ApplyStyleToGutter(ASynEditor.Gutter);
+  ASynEditor.Font.Color := StyleServices.GetSystemColor(clWindowText);
 end;
 
 procedure TfrmMain.UpdateCodeHighlightTheme;
@@ -2514,6 +2631,12 @@ begin
     Options := Options - [eoSmartTabs];
     Gutter.Font.Name := Font.Name;
     Gutter.Font.Size := Font.Size;
+    //Colours taken from the active VCL style. These reach every open editor
+    //through FEditorOptions.AssignTo, which does Gutter.Assign and copies
+    //Font and Color as well.
+    Font.Color := StyleServices.GetSystemColor(clWindowText);
+    Color := StyleServices.GetSystemColor(clWindow);
+    ApplyStyleToGutter(Gutter);
   end;
 end;
 
@@ -3020,7 +3143,9 @@ begin
 
     StyledTaskMessageDlg(STR_ERROR, E.Message,
       TMsgDlgType.mtError,
-      [TMsgDlgBtn.mbOK, TMsgDlgBtn.mbHelp], 0);
+      //NB: mbHelp removed. The .dpr sets Application.HelpFile to '', so the
+      //Help button was shown and did nothing at all.
+      [TMsgDlgBtn.mbOK], 0);
   end;
 end;
 

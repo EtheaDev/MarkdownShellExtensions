@@ -36,6 +36,8 @@ resourcestring
   ERR_VERSION_FORMAT_NOT_VALID = 'Format of version "%s" is not valid: expected a string "vN.N.N"';
   ERR_GET_REQUEST_FAILED = 'GET requested from "%s" failed, web server could not be reached!';
   ERR_GET_REQUEST_FROM_FAILED = 'GET requested from "%s" failed: "%s"';
+  ERR_SETUP_FILENAME_MISSING = 'Setup file name not set: cannot download the new version';
+  ERR_PROJECT_URL_MISSING = 'GitHub project URL not set: cannot reach the project';
 
 type
   //NB: must be a real class, not an alias of Exception: as an alias any
@@ -116,7 +118,9 @@ begin
   AMajor := 0;
   AMinor := 0;
   ARelease := 0;
-  Regex := TRegEx.Create('^v(\d+)\.(\d+)\.(\d+)$', [roIgnoreCase]);
+  // Optional 'v'/'V' prefix and an ignored trailing suffix (e.g. a pre-release
+  // tag like 'beta' in 'V4.0.18beta'): only the leading N.N.N is significant.
+  Regex := TRegEx.Create('^v?(\d+)\.(\d+)\.(\d+)', [roIgnoreCase]);
   Match := Regex.Match(AVersionTag);
   if Match.Success then
   begin
@@ -202,7 +206,13 @@ function TGitHubHttpClient.DownloadLatestSetup(
 begin
   if ASetupFileName <> '' then
     FSetupFileName := ASetupFileName;
-  Assert(FSetupFileName <> '');
+  //NB: real checks and not Assert. Assertions can be compiled out, and an
+  //empty project URL did not fail here at all: it silently produced the
+  //malformed URL '/releases/latest/download/<setup>'.
+  if FSetupFileName = '' then
+    raise ECheckNewVersionException.Create(ERR_SETUP_FILENAME_MISSING);
+  if FGitHubProjectURL = '' then
+    raise ECheckNewVersionException.Create(ERR_PROJECT_URL_MISSING);
   var LFileName := ExtractFileName(FSetupFileName);
   //Build URL Project + 'releases/latest/download/' + FSetupFileName
   var LURL := CombineUrl(FGitHubProjectURL, 'releases/latest/download/');
@@ -263,7 +273,8 @@ function TGitHubHttpClient.GetLatestVersionAsJSonString(
 begin
   if AGitHubProjectURL <> '' then
     FGitHubProjectURL := AGitHubProjectURL;
-  Assert(FGitHubProjectURL <> '');
+  if FGitHubProjectURL = '' then
+    raise ECheckNewVersionException.Create(ERR_PROJECT_URL_MISSING);
   Result := InvokeGETAsString('releases/latest');
 end;
 

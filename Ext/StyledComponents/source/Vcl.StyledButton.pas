@@ -443,9 +443,9 @@ type
     /// <summary>Handles CM_ENTER message when button receives focus</summary>
     procedure CMEnter(var Message: TCMEnter);
     /// <summary>Handles CM_MOUSEENTER message for hot state</summary>
-    procedure CMMouseEnter(var Message: TNotifyEvent);
+    procedure CMMouseEnter(var Message: TMessage);
     /// <summary>Handles CM_MOUSELEAVE message to clear hot state</summary>
-    procedure CMMouseLeave(var Message: TNotifyEvent);
+    procedure CMMouseLeave(var Message: TMessage);
     /// <summary>Handles CM_ENABLEDCHANGED message</summary>
     procedure CMEnabledChanged(var Message: TMessage);
     {$IFDEF HiDPISupport}
@@ -880,8 +880,8 @@ type
     procedure CMStyleChanged(var Message: TMessage); message CM_STYLECHANGED;
     procedure CMDialogChar(var Message: TCMDialogChar); message CM_DIALOGCHAR;
     procedure CMEnter(var Message: TCMEnter); message CM_ENTER;
-    procedure CMMouseEnter(var Message: TNotifyEvent); message CM_MOUSEENTER;
-    procedure CMMouseLeave(var Message: TNotifyEvent); message CM_MOUSELEAVE;
+    procedure CMMouseEnter(var Message: TMessage); message CM_MOUSEENTER;
+    procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
     procedure CMEnabledChanged(var Message: TMessage); message CM_ENABLEDCHANGED;
 
     function GetModalResult: TModalResult;
@@ -1412,8 +1412,8 @@ type
     procedure CMStyleChanged(var Message: TMessage); message CM_STYLECHANGED;
     procedure CMDialogChar(var Message: TCMDialogChar); message CM_DIALOGCHAR;
     procedure CMEnter(var Message: TCMEnter); message CM_ENTER;
-    procedure CMMouseEnter(var Message: TNotifyEvent); message CM_MOUSEENTER;
-    procedure CMMouseLeave(var Message: TNotifyEvent); message CM_MOUSELEAVE;
+    procedure CMMouseEnter(var Message: TMessage); message CM_MOUSEENTER;
+    procedure CMMouseLeave(var Message: TMessage); message CM_MOUSELEAVE;
     procedure CMEnabledChanged(var Message: TMessage); message CM_ENABLEDCHANGED;
 
     function GetModalResult: TModalResult;
@@ -2120,7 +2120,7 @@ begin
   FMouseInControl := False;
 end;
 
-procedure TStyledButtonRender.CMMouseEnter(var Message: TNotifyEvent);
+procedure TStyledButtonRender.CMMouseEnter(var Message: TMessage);
 begin
   if not(Enabled) or (csDesigning in ComponentState) then
     Exit;
@@ -2128,7 +2128,7 @@ begin
   Invalidate;
 end;
 
-procedure TStyledButtonRender.CMMouseLeave(var Message: TNotifyEvent);
+procedure TStyledButtonRender.CMMouseLeave(var Message: TMessage);
 begin
   if not(Enabled) or (csDesigning in ComponentState) then
     Exit;
@@ -3987,10 +3987,16 @@ begin
   LValue := AValue;
   if LValue = '' then
     LValue := DEFAULT_CLASSIC_FAMILY;
-  //Reject an unregistered family loudly: this surfaces a missing style unit at
-  //design time (the form fails to load) instead of rendering black at runtime.
+  //Reject an unregistered family: at design time (or a direct assignment) raise so
+  //a missing style unit surfaces immediately; while a deployed form is streaming
+  //fall back to Classic so the form can still be constructed.
   if not StyleFamilyExists(LValue) then
-    raise EStyledAttributesException.CreateFmt(ERROR_FAMILY_NOT_FOUND, [LValue]);
+  begin
+    if StyleFamilyLoadingFallback(FOwnerControl) then
+      LValue := DEFAULT_CLASSIC_FAMILY
+    else
+      raise EStyledAttributesException.CreateFmt(ERROR_FAMILY_NOT_FOUND, [LValue]);
+  end;
   if (LValue <> Self.FStyleFamily) or not FStyleApplied then
   begin
     FStyleFamily := LValue;
@@ -4366,13 +4372,13 @@ begin
   FRender.CMEnter(Message);
 end;
 
-procedure TCustomStyledGraphicButton.CMMouseEnter(var Message: TNotifyEvent);
+procedure TCustomStyledGraphicButton.CMMouseEnter(var Message: TMessage);
 begin
   inherited;
   FRender.CMMouseEnter(Message);
 end;
 
-procedure TCustomStyledGraphicButton.CMMouseLeave(var Message: TNotifyEvent);
+procedure TCustomStyledGraphicButton.CMMouseLeave(var Message: TMessage);
 begin
   inherited;
   FRender.CMMouseLeave(Message);
@@ -5550,13 +5556,13 @@ begin
   FRender.CMEnter(Message);
 end;
 
-procedure TCustomStyledButton.CMMouseEnter(var Message: TNotifyEvent);
+procedure TCustomStyledButton.CMMouseEnter(var Message: TMessage);
 begin
   inherited;
   FRender.CMMouseEnter(Message);
 end;
 
-procedure TCustomStyledButton.CMMouseLeave(var Message: TNotifyEvent);
+procedure TCustomStyledButton.CMMouseLeave(var Message: TMessage);
 begin
   inherited;
   FRender.CMMouseLeave(Message);

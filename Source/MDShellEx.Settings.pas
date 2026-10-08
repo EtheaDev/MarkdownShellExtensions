@@ -174,6 +174,7 @@ type
     FDownloadFromWEB: Boolean;
     FAutoRefreshWhenEditing: Boolean;
     FSyncScroll: Boolean;
+    FUseWebView2: Boolean;
     FRestoreLastSession: Boolean;
     FHighlightMarkdownText: Boolean;
     FLightActiveLineColor: TColor;
@@ -204,6 +205,10 @@ type
     property DownloadFromWEB: Boolean read FDownloadFromWEB write SetDownloadFromWEB;
     property AutoRefreshWhenEditing: Boolean read FAutoRefreshWhenEditing write SetAutoRefreshWhenEditing;
     property SyncScroll: Boolean read FSyncScroll write SetSyncScroll;
+    //When True (default) the preview of the editor uses Microsoft Edge WebView2
+    //(math formulas, mermaid diagrams), if available; otherwise HTMLViewer.
+    //The preview of Explorer always uses HTMLViewer.
+    property UseWebView2: Boolean read FUseWebView2 write FUseWebView2;
     property RestoreLastSession: Boolean read FRestoreLastSession write SetRestoreLastSession;
     property HighlightMarkdownText: Boolean read FHighlightMarkdownText write SetHighlightMarkdownText;
     property LightActiveLineColor: TColor read FLightActiveLineColor write FLightActiveLineColor;
@@ -228,6 +233,7 @@ uses
   , uLogExcept
   , uRegistry
   , MDShellEx.Misc
+  , MarkDownViewerCommon
   , SynEdit
   , Winapi.Messages
   ;
@@ -411,7 +417,9 @@ begin
   FThemeSelection := TThemeSelection(FIniFile.ReadInteger('Global', 'ThemeSelection', 0));
   FLayoutMode := TLayoutMode(FIniFile.ReadInteger('Global', 'LayoutMode', 0));
   ViewerPercentSize := FIniFile.ReadInteger('Global', 'ViewerPercentSize', 50);
-  FProcessorDialect := TMarkdownProcessorDialect(FIniFile.ReadInteger('Global', 'ProcessorDialect', 1));
+  //The dialect is stored by name; the ordinal of the previous versions is
+  //converted (1 = CommonMark, the old default, becomes GitHub)
+  FProcessorDialect := DialectFromIniValue(FIniFile.ReadString('Global', 'ProcessorDialect', ''));
   FToolbarDrawRounded := FIniFile.ReadBool('Global', 'ToolbarDrawRounded', false);
   FButtonDrawRounded := FIniFile.ReadBool('Global', 'ButtonDrawRounded', false);
   FMenuDrawRounded := FIniFile.ReadBool('Global', 'MenuDrawRounded', false);
@@ -494,7 +502,7 @@ begin
   FIniFile.WriteInteger('Global', 'LayoutMode', Ord(FLayoutMode));
   FIniFile.WriteInteger('Global', 'ViewerPercentSize', FViewerPercentSize);
 
-  FIniFile.WriteInteger('Global', 'ProcessorDialect', Ord(FProcessorDialect));
+  FIniFile.WriteString('Global', 'ProcessorDialect', DialectToIniValue(FProcessorDialect));
   FIniFile.WriteBool('Global', 'ToolbarDrawRounded', ToolbarDrawRounded);
   FIniFile.WriteBool('Global', 'ButtonDrawRounded', ButtonDrawRounded);
   FIniFile.WriteBool('Global', 'MenuDrawRounded', MenuDrawRounded);
@@ -654,6 +662,7 @@ begin
     DownloadFromWEB := Boolean(FIniFile.ReadInteger('Global', 'DownloadFromWEB', 0));
     AutoRefreshWhenEditing := Boolean(FIniFile.ReadInteger('Global', 'AutoRefreshWhenEditing', 1));
     SyncScroll := Boolean(FIniFile.ReadInteger('Global', 'SyncScroll', 1));
+    UseWebView2 := Boolean(FIniFile.ReadInteger('Global', 'UseWebView2', 1));
     RestoreLastSession := Boolean(FIniFile.ReadInteger('Global', 'RestoreLastSession', 1));
     HighlightMarkdownText := Boolean(FIniFile.ReadInteger('Global', 'HighlightMarkdownText', 1));
 
@@ -804,6 +813,7 @@ begin
   FIniFile.WriteInteger('Global', 'DownloadFromWEB', Ord(FDownloadFromWEB));
   FIniFile.WriteInteger('Global', 'AutoRefreshWhenEditing', Ord(FAutoRefreshWhenEditing));
   FIniFile.WriteInteger('Global', 'SyncScroll', Ord(FSyncScroll));
+  FIniFile.WriteInteger('Global', 'UseWebView2', Ord(FUseWebView2));
   FIniFile.WriteInteger('Global', 'RestoreLastSession', Ord(FRestoreLastSession));
   FIniFile.WriteInteger('Global', 'HighlightMarkdownText', Ord(FHighlightMarkdownText));
 

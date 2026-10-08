@@ -185,6 +185,7 @@ type
     FStyleAppearance: TStyledButtonAppearance;
 
     FStyleApplied: Boolean;
+    FAppliedVCLStyleName: string;
 
     FDisabledImages: TCustomImageList;
     FImages: TCustomImageList;
@@ -229,6 +230,7 @@ type
     FImageName: TImageName;
     {$ENDIF}
     FGlyph: TBitmap;
+    FGlyphCache: TStyledGlyphCache;
     FNumGlyphs: TNumGlyphs;
     FTransparentColor: TColor;
     FTransparent: Boolean;
@@ -327,6 +329,8 @@ type
     procedure CalcDefaultImageMargins(const AValue: TImageAlignment);
     procedure SetGlyph(const AValue: TBitmap);
     function GetGlyph: TBitmap;
+    procedure GlyphChanged(Sender: TObject);
+    procedure InvalidateGlyphCache;
     function GetNumGlyphs: TNumGlyphs;
     procedure SetNumGlyphs(const AValue: TNumGlyphs);
     procedure SetFlat(const AValue: Boolean);
@@ -484,9 +488,12 @@ type
     /// <summary>Determines if NotificationBadge should be stored</summary>
     function IsNotificationBadgeStored: Boolean;
     /// <summary>Sets the button style using family, class, and appearance</summary>
-    /// <param name="AStyleFamily">Style family name</param>
-    /// <param name="AStyleClass">Style class within the family</param>
-    /// <param name="AStyleAppearance">Style appearance variant</param>
+    /// <remarks>An empty value keeps the current one (e.g. the style inherited
+    /// from the parent Toolbar), so SetButtonStyle('', '', '') is a no-op.
+    /// Raises EStyledButtonError if the resulting style is not valid.</remarks>
+    /// <param name="AStyleFamily">Style family name (empty = keep current)</param>
+    /// <param name="AStyleClass">Style class within the family (empty = keep current)</param>
+    /// <param name="AStyleAppearance">Style appearance variant (empty = keep current)</param>
     procedure SetButtonStyle(const AStyleFamily: TStyledButtonFamily;
       const AStyleClass: TStyledButtonClass;
       const AStyleAppearance: TStyledButtonAppearance); overload;
@@ -986,6 +993,7 @@ type
     /// <summary>Ends batch update and triggers repaint</summary>
     procedure EndUpdate;
     /// <summary>Sets button style using family, class, and appearance</summary>
+    /// <remarks>An empty value keeps the current one</remarks>
     procedure SetButtonStyle(const AStyleFamily: TStyledButtonFamily;
       const AStyleClass: TStyledButtonClass;
       const AStyleAppearance: TStyledButtonAppearance); overload;
@@ -1520,6 +1528,8 @@ type
     procedure ShowDropDownMenu;
     procedure BeginUpdate;
     procedure EndUpdate;
+    /// <summary>Sets button style using family, class, and appearance</summary>
+    /// <remarks>An empty value keeps the current one</remarks>
     procedure SetButtonStyle(const AStyleFamily: TStyledButtonFamily;
       const AStyleClass: TStyledButtonClass;
       const AStyleAppearance: TStyledButtonAppearance); overload;
@@ -2329,11 +2339,14 @@ begin
     if seBorder in FOwnerControl.StyleElements then
       LStyleAppearance := DEFAULT_APPEARANCE;
     LStyleClass := GetActiveStyleName;
+    //Remembered so that the paint re-resolves only when the style changes
+    FAppliedVCLStyleName := LStyleClass;
   end
   else
   begin
     LStyleClass := FStyleClass;
     LStyleAppearance := FStyleAppearance;
+    FAppliedVCLStyleName := '';
   end;
   Result := StyleFamilyCheckAttributes(FStyleFamily,
     LStyleClass, LStyleAppearance, LButtonFamily);
@@ -2357,6 +2370,18 @@ begin
     LInvaldate := (FStyleClass <> LStyleClass) or (FStyleAppearance <> LStyleAppearance);
     FStyleClass := LStyleClass;
     FStyleAppearance := LStyleAppearance;
+    //Class/Appearance fell back to the family defaults: recompute the state
+    //attributes with them, otherwise the button keeps the colours of the
+    //previous family while StyleClass already reports the new one (R2/B3).
+    //Result stays False so StyleApplied is re-evaluated by the callers.
+    if StyleFamilyUpdateAttributes(FStyleFamily, LStyleClass, LStyleAppearance,
+      FButtonStyleNormal, FButtonStylePressed, FButtonStyleSelected,
+      FButtonStyleHot, FButtonStyleDisabled) then
+    begin
+      LInvaldate := True;
+      if not FCustomDrawType then
+        FStyleDrawType := FButtonStyleNormal.DrawType;
+    end;
   end;
   //ASkipInvalidate is True when this is called from inside the paint cycle
   //(DrawBackgroundAndBorder), where Invalidate would trigger another WM_PAINT
@@ -2386,6 +2411,7 @@ begin
   FreeAndNil(FButtonStyleHot);
   FreeAndNil(FButtonStyleDisabled);
   FreeAndNil(FNotificationBadge);
+  FreeAndNil(FGlyphCache);
   FreeAndNil(FGlyph);
   inherited Destroy;
 end;
@@ -2644,6 +2670,10 @@ begin
 end;
 
 procedure TStyledButtonRender.UpdateAutoClickTimer(const AReset: Boolean);
+const
+  //~66 repaints per second at most: the bar position is computed from the
+  //elapsed time, so a wide button no longer forces a full GDI+ repaint per ms
+  AUTOCLICK_MIN_INTERVAL = 15;
 begin
   if not Assigned(FAutoClickTimer) then
   begin
@@ -2656,8 +2686,15 @@ begin
     FStartAutoClick := Now;
     FAutoClickPixels := 0;
   end;
-  //Calculate Interval based on width of Control for pixel painting
-  FAutoClickTimer.Interval := FAutoClickDelay div FOwnerControl.Width;
+  //Calculate Interval based on width of Control for pixel painting.
+  //Guard a zero/negative width (no EDivByZero) and clamp the interval
+  //(a 0 interval would leave the timer disabled).
+  if FOwnerControl.Width > 0 then
+    FAutoClickTimer.Interval := FAutoClickDelay div FOwnerControl.Width
+  else
+    FAutoClickTimer.Interval := FAutoClickDelay;
+  if FAutoClickTimer.Interval < AUTOCLICK_MIN_INTERVAL then
+    FAutoClickTimer.Interval := AUTOCLICK_MIN_INTERVAL;
   //Enable Timer
   FAutoClickTimer.Enabled := FAutoClick;
 end;
@@ -2786,10 +2823,14 @@ var
   LCorners: TRoundedCorners;
   LDrawingAutoClick: Boolean;
 begin
+  //Classic family follows the active VCL style: re-resolve only when the style
+  //seen by this control differs from the one the attributes were built for
+  //(a name compare) instead of on every paint (5 temporary attribute objects
+  //and a scan of the style table per paint). CM_STYLECHANGED re-applies too.
   //Call with ASkipInvalidate=True: we are already inside WM_PAINT, the
   //attributes update will be reflected by the current paint pass itself,
   //and an Invalidate here would queue another WM_PAINT → loop.
-  if AsVCLStyle then
+  if AsVCLStyle and (GetActiveStyleName <> FAppliedVCLStyleName) then
     ApplyButtonStyle(True);
   LStyleAttribute := GetDrawingStyle(ACanvas, ButtonState);
 
@@ -3080,9 +3121,11 @@ begin
   begin
     if ((FKind = bkCustom) and IsGlyphAssigned) or (FKind <> bkCustom) then
     begin
-      //Uses the Glyph to draw the Icon
+      //Uses the Glyph to draw the Icon (state images cached per button)
+      if not Assigned(FGlyphCache) then
+        FGlyphCache := TStyledGlyphCache.Create;
       DrawBitBtnGlyph(ACanvas, LImageRect, FKind, FState, Enabled,
-        FGlyph, FNumGlyphs, FTransparentColor);
+        FGlyph, FNumGlyphs, FTransparentColor, FGlyphCache);
     end;
   end;
   if (Style = bsCommandLink) then
@@ -3656,6 +3699,7 @@ procedure TStyledButtonRender.SetKind(const AValue: TBitBtnKind);
 begin
   if AValue <> FKind then
   begin
+    InvalidateGlyphCache;
     if AValue <> bkCustom then
     begin
       Default := AValue in [bkOK, bkYes];
@@ -3717,6 +3761,7 @@ begin
   if LValue <> FNumGlyphs then
   begin
     FNumGlyphs := LValue;
+    InvalidateGlyphCache;
     Invalidate;
   end;
 end;
@@ -3749,12 +3794,17 @@ procedure TStyledButtonRender.SetButtonStyle(
   const AStyleClass: TStyledButtonClass;
   const AStyleAppearance: TStyledButtonAppearance);
 begin
-  FStyleFamily := AStyleFamily;
-  FStyleClass := AStyleClass;
-  FStyleAppearance := AStyleAppearance;
+  //Empty values keep the current style (e.g. the style inherited
+  //from the parent Toolbar when the button was created)
+  if AStyleFamily <> '' then
+    FStyleFamily := AStyleFamily;
+  if AStyleClass <> '' then
+    FStyleClass := AStyleClass;
+  if AStyleAppearance <> '' then
+    FStyleAppearance := AStyleAppearance;
   if not ApplyButtonStyle then
     raise EStyledButtonError.CreateFmt(ERROR_SETTING_BUTTON_STYLE,
-      [AStyleFamily, AStyleClass, AStyleAppearance]);
+      [FStyleFamily, FStyleClass, FStyleAppearance]);
 end;
 
 procedure TStyledButtonRender.SetButtonStyle(const AStyleFamily: TStyledButtonFamily;
@@ -4208,8 +4258,22 @@ begin
     FGlyph := TBitmap.Create;
     FGlyph.Width := 0;
     FGlyph.Height := 0;
+    //Glyph.Assign / LoadFromFile by the user bypass SetGlyph
+    FGlyph.OnChange := GlyphChanged;
   end;
   Result := FGlyph;
+end;
+
+procedure TStyledButtonRender.GlyphChanged(Sender: TObject);
+begin
+  InvalidateGlyphCache;
+  Invalidate;
+end;
+
+procedure TStyledButtonRender.InvalidateGlyphCache;
+begin
+  if Assigned(FGlyphCache) then
+    FGlyphCache.Invalidate;
 end;
 
 function TStyledButtonRender.GetHint: string;
@@ -4302,7 +4366,6 @@ procedure TCustomStyledGraphicButton.AssignTo(ADest: TPersistent);
 var
   LDest: TCustomStyledGraphicButton;
 begin
-  inherited AssignTo(ADest);
   if ADest is TCustomStyledGraphicButton then
   begin
     LDest := TCustomStyledGraphicButton(ADest);
@@ -4316,7 +4379,11 @@ begin
     LDest.Enabled := Self.Enabled;
     LDest.Down := Self.Down;
     LDest.AllowAllUp := Self.AllowAllUp;
-  end;
+  end
+  else
+    //TControl.AssignTo handles TCustomAction and raises AssignError for any
+    //other destination, so it must only run when we do not copy ourselves
+    inherited AssignTo(ADest);
 end;
 
 procedure TCustomStyledGraphicButton.BeginUpdate;
@@ -5496,9 +5563,6 @@ procedure TCustomStyledButton.AssignTo(ADest: TPersistent);
 var
   LDest: TCustomStyledButton;
 begin
-  inherited AssignTo(ADest);
-  if ADest is TCustomStyledButton then
-  begin
   if ADest is TCustomStyledButton then
   begin
     LDest := TCustomStyledButton(ADest);
@@ -5511,8 +5575,11 @@ begin
     LDest.Tag := Self.Tag;
     LDest.Enabled := Self.Enabled;
     LDest.TabStop := Self.TabStop;
-  end;
-  end;
+  end
+  else
+    //TControl.AssignTo handles TCustomAction and raises AssignError for any
+    //other destination, so it must only run when we do not copy ourselves
+    inherited AssignTo(ADest);
 end;
 
 procedure TCustomStyledButton.BeginUpdate;
@@ -6599,18 +6666,17 @@ end;
 
 procedure TCustomStyledButton.CNKeyDown(var Message: TWMKeyDown);
 begin
-  with Message do
+  //Keep the inherited result: TWinControl returns 1 when the CM_DIALOGKEY
+  //broadcast handled the key (Enter/Esc clicked a button). Forcing 0 made the
+  //application dispatch the WM_KEYDOWN too, so a KeyPreview form clicked again.
+  if not (csDesigning in ComponentState) and
+    (Message.CharCode = VK_DOWN) and CanDropDownMenu then
   begin
-    Result := 1;
-    if not (csDesigning in ComponentState) then
-    begin
-      if (CharCode = VK_DOWN) and (CanDropDownMenu) then
-        DoDropDownMenu
-      else
-        inherited;
-    end;
-    Result := 0;
-  end;
+    DoDropDownMenu;
+    Message.Result := 1;
+  end
+  else
+    inherited;
 end;
 
 procedure TCustomStyledButton.WMKeyDown(var Message: TMessage);
@@ -6674,14 +6740,17 @@ begin
         FPaintBuffer := TBitmap.Create;
       Inc(FPaintBufferUsers);
       try
-        FPaintBuffer.SetSize(Self.Width, Self.Height);
+        if (FPaintBuffer.Width <> Self.Width) or (FPaintBuffer.Height <> Self.Height) then
+          FPaintBuffer.SetSize(Self.Width, Self.Height);
         FRender.DrawButton(FPaintBuffer.Canvas, True);
         // paint other controls
         PaintControls(FPaintBuffer.Canvas.Handle, nil);
         LCanvas.Draw(0, 0, FPaintBuffer);
       finally
         Dec(FPaintBufferUsers);
-        ReleasePaintBuffer;
+        //The buffer is kept for the next paint: creating and freeing a DIB per
+        //paint cost more than the whole GDI+ drawing (see StyledPerfTests). It
+        //is released in Destroy and when DoubleBuffered is switched off.
       end;
     end
     else

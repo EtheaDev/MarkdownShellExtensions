@@ -282,6 +282,7 @@ type
     FImageChangeLink: TChangeLink;
     FDisabledImageChangeLink: TChangeLink;
     FUpdateCount: Integer;
+    FResizePending: Boolean;
     FOnCustomizeNewButton: TSTBNewButtonEvent;
     FOnCustomizeAdded: TSTBButtonEvent;
     FCaptureChangeCancels: Boolean;
@@ -401,6 +402,10 @@ type
     function GetStyledToolButtonClass: TStyledToolButtonClass; virtual;
     procedure Loaded; override;
   public
+    {$IFDEF D10_1+}
+    //Public as in TControl: a protected override raises hint H2269
+    procedure ScaleForPPI(NewPPI: Integer); override;
+    {$ENDIF}
     /// <summary>Copies properties from another toolbar</summary>
     procedure Assign(Source: TPersistent); override;
     /// <summary>Registers default rendering style for all new toolbar instances</summary>
@@ -773,7 +778,13 @@ begin
   LWidth := Width;
   if IsDropDown and Assigned(FToolBar) then //FToolBar may be nil (not yet parented)
     LWidth := FToolBar.ButtonWidth + GetSplitButtonWidth;
+  //Only mirror a button's size back into the toolbar's ButtonWidth/ButtonHeight
+  //(and re-lay-out all buttons) at design time, where resizing one button is a
+  //deliberate edit. At runtime the FlowPanel/AutoSize layout drives SetBounds
+  //with computed sizes, so writing them back would corrupt FButtonWidth/
+  //FButtonHeight and cascade through ResizeButtons.
   LUpdateToolBar := Assigned(FToolBar) and not FToolBar.FRescaling
+    and (csDesigning in ComponentState)
     and ((AWidth <> Width) or (AHeight <> Height))
     and not IsSeparator
     and not (csLoading in ComponentState);
@@ -1151,6 +1162,21 @@ begin
     FRescaling := False; //reset the rescaling flag once inherited scaling is done
   end;
 end;
+
+procedure TStyledToolbar.ScaleForPPI(NewPPI: Integer);
+begin
+  //Per-Monitor DPI change: the VCL scales the child buttons first
+  //(ScaleControlsForDpi) and only then calls our ChangeScale. The guard must
+  //already be up while the children scale, otherwise TStyledToolButton.SetBounds
+  //writes their scaled size back into FButtonWidth/FButtonHeight and ChangeScale
+  //then scales it a second time. Keep FRescaling up around the whole pass.
+  FRescaling := True;
+  try
+    inherited;
+  finally
+    FRescaling := False;
+  end;
+end;
 {$ENDIF}
 
 
@@ -1262,6 +1288,12 @@ end;
 procedure TStyledToolbar.EndUpdate;
 begin
   Dec(FUpdateCount);
+  //Run the ResizeButtons that was requested while the update block was open
+  if (FUpdateCount = 0) and FResizePending then
+  begin
+    FResizePending := False;
+    ResizeButtons;
+  end;
 end;
 
 procedure TStyledToolbar.ImageListChange(Sender: TObject);
@@ -2163,11 +2195,17 @@ procedure TStyledToolbar.ResizeButtons;
 begin
   if (csLoading in ComponentState) then
     Exit;
+  //Inside a BeginUpdate/EndUpdate block defer the work: EndUpdate runs it once
+  if FUpdateCount > 0 then
+  begin
+    FResizePending := True;
+    Exit;
+  end;
+  FResizePending := False;
 
   DisableButtonAlign := True;
   try
-    if (FButtonHeight <> 0) and (FButtonWidth <> 0) and
-      (FUpdateCount = 0) then
+    if (FButtonHeight <> 0) and (FButtonWidth <> 0) then
     begin
       BeginUpdate;
       try

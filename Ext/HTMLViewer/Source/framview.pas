@@ -2250,13 +2250,6 @@ constructor TFrameSetBase.Create(AOwner: TComponent);
 begin
   inherited CreateIt(AOwner, Self);
   FFrameViewer := AOwner as TFvBase;
-{$ifdef DEBUG}
-  {$if defined(LCL) or defined(Compiler22_Plus)}
-  Name := FFrameViewer.Name + '_FrameSetBase' + IntToHex(Integer(Self));
-  {$else}
-  Name := FFrameViewer.Name + '_FrameSetBase' + IntToHex(Integer(Self), 8);
-  {$ifend}
-{$endif}
   LocalCodePage := FrameViewer.CodePage;
   if fvNoBorder in FrameViewer.fvOptions then
     BorderSize := 0

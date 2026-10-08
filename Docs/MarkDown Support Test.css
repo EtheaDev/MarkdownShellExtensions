@@ -1,0 +1,35 @@
+<style type="text/css">
+body{
+    font-family: Arial, sans-serif;
+}
+code{
+  font-family: "Consolas", monospace;
+}
+pre{
+  border: 1px solid #ddd;
+  border-left: 3px solid #f36d33;
+  overflow: auto;
+  padding: 1em 1.5em;
+  display: block;
+}
+Blockquote{
+  border-left: 3px solid #d0d0d0;
+  padding-left: 0.5em;
+  margin-left:1em;
+}
+Blockquote p{
+  margin: 0;
+}
+table{
+  border:2px solid;
+  border-collapse:collapse;
+}
+th{'+
+  padding:5px;
+  border:2px solid;
+}
+td{
+  padding:5px;
+  border:2px solid;
+}
+</style>

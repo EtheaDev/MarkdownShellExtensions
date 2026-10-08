@@ -1,9 +1,9 @@
 {******************************************************************************}
 {                                                                              }
 {       MarkDown Processor                                                     }
-{       Delphi version of FPC-markdown by Miguel A. Risco-Castillo             }
+{       CommonMark dialect                                                     }
 {                                                                              }
-{       Copyright (c) 2022-2025 (Ethea S.r.l.)                                 }
+{       Copyright (c) 2022-2026 (Ethea S.r.l.)                                 }
 {       Author: Carlo Barazzetta                                               }
 {                                                                              }
 {       https://github.com/EtheaDev/MarkdownProcessor                          }
@@ -23,77 +23,164 @@
 {  limitations under the License.                                              }
 {                                                                              }
 {******************************************************************************}
-Unit MarkdownCommonMark;
+unit MarkdownCommonMark;
 
-{
-Copyright (c) 2011+, Health Intersections Pty Ltd (http://www.healthintersections.com.au)
-All rights reserved.
+{ mdCommonMark: CommonMark 0.31.2 on the new engine (MarkdownBlockParser,
+  MarkdownInlineParser, MarkdownHtmlRenderer). It no longer derives from
+  TMarkdownDaringFireball: the legacy dialects keep the old engine.
+  mdGFM: the same engine with the GFM 0.29 extensions enabled.
+  mdGitHub (the default dialect): what github.com renders, GFM plus math,
+  alerts and mermaid diagrams.
+  Both can enable more syntax through Config.Extensions.
+  See docs/COMMONMARK_PLAN.md. }
 
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
- * Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
- * Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
- * Neither the name of HL7 nor the names of its contributors may be used to
-   endorse or promote products derived from this software without specific
-   prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 'AS IS' AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
-}
 interface
 
 uses
-  System.SysUtils
-  , System.Classes
-  , System.TypInfo
-  , MarkdownProcessor
-  , MarkdownDaringFireball
-  , MarkdownUtils
-  ;
+  System.SysUtils,
+  System.Classes,
+  MarkdownProcessor,
+  MarkdownUtils,
+  MarkdownAST;
 
-Type
-
-  TMarkdownCommonMark = class(TMarkdownDaringFireball)
-  private
+type
+  TMarkdownCommonMark = class(TMarkdownProcessor)
   protected
+    function GetAllowUnSafe: boolean; override;
+    procedure SetAllowUnSafe(const Value: boolean); override;
+    /// <summary>Parses into a document node owned by the caller (ReleaseOwnership).</summary>
+    function ParseDocument(const ASource: string): TMarkdownNode; virtual;
+    function RenderDocument(ADocument: TMarkdownNode): string; virtual;
   public
-    Constructor Create;
-    Destructor Destroy; override;
+    constructor Create;
+    destructor Destroy; override;
     function Process(const ASource: string): string; override;
+    function Parse(const ASource: string): IMarkdownNode; override;
+    function Render(const ADocument: IMarkdownNode): string; override;
+  end;
+
+  /// <summary>mdGFM: GitHub Flavored Markdown 0.29 (CommonMark + tables, task
+  /// lists, strikethrough, extended autolinks, disallowed raw HTML).</summary>
+  TMarkdownGFM = class(TMarkdownCommonMark)
+  public
+    constructor Create;
+  end;
+
+  /// <summary>mdGitHub: GFM + math + alerts + mermaid, as github.com.</summary>
+  TMarkdownGitHub = class(TMarkdownCommonMark)
+  public
+    constructor Create;
   end;
 
 implementation
 
+uses
+  MarkdownBlockParser,
+  MarkdownHtmlRenderer;
 
 { TMarkdownCommonMark }
 
 constructor TMarkdownCommonMark.Create;
 begin
-  inherited;
-  Config.Dialect:=mdCommonMark;
+  inherited Create;
+  Config := TConfiguration.Create(True);
+  Config.Dialect := mdCommonMark;
 end;
 
 destructor TMarkdownCommonMark.Destroy;
 begin
+  Config.Free;
   inherited;
 end;
 
-function TMarkdownCommonMark.Process(const ASource: string): string;
+function TMarkdownCommonMark.GetAllowUnSafe: boolean;
 begin
-  result := inherited Process(ASource);
+  Result := not Config.safeMode;
 end;
 
+procedure TMarkdownCommonMark.SetAllowUnSafe(const Value: boolean);
+begin
+  Config.safeMode := not Value;
+end;
+
+function TMarkdownCommonMark.ParseDocument(const ASource: string): TMarkdownNode;
+var
+  Parser: TMarkdownBlockParser;
+begin
+  Parser := TMarkdownBlockParser.Create;
+  try
+    Parser.Extensions := Config.Extensions;
+    Result := Parser.Parse(ASource);
+  finally
+    Parser.Free;
+  end;
+end;
+
+function TMarkdownCommonMark.RenderDocument(ADocument: TMarkdownNode): string;
+var
+  Renderer: TMarkdownHtmlRenderer;
+begin
+  Renderer := TMarkdownHtmlRenderer.Create;
+  try
+    Renderer.AllowUnsafe := AllowUnsafe;
+    Renderer.TagFilter := mexTagFilter in Config.Extensions;
+    if mexWikiLinks in Config.Extensions then
+      Renderer.SpecialLinkEmitter := Config.specialLinkEmitter;
+    Renderer.CodeBlockEmitter := Config.codeBlockEmitter;
+    Renderer.Mermaid := mexMermaid in Config.Extensions;
+    Renderer.MathRendering := Config.MathRendering;
+    Result := Renderer.Render(ADocument);
+  finally
+    Renderer.Free;
+  end;
+end;
+
+function TMarkdownCommonMark.Process(const ASource: string): string;
+var
+  Document: TMarkdownNode;
+begin
+  Document := ParseDocument(ASource);
+  try
+    Result := RenderDocument(Document);
+  finally
+    Document.ReleaseOwnership;
+  end;
+end;
+
+function TMarkdownCommonMark.Parse(const ASource: string): IMarkdownNode;
+var
+  Document: TMarkdownNode;
+begin
+  Document := ParseDocument(ASource);
+  Result := Document;
+  Document.ReleaseOwnership;
+end;
+
+function TMarkdownCommonMark.Render(const ADocument: IMarkdownNode): string;
+var
+  Node: TMarkdownNode;
+begin
+  Node := ADocument as TMarkdownNode;
+  Result := RenderDocument(Node.Document);
+end;
+
+{ TMarkdownGFM }
+
+constructor TMarkdownGFM.Create;
+begin
+  inherited Create;
+  Config.Dialect := mdGFM;
+  Config.Extensions := GFMExtensions;
+end;
+
+
+{ TMarkdownGitHub }
+
+constructor TMarkdownGitHub.Create;
+begin
+  inherited Create;
+  Config.Dialect := mdGitHub;
+  Config.Extensions := GitHubExtensions;
+end;
 
 end.

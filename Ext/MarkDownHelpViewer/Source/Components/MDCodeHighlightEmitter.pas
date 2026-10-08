@@ -1,4 +1,4 @@
-{******************************************************************************}
+﻿{******************************************************************************}
 {                                                                              }
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
@@ -413,7 +413,29 @@ procedure TSynHighlightBlockEmitter.emitBlock(out_: TStringBuilder;
   lines: TStringList; meta: String);
 var
   LHighlighter: TSynCustomHighlighter;
+  I: Integer;
+  C: Char;
 begin
+  //Mermaid diagrams are not code: <pre class="mermaid"> as the Markdown
+  //Processor writes it, drawn by mermaid.js (WebView2) or shown as text
+  if NormalizeLang(meta) = 'mermaid' then
+  begin
+    out_.Append('<pre class="mermaid">');
+    for I := 0 to lines.Count - 1 do
+    begin
+      for C in lines[I] do
+        case C of
+          '&': out_.Append('&amp;');
+          '<': out_.Append('&lt;');
+          '>': out_.Append('&gt;');
+        else
+          out_.Append(C);
+        end;
+      out_.Append(#10);
+    end;
+    out_.Append('</pre>'#10);
+    Exit;
+  end;
   LHighlighter := GetHighlighter(NormalizeLang(meta));
   if LHighlighter = nil then
   begin

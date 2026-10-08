@@ -167,6 +167,7 @@ uses
 
 var
   SavedBounds: TRect = (Left: 0; Top: 0; Right: 0; Bottom: 0);
+  SavedWindowState: TWindowState = TWindowState.wsNormal;
   ItemPanelHeight: Single;
   TrackaBarPosition: Single;
 
@@ -230,7 +231,15 @@ begin
           //Screen.Cursor := crDefault;
         end;
       end;
-      SavedBounds := Bounds;
+      //Bounds of the normal window only: the ones of a maximized window,
+      //restored on a normal one, give a window as big as the screen but not
+      //maximized
+      if WindowState = TWindowState.wsNormal then
+        SavedBounds := Bounds;
+      if WindowState = TWindowState.wsMaximized then
+        SavedWindowState := TWindowState.wsMaximized
+      else
+        SavedWindowState := TWindowState.wsNormal;
       ItemPanelHeight := ItemPanel.Height;
       TrackaBarPosition := BackgroundTrackBar.Value;
     finally
@@ -660,6 +669,9 @@ procedure TSVGIconImageListEditorFMX.FormShow(Sender: TObject);
 begin
   if SavedBounds.Right - SavedBounds.Left > 0 then
     SetBounds(SavedBounds.Left, SavedBounds.Top, SavedBounds.Width, SavedBounds.Height);
+  //After the normal bounds, so that "Restore" goes back to them
+  if SavedWindowState = TWindowState.wsMaximized then
+    WindowState := TWindowState.wsMaximized;
 
   if ItemPanelHeight <> 0 then
     ItemPanel.Height := ItemPanelHeight;

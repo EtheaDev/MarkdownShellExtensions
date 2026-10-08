@@ -184,7 +184,7 @@ object MDSettingsForm: TMDSettingsForm
           Left = 5
           Top = 20
           Width = 263
-          Height = 110
+          Height = 130
           Align = alTop
           Caption = 'Markdown processor options'
           TabOrder = 0
@@ -203,9 +203,6 @@ object MDSettingsForm: TMDSettingsForm
             Height = 23
             Style = csDropDownList
             TabOrder = 0
-            Items.Strings = (
-              'DaringFireball'
-              'CommonMark')
           end
           object AllowUnsafeHTMLCheckBox: TCheckBox
             Left = 15
@@ -220,6 +217,20 @@ object MDSettingsForm: TMDSettingsForm
             ParentShowHint = False
             ShowHint = True
             TabOrder = 1
+          end
+          object UseWebView2CheckBox: TCheckBox
+            Left = 15
+            Top = 100
+            Width = 235
+            Height = 17
+            Hint =
+              'Show the preview of the editor with Microsoft Edge WebView2 (mat' +
+              'h formulas and mermaid diagrams), when available. Disable it to' +
+              ' use the internal HTML viewer.'
+            Caption = 'Use WebView2 (Edge) when available'
+            ParentShowHint = False
+            ShowHint = True
+            TabOrder = 2
           end
         end
         object RenderingGroupBox: TGroupBox

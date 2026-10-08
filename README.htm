@@ -1,7 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
 <style type="text/css">
-body{
-  font-family: Arial, Helvetica, sans-serif;
-}
+:root{color-scheme:dark;}
+body{font-family:"Arial",sans-serif;font-size:12pt;color:#FFFFFF;background-color:#191D22;}
+a{color:#0000FF;}
+.markdown-alert>:last-child{margin-bottom:0;}
+.markdown-alert-title{margin-top:0;}
+@media print{body{color:#000;background-color:#fff;}}
+</style>
+<script>
+document.addEventListener("click",function(e){var a=e.target.closest("a");if(a){var h=a.getAttribute("href");if(h&&h.charAt(0)==="#"){e.preventDefault();var t=document.getElementById(decodeURIComponent(h.substring(1)));if(t)t.scrollIntoView();}}});
+window.addEventListener("scroll",function(){if(window.chrome&&chrome.webview)chrome.webview.postMessage("scrollY:"+Math.round(window.scrollY)+":"+Math.max(0,Math.round(document.documentElement.scrollHeight-window.innerHeight)));});
+</script>
+</head>
+<body>
+<style type="text/css">
 img{
   max-width: 100%;
   height: auto;
@@ -28,74 +43,174 @@ table{
   border:1px solid;
   border-collapse:collapse;
 }
-th{  padding:5px;
+th{
+  padding:5px;
   border:1px solid;
 }
 td{
   padding:5px;
   border:1px solid;
 }
+mark{
+  background-color: #fff3a0;
+  color: #000;
+}
+kbd{
+  font-family: "Consolas", monospace;
+  border: 1px solid #bbb;
+  padding: 0 4px;
+}
+div.math{
+  text-align: center;
+}
+pre.mermaid{
+  border: none;
+  padding: 0;
+}
+.markdown-alert{
+  padding: 0.5em 1em;
+  margin-bottom: 1em;
+  border-left: 4px solid #d0d7de;
+}
+.markdown-alert-title{
+  font-weight: bold;
+}
+.markdown-alert-note{
+  border-left: 4px solid #0969da;
+}
+.markdown-alert-note .markdown-alert-title{
+  color: #0969da;
+}
+.markdown-alert-tip{
+  border-left: 4px solid #1a7f37;
+}
+.markdown-alert-tip .markdown-alert-title{
+  color: #1a7f37;
+}
+.markdown-alert-important{
+  border-left: 4px solid #8250df;
+}
+.markdown-alert-important .markdown-alert-title{
+  color: #8250df;
+}
+.markdown-alert-warning{
+  border-left: 4px solid #9a6700;
+}
+.markdown-alert-warning .markdown-alert-title{
+  color: #9a6700;
+}
+.markdown-alert-caution{
+  border-left: 4px solid #cf222e;
+}
+.markdown-alert-caution .markdown-alert-title{
+  color: #cf222e;
+}
 </style>
-<h1>Markdown Editor and Shell Extensions <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg" alt="License"/></a></h1>
-<p><strong>Latest Version 2.8.5 - 03 Sep 2026</strong></p>
+<h1 id="markdown-editor-and-shell-extensions">Markdown Editor and Shell Extensions</h1>
+<!-- raw HTML omitted -->
+<p><a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License: Apache" /></a>
+<a href="https://github.com/EtheaDev/MarkdownShellExtensions/releases"><img src="https://img.shields.io/github/v/release/EtheaDev/MarkdownShellExtensions?label=release&amp;color=blue" alt="Latest release" /></a>
+<a href="https://www.embarcadero.com/products/delphi"><img src="https://img.shields.io/badge/Delphi-12%2B-e62329.svg" alt="Delphi 12+" /></a>
+<a href="https://docwiki.embarcadero.com/RADStudio/en/Main_Page"><img src="https://img.shields.io/badge/Platform-VCL-8a2be2.svg" alt="Platform: VCL" /></a>
+<a href="https://spec.commonmark.org/0.31.2/"><img src="https://img.shields.io/badge/CommonMark-0.31.2%20652%2F652-1f6feb.svg" alt="CommonMark 0.31.2" /></a>
+<a href="https://github.github.com/gfm/"><img src="https://img.shields.io/badge/GFM-0.29%2024%2F24-24292f.svg" alt="GFM 0.29" /></a>
+<a href="https://katex.org/"><img src="https://img.shields.io/badge/Math-35%2F35-008080.svg" alt="Math formulas" /></a>
+<a href="https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts"><img src="https://img.shields.io/badge/Alerts-20%2F20-d29922.svg" alt="GitHub alerts" /></a>
+<a href="https://katex.org/"><img src="https://img.shields.io/badge/KaTeX-0.16.11-008080.svg" alt="KaTeX 0.16.11" /></a>
+<a href="https://mermaid.js.org/"><img src="https://img.shields.io/badge/Mermaid-11.17.2-ff3670.svg" alt="Mermaid 11.17.2" /></a>
+<a href="https://developer.microsoft.com/microsoft-edge/webview2/"><img src="https://img.shields.io/badge/WebView2-Edge-0078d4.svg" alt="Microsoft Edge WebView2" /></a>
+<a href="https://www.microsoft.com/windows"><img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d6.svg" alt="Windows 10 and 11" /></a></p>
+<p><img src="/Setup/SupportingDelphi.jpg" alt="Delphi Support" /></p>
+<p>Related links: <a href="https://www.embarcadero.com/">embarcadero.com</a> - <a href="https://learndelphi.org/">learndelphi.org</a></p>
 <p><strong>A collection of tools for markdown files, to edit and view content:</strong></p>
 <ul>
-<li><p>A <strong>Markdown Text Editor</strong> to manually edit a markdown file, with instant preview of the output in a HTML Viewer.</p>
+<li>
+<p>A <strong>Markdown Text Editor</strong> to manually edit a markdown file, with instant preview of the output: the preview uses Microsoft Edge WebView2, so math formulas and mermaid diagrams are drawn as on GitHub.</p>
 </li>
-<li><p>A <strong>Preview handler</strong> which allows you to see the content of the markdown file without open it, in the &ldquo;Preview Panel&rdquo;, integrated into Windows Explorer.</p>
-</li>
-</ul>
-<h3>Features</h3>
-<ul>
-<li><p>No need to built the project with Delphi: an easy Setup is provided.</p>
-</li>
-<li><p>Supports Windows 10 and 11 (for 32 bits and 64 bits).</p>
-</li>
-<li><p>Themes (Dark and Light) according to user preferences of Windows Theme</p>
-</li>
-<li><p>Integrated also with other Shell Applications (like XYplorer)</p>
+<li>
+<p>A <strong>Preview handler</strong> which allows you to see the content of the markdown file without open it, in the “Preview Panel”, integrated into Windows Explorer.</p>
 </li>
 </ul>
-<h3>Delphi: integration with MarkDown Help Viewer</h3>
+<h3 id="documentation">Documentation</h3>
+<p>Follow the <a href="https://ethea.it/docs/markdowntools/">Project Site</a> to know all the markdown tools and the Delphi components: Markdown Processor, Markdown Text Editor and Markdown Help Viewer.</p>
+<hr />
+<h3 id="features">Features</h3>
 <ul>
-<li>For Delphi developers: use this tool to prepare and integrate a Help System in your application, using the <a href="https://github.com/EtheaDev/MarkdownHelpViewer">&ldquo;MarkDown Help Viewer&rdquo;</a> project.</li>
+<li>
+<p>No need to built the project with Delphi: an easy Setup is provided.</p>
+</li>
+<li>
+<p>Supports Windows 10 and 11 (for 32 bits and 64 bits).</p>
+</li>
+<li>
+<p>Themes (Dark and Light) according to user preferences of Windows Theme</p>
+</li>
+<li>
+<p>Uses the latest, empowered version of the <a href="https://github.com/EtheaDev/MarkdownProcessor">Markdown Processor</a> (2.0): CommonMark 0.31.2 and GitHub Flavored Markdown compliant engine. The default dialect is now <strong>GitHub</strong> (GFM + math formulas, alerts and mermaid diagrams, plus subscript, superscript, insert, mark, smart typography, heading ids and wiki links); CommonMark, GFM, DaringFireball and TxtMark are still available.</p>
+</li>
+<li>
+<p>The preview of the <strong>Markdown Text Editor</strong> uses <strong>Microsoft Edge WebView2</strong> (TEdgeMarkdownViewer of the <a href="https://github.com/EtheaDev/MarkdownHelpViewer">Markdown Help Viewer</a> project): math formulas with KaTeX, mermaid diagrams, GitHub alerts, synchronized scroll with the editor. When WebView2 is not available, or it is disabled in the Settings (“Use WebView2 (Edge) when available”), the preview uses HTMLViewer. <strong>WebView2Loader.dll</strong> is distributed with the editor (installed by the Setup). KaTeX and mermaid.js are installed with the editor too (Scripts folder): math formulas, mermaid diagrams and charts (pie, bar and line charts) are drawn also <strong>without an Internet connection</strong>.</p>
+</li>
+<li>
+<p>The <strong>Preview Panel</strong> of Windows Explorer keeps the internal HTML viewer (HTMLViewer): math formulas are shown as images and mermaid diagrams as text.</p>
+</li>
+<li>
+<p>Integrated also with other Shell Applications (like XYplorer)</p>
+</li>
+</ul>
+<h3 id="delphi-integration-with-markdown-help-viewer">Delphi: integration with MarkDown Help Viewer</h3>
+<ul>
+<li>For Delphi developers: use this tool to prepare and integrate a Help System in your application, using the <a href="https://github.com/EtheaDev/MarkdownHelpViewer">“MarkDown Help Viewer”</a> project.</li>
 <li>Use the <strong>Markdown Text Editor</strong> to edit your help files and use the <strong>Markdown Help Viewer</strong> to show them.</li>
 </ul>
-<h3>Setup using the Installer</h3>
+<h3 id="setup-using-the-installer">Setup using the Installer</h3>
 <p>Click to download the <a href="https://github.com/EtheaDev/MarkdownShellExtensions/releases/latest/download/MDShellExtensionsSetup.exe">MDShellExtensionsSetup.exe</a> located also in the Release area. The Installer works both for 32 and 64 bit system.</p>
-<p><img src="./Images/Setup.png" alt="Markdown Setup_Program"/></p>
-<p><strong><em>For a clean Setup close all the windows explorer instances which have the preview handler active or the preview handler was used (remember the dll remains in memory until the windows explorer was closed).</em></strong></p>
-<h3>Markdown Text Editor</h3>
+<p><img src="./Images/Setup.png" alt="Markdown Setup_Program" /></p>
+<p><em><strong>For a clean Setup close all the windows explorer instances which have the preview handler active or the preview handler was used (remember the dll remains in memory until the windows explorer was closed).</strong></em></p>
+<h3 id="markdown-text-editor">Markdown Text Editor</h3>
 <p>A useful Text editor with instant preview of Markdown formatted content:</p>
-<p><img src="./Images/MDTextEditorLight.png" alt="Markdown Text Editor Dark"/></p>
-<h3>Manual Build and Installation (only for Delphi developers)</h3>
+<p><img src="./Images/MDTextEditorLight.png" alt="Markdown Text Editor Dark" /></p>
+<h3 id="manual-build-and-installation-only-for-delphi-developers">Manual Build and Installation (only for Delphi developers)</h3>
 <p>Learn more about the manual within our <a href="https://github.com/EtheaDev/MarkdownShellExtensions/wiki/Manual-Build-and-Installation">wiki</a>. Dive deeper into everything related to this tool, its features, and how to make the most of it.</p>
-<h3>Preview Panel in action</h3>
+<h3 id="preview-panel-in-action">Preview Panel in action</h3>
 <p>In Windows 10 with Dark theme:</p>
-<p><img src="./Images/PreviewPanelDark.png" alt="Preview Panel Dark"/></p>
-<h3>Manual Build and Installation (only for Delphi developers)</h3>
+<p><img src="./Images/PreviewPanelDark.png" alt="Preview Panel Dark" /></p>
+<h3 id="manual-build-and-installation-only-for-delphi-developers-1">Manual Build and Installation (only for Delphi developers)</h3>
 <p>If you have Delphi 12 or 13, you can manually build the projects using:</p>
 <p>\Source\MDShellExtensionsGroup.groupproj</p>
 <p>or the command: Build.bat (defining location of your Delphi environment)</p>
-<p><strong><em>Warning: To simplyfy build of the projects, some third parties libraries are located into ext folder</em></strong></p>
+<p><em><strong>Warning: To simplyfy build of the projects, some third parties libraries are located into ext folder</strong></em></p>
 <p>To manually install the SVGShellExtensions.dll follow these steps:</p>
 <ol>
-<li><p>Close all the windows explorer instances which have the preview handler active or the preview handler was used (remember the dll remains in memory until the windows explorer was closed).</p>
+<li>
+<p>Close all the windows explorer instances which have the preview handler active or the preview handler was used (remember the dll remains in memory until the windows explorer was closed).</p>
 </li>
-<li><p>If you have already used the installer uninstall the components from system.</p>
+<li>
+<p>If you have already used the installer uninstall the components from system.</p>
 </li>
-<li><p>To install manually the dll run the <code>Unregister_Register.cmd</code> (run-as-administrator): notice that you must change the path into cmd file.</p>
+<li>
+<p>To install manually the dll run the <code>Unregister_Register.cmd</code> (run-as-administrator): notice that you must change the path into cmd file.</p>
 </li>
 </ol>
-<h2>Release Notes</h2>
+<h2 id="release-notes">Release Notes</h2>
+<p>08 Oct 2026: ver. 3.0.0 (major version)</p>
+<ul>
+<li>Uses the new Markdown Processor 2.0: CommonMark 0.31.2 and GitHub Flavored Markdown compliant engine, with math formulas, GitHub alerts, mermaid diagrams and the legacy extensions (subscript, superscript, insert, mark, smart typography, heading ids, wiki links)</li>
+<li>New default dialect: GitHub. The dialect saved by the previous versions as CommonMark (the old default) is automatically converted to GitHub; the dialect is now stored by name in the settings, and the dialect combo lists all the dialects (DaringFireball, CommonMark, TxtMark, GFM, GitHub)</li>
+<li>Markdown Text Editor: the preview uses Microsoft Edge WebView2 (math formulas with KaTeX, mermaid diagrams, alerts, synchronized scroll); print preview with the WebView2 print dialog, PDF export with WebView2, HTML export of the full page with the scripts. Fallback to HTMLViewer when WebView2 is not available or when “Use WebView2 (Edge) when available” is disabled in the Settings</li>
+<li>WebView2Loader.dll is distributed with the Markdown Text Editor (installed by the Setup)</li>
+<li>Math formulas and mermaid diagrams (also charts: pie, bar and line charts) are drawn in the preview of the Markdown Text Editor also without an Internet connection: KaTeX 0.16.11 and mermaid 11.17.2 are distributed in the <strong>Scripts</strong> folder (installed by the Setup)</li>
+<li>Preview Panel of Windows Explorer: still based on HTMLViewer, now with math formulas as images</li>
+<li>New default stylesheet, shared with the Markdown Help Viewer: styles for alerts, mark, kbd, math and mermaid; the font of the page is the HTML font of the Settings</li>
+</ul>
 <p>03 Sep 2026: ver. 2.8.5</p>
 <ul>
 <li>Fixed an Access Violation when downloading a new setup right after the automatic version check: the shared HTTP client was created only by the manual check, so the automatic path reached the download with no client at all.</li>
 <li>A missing setup file name or project URL is now reported with a clear message instead of an assertion, which is compiled out of release builds.</li>
-<li>Web help and repository are now kept distinct: the documentation points to https://ethea.it/docs/markdowntools/, while the Issues button and the new-version check point to GitHub.</li>
+<li>Web help and repository are now kept distinct: the documentation points to <a href="https://ethea.it/docs/markdowntools/">https://ethea.it/docs/markdowntools/</a>, while the Issues button and the new-version check point to GitHub.</li>
 <li>Markdown Text Editor: fixed two memory-management defects on the file-opening error path.</li>
 <li>Markdown Text Editor: closing with unsaved changes can now be cancelled.</li>
-<li>Markdown Text Editor: &ldquo;Save All&rdquo; no longer stops at the first file that cannot be saved; all the failures are reported together at the end.</li>
+<li>Markdown Text Editor: “Save All” no longer stops at the first file that cannot be saved; all the failures are reported together at the end.</li>
 <li>Markdown Text Editor: removed the Help button from the error dialog, which did nothing because no help file is configured.</li>
 </ul>
 <p>01 Sep 2026: ver. 2.8.4</p>
@@ -114,9 +229,9 @@ td{
 <ul>
 <li>Added a configurable HTML stylesheet (CSS) in Settings (Preview page), with CSS syntax highlighting: you can customize how the markdown preview is rendered.</li>
 <li>Large images now fit the page width by default (img max-width).</li>
-<li>Reorganized the Settings dialog: editor options in the &ldquo;General&rdquo; page, HTML preview options in the &ldquo;Preview&rdquo; page.</li>
+<li>Reorganized the Settings dialog: editor options in the “General” page, HTML preview options in the “Preview” page.</li>
 <li>The Settings dialog can now be closed with the Esc key.</li>
-<li>Fixed &ldquo;List index out of bounds&rdquo; at startup when restoring the previous session.</li>
+<li>Fixed “List index out of bounds” at startup when restoring the previous session.</li>
 </ul>
 <p>26 Jun 2026: ver. 2.8.2</p>
 <ul>
@@ -132,9 +247,9 @@ td{
 </ul>
 <p>09 Jun 2026: ver. 2.8.0</p>
 <ul>
-<li>Added syntax highlighting of fenced code blocks (<code>`delphi,</code>`json, &hellip;), based on the language, like GitHub, both in the Editor preview and in the Explorer Preview Panel.</li>
-<li>Added Markdown syntax highlighting in the text editor (headings, bold, italic, links, inline code, lists, blockquotes, &hellip;), with theme-aware colors for light and dark mode.</li>
-<li>Added Settings option &ldquo;Highlight Markdown text&rdquo; (enabled by default) to turn the editor's Markdown syntax highlighting on or off.</li>
+<li>Added syntax highlighting of fenced code blocks (<code>delphi, </code>json, …), based on the language, like GitHub, both in the Editor preview and in the Explorer Preview Panel.</li>
+<li>Added Markdown syntax highlighting in the text editor (headings, bold, italic, links, inline code, lists, blockquotes, …), with theme-aware colors for light and dark mode.</li>
+<li>Added Settings option “Highlight Markdown text” (enabled by default) to turn the editor's Markdown syntax highlighting on or off.</li>
 </ul>
 <p>03 Jun 2026: ver. 2.7.3</p>
 <ul>
@@ -149,7 +264,7 @@ td{
 </ul>
 <p>11 Apr 2026: ver. 2.7.1</p>
 <ul>
-<li>Used new &ldquo;modern&rdquo; Styles available in Delphi 13.</li>
+<li>Used new “modern” Styles available in Delphi 13.</li>
 </ul>
 <p>20 Feb 2026: ver. 2.7.0</p>
 <ul>
@@ -170,15 +285,15 @@ td{
 </ul>
 <p>01 Mar 2025: ver. 2.4.0</p>
 <ul>
-<li>Added &ldquo;Wordwrap option&rdquo; for the editor (active by default)</li>
-<li>Added &ldquo;Layout Views&rdquo;</li>
+<li>Added “Wordwrap option” for the editor (active by default)</li>
+<li>Added “Layout Views”</li>
 <li>Fixed Menu over Editor Toolbar and Captions when collapsed</li>
 <li>Updated the latest Image32 library</li>
 </ul>
 <p>26 Jan 2025: ver. 2.3.3</p>
 <ul>
 <li>Fixed loading remote svg files</li>
-<li>Fixed &ldquo;autocreate&rdquo; missing file</li>
+<li>Fixed “autocreate” missing file</li>
 </ul>
 <p>22 Jan 2025: ver. 2.3.2</p>
 <ul>
@@ -241,13 +356,13 @@ td{
 </ul>
 <p>3 Nov 2023: ver. 2.0.2</p>
 <ul>
-<li>Added &ldquo;mark&rdquo; command in markdown toolbar</li>
+<li>Added “mark” command in markdown toolbar</li>
 <li>Recognized 1) same as 1. (ordered list)</li>
 <li>Added .text and .txt extensions to editor/shell extensions</li>
 </ul>
 <p>25 Oct 2023: ver. 2.0.1</p>
 <ul>
-<li>Fixed some &ldquo;hints&rdquo;</li>
+<li>Fixed some “hints”</li>
 <li>Uses System Border and Shadows for Forms</li>
 </ul>
 <p>24 Oct 2023: ver. 2.0.0</p>
@@ -260,16 +375,16 @@ td{
 <li>Updated Markdown library with best support for CommonMark transformation</li>
 </ul>
 <ol>
-<li>Subscript <sub>text</sub> and Superscript <sup>text</sup></li>
+<li>Subscript <!-- raw HTML omitted -->text<!-- raw HTML omitted --> and Superscript <!-- raw HTML omitted -->text<!-- raw HTML omitted --></li>
 <li>Formulas (using <a href="https://developers.google.com/chart/infographics/docs/formulas">Google Chart API</a>)</li>
 <li><mark>Markers</mark></li>
 <li><a href="https://www.markdownguide.org/basic-syntax/#reference-style-links">Reference-style Links</a></li>
 </ol>
 <p>29 Jun 2023: ver. 1.5.2</p>
 <ul>
-<li>Fixed loading images with &ldquo;spaces&rdquo; in the filename</li>
+<li>Fixed loading images with “spaces” in the filename</li>
 <li>Fixed immediate-loading of new images when editing the file</li>
-<li>During loading of remote images, user can stop loading pressing &ldquo;Esc&rdquo;</li>
+<li>During loading of remote images, user can stop loading pressing “Esc”</li>
 <li>Updated Copyright for the Editor</li>
 </ul>
 <p>26 Jun 2023: ver. 1.5.1</p>
@@ -284,7 +399,7 @@ td{
 <li>Added useful close button on Tabs</li>
 <li>Hint full filename on Tabs</li>
 <li>Save/Discard messaged default response inverted</li>
-<li>Removed Settings &ldquo;Search In Folder&rdquo;</li>
+<li>Removed Settings “Search In Folder”</li>
 </ul>
 <p>1 Nov 2022: ver. 1.4.3</p>
 <ul>
@@ -317,47 +432,51 @@ td{
 <ul>
 <li>First public release with setup</li>
 </ul>
-<h2>Credits</h2>
+<h2 id="credits">Credits</h2>
 <p>Many thanks to <strong>Rodrigo Ruz V.</strong> (author of <a href="https://theroadtodelphi.com/">theroadtodelphi.com</a> Blog) for his wonderful work on <a href="https://theroadtodelphi.com/category/previewhandler/">delphi-preview-handler</a> from which this project has used a lot of code and inspiration.</p>
-<h2>License</h2>
-<p>Licensed under the <a href="https://opensource.org/licenses/Apache-2.0">Apache License, Version 2.0</a> (the &ldquo;License&rdquo;);</p>
-<p>Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an &ldquo;AS IS&rdquo; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.</p>
-<h3>Other libraries from Ethea:</h3>
-<p><strong>SVGIconImageList</strong> - https://github.com/EtheaDev/SVGIconImageList/</p>
-<p><strong>StyledComponents</strong> - https://github.com/EtheaDev/StyledComponents</p>
-<p><strong>Delphi MarkdownProcessor</strong> - https://github.com/EtheaDev/MarkdownProcessor</p>
-<h3>Third parties libraries:</h3>
+<h2 id="license">License</h2>
+<p>Licensed under the <a href="https://opensource.org/licenses/Apache-2.0">Apache License, Version 2.0</a> (the “License”);</p>
+<p>Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.</p>
+<h3 id="other-libraries-from-ethea">Other libraries from Ethea:</h3>
+<p><strong>SVGIconImageList</strong> - <a href="https://github.com/EtheaDev/SVGIconImageList/">https://github.com/EtheaDev/SVGIconImageList/</a></p>
+<p><strong>StyledComponents</strong> - <a href="https://github.com/EtheaDev/StyledComponents">https://github.com/EtheaDev/StyledComponents</a></p>
+<p><strong>Delphi MarkdownProcessor</strong> - <a href="https://github.com/EtheaDev/MarkdownProcessor">https://github.com/EtheaDev/MarkdownProcessor</a></p>
+<h3 id="third-parties-libraries">Third parties libraries:</h3>
 <p><strong>OpenSLL Library</strong>: Cryptography and SSL/TLS Toolkit</p>
 <p>Copyright © 1998-2018 The OpenSSL Project.  All rights reserved.</p>
-<p><strong>Delphi Markdown</strong> - https://github.com/grahamegrieve/delphi-markdown</p>
+<p><strong>Delphi Markdown</strong> - <a href="https://github.com/grahamegrieve/delphi-markdown">https://github.com/grahamegrieve/delphi-markdown</a></p>
 <p>Copyright (c) 2011+, Health Intersections Pty Ltd All rights reserved</p>
-<p><strong>Delphi Preview Handler</strong> - https://github.com/RRUZ/delphi-preview-handler</p>
+<p><strong>Delphi Preview Handler</strong> - <a href="https://github.com/RRUZ/delphi-preview-handler">https://github.com/RRUZ/delphi-preview-handler</a></p>
 <p>The Initial Developer of the Original Code is Rodrigo Ruz V.
 Portions created by Rodrigo Ruz V. are Copyright © 2011-2023 Rodrigo Ruz V.</p>
-<p><strong>SynEdit</strong> - http://synedit.svn.sourceforge.net/viewvc/synedit/</p>
+<p><strong>SynEdit</strong> - <a href="http://synedit.svn.sourceforge.net/viewvc/synedit/">http://synedit.svn.sourceforge.net/viewvc/synedit/</a></p>
 <p>all rights reserved.</p>
-<p><strong>Synopse/SynPDF</strong> - https://github.com/synopse/SynPDF</p>
+<p><strong>KaTeX</strong> - <a href="https://katex.org/">https://katex.org/</a></p>
+<p>Copyright (c) 2013-2020 Khan Academy and other contributors (MIT License)</p>
+<p><strong>Mermaid</strong> - <a href="https://mermaid.js.org/">https://mermaid.js.org/</a></p>
+<p>Copyright (c) 2014-2022 Knut Sveidqvist (MIT License)</p>
+<p><strong>Synopse/SynPDF</strong> - <a href="https://github.com/synopse/SynPDF">https://github.com/synopse/SynPDF</a></p>
 <p>Copyright © Synopse: all right reserved.</p>
-<p><strong>HtmlToPdf</strong> - https://github.com/MuzioValerio/HtmlToPdf</p>
+<p><strong>HtmlToPdf</strong> - <a href="https://github.com/MuzioValerio/HtmlToPdf">https://github.com/MuzioValerio/HtmlToPdf</a></p>
 <p>Copyright © Muzio Valerio.</p>
-<p><strong>Image32 Library</strong> - http://www.angusj.com/delphi/image32/Docs/_Body.htm</p>
+<p><strong>Image32 Library</strong> - <a href="http://www.angusj.com/delphi/image32/Docs/_Body.htm">http://www.angusj.com/delphi/image32/Docs/_Body.htm</a></p>
 <p>Copyright ©2019-2025 Angus Johnson.</p>
-<p><strong>dzlib</strong> - https://sourceforge.net/projects/dzlib/</p>
+<p><strong>dzlib</strong> - <a href="https://sourceforge.net/projects/dzlib/">https://sourceforge.net/projects/dzlib/</a></p>
 <p>Copyright (c) Thomas Mueller</p>
-<p><strong>HTMLViewer</strong> - https://github.com/BerndGabriel/HtmlViewer</p>
+<p><strong>HTMLViewer</strong> - <a href="https://github.com/BerndGabriel/HtmlViewer">https://github.com/BerndGabriel/HtmlViewer</a></p>
 <p>Copyright (c) 1995 - 2008 by L. David Baldwin</p>
 <p>Copyright (c) 1995 - 2023 by Anders Melander (DitherUnit.pas)</p>
 <p>Copyright (c) 1995 - 2023 by Ron Collins (HtmlGif1.pas)</p>
 <p>Copyright (c) 2008 - 2009 by Sebastian Zierer (Delphi 2009 Port)</p>
 <p>Copyright (c) 2008 - 2010 by Arvid Winkelsdorf (Fixes)</p>
 <p>Copyright (c) 2009 - 2023 by HtmlViewer Team</p>
-<h1>External projects</h1>
-<p><strong><em>To simpilfy compilation of projects they are added into ext folder</em></strong></p>
+<h1 id="external-projects">External projects</h1>
+<p><em><strong>To simpilfy compilation of projects they are added into ext folder</strong></em></p>
 <p><a href="https://github.com/EtheaDev/SVGIconImageList">SVGIconImageList</a></p>
 <p><a href="https://github.com/BerndGabriel/HtmlViewer">HtmlViewer</a></p>
 <p><a href="https://github.com/RRUZ/vcl-styles-utils">vcl-styles-utils</a></p>
 <p><a href="https://github.com/EtheaDev/MarkdownProcessor">markdownProcessor</a></p>
 <p><a href="https://github.com/EtheaDev/StyledComponents">StyledComponents</a></p>
 <p><a href="https://sourceforge.net/projects/dzlib/">dzlib</a></p>
-<p><img src="/Setup/SupportingDelphi.jpg" alt="Delphi Support"/></p>
-<p>Related links: <a href="https://www.embarcadero.com/">embarcadero.com</a> - <a href="https://learndelphi.org/">learndelphi.org</a></p>
+</body>
+</html>

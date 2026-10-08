@@ -1,12 +1,34 @@
-﻿# Markdown Editor and Shell Extensions [![License](https://img.shields.io/badge/License-Apache%202.0-yellowgreen.svg)](https://opensource.org/licenses/Apache-2.0)
+﻿# Markdown Editor and Shell Extensions
 
-**Latest Version 2.8.5 - 03 Sep 2026**
+<!-- badges -->
+[![License: Apache](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/EtheaDev/MarkdownShellExtensions?label=release&color=blue)](https://github.com/EtheaDev/MarkdownShellExtensions/releases)
+[![Delphi 12+](https://img.shields.io/badge/Delphi-12%2B-e62329.svg)](https://www.embarcadero.com/products/delphi)
+[![Platform: VCL](https://img.shields.io/badge/Platform-VCL-8a2be2.svg)](https://docwiki.embarcadero.com/RADStudio/en/Main_Page)
+[![CommonMark 0.31.2](https://img.shields.io/badge/CommonMark-0.31.2%20652%2F652-1f6feb.svg)](https://spec.commonmark.org/0.31.2/)
+[![GFM 0.29](https://img.shields.io/badge/GFM-0.29%2024%2F24-24292f.svg)](https://github.github.com/gfm/)
+[![Math formulas](https://img.shields.io/badge/Math-35%2F35-008080.svg)](https://katex.org/)
+[![GitHub alerts](https://img.shields.io/badge/Alerts-20%2F20-d29922.svg)](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts)
+[![KaTeX 0.16.11](https://img.shields.io/badge/KaTeX-0.16.11-008080.svg)](https://katex.org/)
+[![Mermaid 11.17.2](https://img.shields.io/badge/Mermaid-11.17.2-ff3670.svg)](https://mermaid.js.org/)
+[![Microsoft Edge WebView2](https://img.shields.io/badge/WebView2-Edge-0078d4.svg)](https://developer.microsoft.com/microsoft-edge/webview2/)
+[![Windows 10 and 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078d6.svg)](https://www.microsoft.com/windows)
+
+![Delphi Support](/Setup/SupportingDelphi.jpg)
+
+Related links: [embarcadero.com][3] - [learndelphi.org][4]
 
 **A collection of tools for markdown files, to edit and view content:**
 
-- A **Markdown Text Editor** to manually edit a markdown file, with instant preview of the output in a HTML Viewer.
+- A **Markdown Text Editor** to manually edit a markdown file, with instant preview of the output: the preview uses Microsoft Edge WebView2, so math formulas and mermaid diagrams are drawn as on GitHub.
 
 - A **Preview handler** which allows you to see the content of the markdown file without open it, in the "Preview Panel", integrated into Windows Explorer.
+
+### Documentation
+
+Follow the [Project Site](https://ethea.it/docs/markdowntools/) to know all the markdown tools and the Delphi components: Markdown Processor, Markdown Text Editor and Markdown Help Viewer.
+
+---
 
 ### Features
 
@@ -15,6 +37,12 @@
 - Supports Windows 10 and 11 (for 32 bits and 64 bits).
 
 - Themes (Dark and Light) according to user preferences of Windows Theme
+
+- Uses the latest, empowered version of the [Markdown Processor](https://github.com/EtheaDev/MarkdownProcessor) (2.0): CommonMark 0.31.2 and GitHub Flavored Markdown compliant engine. The default dialect is now **GitHub** (GFM + math formulas, alerts and mermaid diagrams, plus subscript, superscript, insert, mark, smart typography, heading ids and wiki links); CommonMark, GFM, DaringFireball and TxtMark are still available.
+
+- The preview of the **Markdown Text Editor** uses **Microsoft Edge WebView2** (TEdgeMarkdownViewer of the [Markdown Help Viewer](https://github.com/EtheaDev/MarkdownHelpViewer) project): math formulas with KaTeX, mermaid diagrams, GitHub alerts, synchronized scroll with the editor. When WebView2 is not available, or it is disabled in the Settings ("Use WebView2 (Edge) when available"), the preview uses HTMLViewer. **WebView2Loader.dll** is distributed with the editor (installed by the Setup). KaTeX and mermaid.js are installed with the editor too (Scripts folder): math formulas, mermaid diagrams and charts (pie, bar and line charts) are drawn also **without an Internet connection**.
+
+- The **Preview Panel** of Windows Explorer keeps the internal HTML viewer (HTMLViewer): math formulas are shown as images and mermaid diagrams as text.
 
 - Integrated also with other Shell Applications (like XYplorer)
 
@@ -66,6 +94,15 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+08 Oct 2026: ver. 3.0.0 (major version)
+- Uses the new Markdown Processor 2.0: CommonMark 0.31.2 and GitHub Flavored Markdown compliant engine, with math formulas, GitHub alerts, mermaid diagrams and the legacy extensions (subscript, superscript, insert, mark, smart typography, heading ids, wiki links)
+- New default dialect: GitHub. The dialect saved by the previous versions as CommonMark (the old default) is automatically converted to GitHub; the dialect is now stored by name in the settings, and the dialect combo lists all the dialects (DaringFireball, CommonMark, TxtMark, GFM, GitHub)
+- Markdown Text Editor: the preview uses Microsoft Edge WebView2 (math formulas with KaTeX, mermaid diagrams, alerts, synchronized scroll); print preview with the WebView2 print dialog, PDF export with WebView2, HTML export of the full page with the scripts. Fallback to HTMLViewer when WebView2 is not available or when "Use WebView2 (Edge) when available" is disabled in the Settings
+- WebView2Loader.dll is distributed with the Markdown Text Editor (installed by the Setup)
+- Math formulas and mermaid diagrams (also charts: pie, bar and line charts) are drawn in the preview of the Markdown Text Editor also without an Internet connection: KaTeX 0.16.11 and mermaid 11.17.2 are distributed in the **Scripts** folder (installed by the Setup)
+- Preview Panel of Windows Explorer: still based on HTMLViewer, now with math formulas as images
+- New default stylesheet, shared with the Markdown Help Viewer: styles for alerts, mark, kbd, math and mermaid; the font of the page is the HTML font of the Settings
+
 03 Sep 2026: ver. 2.8.5
 - Fixed an Access Violation when downloading a new setup right after the automatic version check: the shared HTTP client was created only by the manual check, so the automatic path reached the download with no client at all.
 - A missing setup file name or project URL is now reported with a clear message instead of an assertion, which is compiled out of release builds.
@@ -295,6 +332,14 @@ Portions created by Rodrigo Ruz V. are Copyright © 2011-2023 Rodrigo Ruz V.
 
 all rights reserved.
 
+**KaTeX** - https://katex.org/
+
+Copyright (c) 2013-2020 Khan Academy and other contributors (MIT License)
+
+**Mermaid** - https://mermaid.js.org/
+
+Copyright (c) 2014-2022 Knut Sveidqvist (MIT License)
+
 **Synopse/SynPDF** - https://github.com/synopse/SynPDF
 
 Copyright © Synopse: all right reserved.
@@ -340,10 +385,6 @@ Copyright (c) 2009 - 2023 by HtmlViewer Team
 [StyledComponents](https://github.com/EtheaDev/StyledComponents)
 
 [dzlib](https://sourceforge.net/projects/dzlib/)
-
-![Delphi Support](/Setup/SupportingDelphi.jpg)
-
-Related links: [embarcadero.com][3] - [learndelphi.org][4]
 
 [1]: https://github.com/EtheaDev/MarkdownShellExtensions/releases/latest/download/MDShellExtensionsSetup.exe
 

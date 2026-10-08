@@ -47,8 +47,50 @@ Type
   end;
   {$ifend}
 
-  TMarkdownProcessorDialect = (mdDaringFireball, mdCommonMark, mdTxtMark);
+  // The order is load-bearing (backward compatibility): append new values only.
+  TMarkdownProcessorDialect = (mdDaringFireball, mdCommonMark, mdTxtMark, mdGFM, mdGitHub);
   TSeTMarkdownProcessorDialect = set of TMarkdownProcessorDialect;
+
+  /// <summary>Optional syntax of the CommonMark/GFM engine (mdCommonMark, mdGFM).
+  /// Ignored by mdDaringFireball and mdTxtMark.</summary>
+  TMarkdownExtension = (
+    // GitHub Flavored Markdown
+    mexTables, mexTaskLists, mexStrikethrough, mexAutolinks, mexTagFilter,
+    // other standards in common use
+    mexMath, mexAlerts,
+    // legacy (Ethea) extensions, non-standard
+    mexSubscript,         // ~x~
+    mexSuperscript,       // ^x^
+    mexInsert,            // ++x++
+    mexMark,              // ==x==
+    mexSmartTypography,   // -- --- ... (C) (R) (TM) "quotes" << >>
+    mexHeadingAttributes, // # Title {#id}
+    mexAutoHeadingIds,    // GitHub-style slug ids
+    mexWikiLinks,         // [[...]]
+    // diagrams
+    mexMermaid);          // ```mermaid -> <pre class="mermaid"> for mermaid.js
+  TMarkdownExtensions = set of TMarkdownExtension;
+
+  /// <summary>How the new engine writes math (mexMath).</summary>
+  TMarkdownMathRendering = (
+    // <span class="math">\(...\)</span>, <div class="math">\[...\]</div>:
+    // typeset in the page by KaTeX or MathJax (e.g. WebView2)
+    mmrMarkup,
+    // <img> from latex.codecogs.com: for viewers without JavaScript (e.g.
+    // HTMLViewer); needs the network
+    mmrCodeCogsImage);
+
+const
+  /// <summary>Default extensions of mdGFM: the five GFM 0.29 extensions.</summary>
+  GFMExtensions: TMarkdownExtensions = [mexTables, mexTaskLists, mexStrikethrough,
+    mexAutolinks, mexTagFilter];
+  /// <summary>Default extensions of mdGitHub: what github.com renders.</summary>
+  GitHubExtensions: TMarkdownExtensions = [mexTables, mexTaskLists, mexStrikethrough,
+    mexAutolinks, mexTagFilter, mexMath, mexAlerts, mexMermaid];
+  /// <summary>The dialect used when none is given.</summary>
+  DefaultMarkdownDialect = mdGitHub;
+
+type
 
   THTMLElement = (heNONE, hea, heabbr, heacronym, headdress, heapplet, hearea, heb, hebase, hebasefont, hebdo, hebig, heblockquote, hebody, hebr, hebutton, hecaption, hecite,
     hecode, hecol, hecolgroup, hedd, hedel, hedfn, hediv, hedl, hedt, heem, hefieldset, hefont, heform, heframe, heframeset, heh1, heh2, heh3, heh4, heh5, heh6, hehead, hehr,
@@ -56,11 +98,17 @@ Type
     hes, hesamp, hescript, heselect, hesmall, hespan, hestrike, hestrong, hestyle, hesub, hesup, hetable, hetbody, hetd, hetextarea, hetfoot, heth, hethead, hetitle, hetr, hett,
     heu, heul, hevar);
 
-const MarkdownDefaultCSS =
-    '<style type="text/css">'#10+
-    'body{'+
-    '     font-family: Arial, sans-serif;'+
-    '}'+
+const
+  /// <summary>The rules of the default stylesheet for the HTML elements written
+  /// by the processor (code, quotes, tables, images, mark, kbd, math, mermaid,
+  /// GitHub alerts), without the font of the page and without the &lt;style&gt;
+  /// tag: the viewers (MarkdownHelpViewer) use it with their own font settings.
+  /// Only CSS that HTMLViewer understands.</summary>
+  MarkdownBaseCSS =
+    'img{'#10+
+    '  max-width: 100%;'#10+
+    '  height: auto;'#10+
+    '}'#10+
     'code{'#10+
     '  font-family: "Consolas", monospace;'#10+
     '}'#10+
@@ -83,7 +131,7 @@ const MarkdownDefaultCSS =
     '  border:1px solid;'#10+
     '  border-collapse:collapse;'#10+
     '}'#10+
-    'th{'+
+    'th{'#10+
     '  padding:5px;'#10+
     '  border:1px solid;'#10+
     '}'#10+
@@ -91,6 +139,68 @@ const MarkdownDefaultCSS =
     '  padding:5px;'#10+
     '  border:1px solid;'#10+
     '}'#10+
+    'mark{'#10+
+    '  background-color: #fff3a0;'#10+
+    '  color: #000;'#10+
+    '}'#10+
+    'kbd{'#10+
+    '  font-family: "Consolas", monospace;'#10+
+    '  border: 1px solid #bbb;'#10+
+    '  padding: 0 4px;'#10+
+    '}'#10+
+    'div.math{'#10+
+    '  text-align: center;'#10+
+    '}'#10+
+    'pre.mermaid{'#10+
+    '  border: none;'#10+
+    '  padding: 0;'#10+
+    '}'#10+
+    '.markdown-alert{'#10+
+    '  padding: 0.5em 1em;'#10+
+    '  margin-bottom: 1em;'#10+
+    '  border-left: 4px solid #d0d7de;'#10+
+    '}'#10+
+    '.markdown-alert-title{'#10+
+    '  font-weight: bold;'#10+
+    '}'#10+
+    '.markdown-alert-note{'#10+
+    '  border-left: 4px solid #0969da;'#10+
+    '}'#10+
+    '.markdown-alert-note .markdown-alert-title{'#10+
+    '  color: #0969da;'#10+
+    '}'#10+
+    '.markdown-alert-tip{'#10+
+    '  border-left: 4px solid #1a7f37;'#10+
+    '}'#10+
+    '.markdown-alert-tip .markdown-alert-title{'#10+
+    '  color: #1a7f37;'#10+
+    '}'#10+
+    '.markdown-alert-important{'#10+
+    '  border-left: 4px solid #8250df;'#10+
+    '}'#10+
+    '.markdown-alert-important .markdown-alert-title{'#10+
+    '  color: #8250df;'#10+
+    '}'#10+
+    '.markdown-alert-warning{'#10+
+    '  border-left: 4px solid #9a6700;'#10+
+    '}'#10+
+    '.markdown-alert-warning .markdown-alert-title{'#10+
+    '  color: #9a6700;'#10+
+    '}'#10+
+    '.markdown-alert-caution{'#10+
+    '  border-left: 4px solid #cf222e;'#10+
+    '}'#10+
+    '.markdown-alert-caution .markdown-alert-title{'#10+
+    '  color: #cf222e;'#10+
+    '}'#10;
+
+  /// <summary>The default stylesheet: font of the page and MarkdownBaseCSS.</summary>
+  MarkdownDefaultCSS =
+    '<style type="text/css">'#10+
+    'body{'#10+
+    '  font-family: Arial, sans-serif;'#10+
+    '}'#10+
+    MarkdownBaseCSS+
     '</style>'#10;
 
   // pstfix
@@ -322,6 +432,8 @@ Type
     FcodeBlockEmitter: TBlockEmitter;
     FpanicMode: boolean;
     FspecialLinkEmitter: TSpanEmitter;
+    FExtensions: TMarkdownExtensions;
+    FMathRendering: TMarkdownMathRendering;
     procedure SetDialect(AValue: TMarkdownProcessorDialect);
   public
     Constructor Create(safe : boolean);
@@ -334,6 +446,10 @@ Type
     property codeBlockEmitter: TBlockEmitter read FcodeBlockEmitter write FcodeBlockEmitter;
     property allowSpacesInFencedDelimiters: boolean read FallowSpacesInFencedDelimiters write FallowSpacesInFencedDelimiters;
     property specialLinkEmitter: TSpanEmitter read FspecialLinkEmitter write FspecialLinkEmitter;
+    /// <summary>Extensions of the CommonMark/GFM engine (mdCommonMark: [], mdGFM: GFMExtensions).</summary>
+    property Extensions: TMarkdownExtensions read FExtensions write FExtensions;
+    /// <summary>Math output of the new engine (default mmrMarkup).</summary>
+    property MathRendering: TMarkdownMathRendering read FMathRendering write FMathRendering;
   end;
 
   TLineType = (

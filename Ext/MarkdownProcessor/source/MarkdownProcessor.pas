@@ -58,6 +58,7 @@ uses
   System.Classes
   , System.SysUtils
   , MarkdownUtils
+  , MarkdownAST
   ;
 
 Type
@@ -71,10 +72,14 @@ Type
     function GetAllowUnSafe: boolean; virtual; abstract;
     procedure SetAllowUnSafe(const Value: boolean); virtual; abstract;
   public
-    class function CreateDialect(dialect : TMarkdownProcessorDialect) : TMarkdownProcessor;
+    class function CreateDialect(dialect : TMarkdownProcessorDialect = DefaultMarkdownDialect) : TMarkdownProcessor;
     function Process(const ASource : string) : string; virtual; abstract;
     function ProcessFile(const AFileName: TFileName;
       const AEncoding: TEncoding = nil): string; virtual;
+    // Read-only syntax tree (mdCommonMark and mdGFM only; the legacy dialects
+    // raise ENotSupportedException). Render(Parse(s)) = Process(s).
+    function Parse(const ASource: string): IMarkdownNode; virtual;
+    function Render(const ADocument: IMarkdownNode): string; virtual;
     property config: TConfiguration read FConfig write FConfig;
     // when AllowUnsafe = true, then the processor can create scripts etc.
     property AllowUnsafe : boolean read GetAllowUnSafe write SetAllowUnSafe;
@@ -96,9 +101,23 @@ begin
     mdDaringFireball : result := TMarkdownDaringFireball.Create;
     mdCommonMark : result := TMarkdownCommonMark.Create;
     mdTxtMark : result := TMarkdownTxtMark.Create;
+    mdGFM : result := TMarkdownGFM.Create;
+    mdGitHub : result := TMarkdownGitHub.Create;
   else
     raise Exception.Create('Unknown Markdown dialect');
   end;
+end;
+
+function TMarkdownProcessor.Parse(const ASource: string): IMarkdownNode;
+begin
+  raise ENotSupportedException.CreateFmt('%s does not build a syntax tree: use mdCommonMark or mdGFM',
+    [ClassName]);
+end;
+
+function TMarkdownProcessor.Render(const ADocument: IMarkdownNode): string;
+begin
+  raise ENotSupportedException.CreateFmt('%s does not render a syntax tree: use mdCommonMark or mdGFM',
+    [ClassName]);
 end;
 
 function TMarkdownProcessor.ProcessFile(const AFileName: TFileName;

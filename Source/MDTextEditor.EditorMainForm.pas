@@ -69,6 +69,9 @@ uses
   , PageControlHook
   , MarkdownUtils
   , MDCodeHighlightEmitter
+  , Vcl.Edge
+  , Winapi.WebView2
+  , MarkDownEdgeViewerComponents
   ;
 
 const
@@ -108,6 +111,8 @@ type
     FShowXMLText: Boolean;
     FMarkDownFile: TMarkDownFile;
     FHTMLViewer: THTMLViewer;
+    //The preview with WebView2: when assigned, FHTMLViewer is nil
+    FEdgeViewer: TEdgeMarkdownViewer;
     FEditorSettings: TEditorSettings;
     FViewerUpdated: Boolean;
     FSyncingScroll: Boolean;
@@ -121,6 +126,8 @@ type
     function GetImageName: string;
     procedure UpdateTabSheetCaption;
     procedure SetHTMLViewer(const Value: THTMLViewer);
+    procedure SetEdgeViewer(const Value: TEdgeMarkdownViewer);
+    function GetPreviewControl: TWinControl;
     procedure UpdateRootPath;
     function GetServerRoot: string;
   public
@@ -134,6 +141,9 @@ type
       const AReloadImages: Boolean;
       const ACodeBlockEmitter: TBlockEmitter = nil);
     property HTMLViewer: THTMLViewer read FHTMLViewer write SetHTMLViewer;
+    property EdgeViewer: TEdgeMarkdownViewer read FEdgeViewer write SetEdgeViewer;
+    //The control of the preview: EdgeViewer or HTMLViewer
+    property PreviewControl: TWinControl read GetPreviewControl;
     property FileName: string read GetFileName write SetFileName; //with full path
     property Name: string read GetName; //only name of file
     property ImageName: string read GetImageName;
@@ -407,6 +417,7 @@ type
     MinFormWidth, MinFormHeight, MaxFormWidth, MaxFormHeight: Integer;
     FProcessingFiles: Boolean;
     FEditorSettings: TEditorSettings;
+    FPDFFileName: TFileName;
     FCodeHighlightEmitter: TCodeHighlightEmitterBase;
     CurrentDir: string;
     EditFileList: TObjectList;
@@ -470,6 +481,18 @@ type
     function AcceptedExtensions: string;
     procedure SplitterMoved(Sender: TObject);
     procedure ConfirmChanges(EditingFile: TEditingFile);
+    procedure EdgeViewerFileNameClicked(const AFileName: TFileName; out AHandled: Boolean);
+    procedure EdgeViewerURLClicked(const AURL: string; out AHandled: Boolean);
+    procedure EdgeViewerScrollChanged(Sender: TObject);
+    procedure EdgeViewerSaveAs(Sender: TObject);
+    procedure EdgeViewerPDFCompleted(Sender: TCustomEdgeBrowser; ErrorCode: HResult;
+      IsSuccessful: Boolean);
+    procedure UpdateEdgeViewerStyle(const AViewer: TEdgeMarkdownViewer);
+    function CreatePreviewViewer(const AEditingFile: TEditingFile;
+      const AParent: TWinControl): TWinControl;
+    procedure UpdatePreviewViewers;
+    function ConfirmCreateFile(const AFileName: TFileName): Boolean;
+    procedure SyncEditorFromRatio(const AFile: TEditingFile; const ARatio: Double);
     procedure HtmlViewerHotSpotClick(Sender: TObject; const ASource: ThtString;
       var Handled: Boolean);
     procedure UpdateTabsheetImage(ATabSheet: TTabSheet; AModified: Boolean;
@@ -562,6 +585,19 @@ var
 begin
   Screen.Cursor := crHourGlass;
   try
+    if Assigned(FEdgeViewer) then
+    begin
+      //WebView2: math formulas for KaTeX, mermaid diagrams for mermaid.js; the
+      //viewer keeps the scroll position when its HTML changes
+      FMarkDownFile := TMarkDownFile.Create(SynEditor.Lines.Text,
+        ASettings.ProcessorDialect, True, ACodeBlockEmitter, ASettings.AllowUnsafeHTML,
+        ASettings.CustomCSS, mmrMarkup);
+      FEdgeViewer.DefFontSize := ASettings.HTMLFontSize;
+      FEdgeViewer.DefFontName := ASettings.HTMLFontName;
+      FEdgeViewer.HtmlContent.Text := FMarkDownFile.HTML;
+      FViewerUpdated := True;
+      Exit;
+    end;
     //NB: read the scroll position *before* Clear, which resets it to zero:
     //reading it afterwards always restored the top of the document, so while
     //editing the preview jumped back up at every refresh.
@@ -628,7 +664,9 @@ end;
 
 function TEditingFile.GetServerRoot: string;
 begin
-  if HTMLViewer <> nil then
+  if EdgeViewer <> nil then
+    Result := EdgeViewer.ServerRoot
+  else if HTMLViewer <> nil then
     Result := HTMLViewer.ServerRoot
   else
     Result := '';
@@ -658,6 +696,22 @@ procedure TEditingFile.UpdateRootPath;
 begin
   if Assigned(HTMLViewer) then
     HTMLViewer.ServerRoot := ExtractFilePath(FFileName);
+  if Assigned(EdgeViewer) then
+    EdgeViewer.ServerRoot := ExtractFilePath(FFileName);
+end;
+
+procedure TEditingFile.SetEdgeViewer(const Value: TEdgeMarkdownViewer);
+begin
+  FEdgeViewer := Value;
+  UpdateRootPath;
+end;
+
+function TEditingFile.GetPreviewControl: TWinControl;
+begin
+  if Assigned(FEdgeViewer) then
+    Result := FEdgeViewer
+  else
+    Result := FHTMLViewer;
 end;
 
 procedure TEditingFile.SetHTMLViewer(const Value: THTMLViewer);
@@ -680,7 +734,8 @@ begin
       LParentForm.ActiveControl := nil;
   end;
 
-  FreeAndNil(HTMLViewer);
+  FreeAndNil(FEdgeViewer);
+  FreeAndNil(FHTMLViewer);
   FreeAndNil(SynEditor);
   inherited;
 end;
@@ -699,6 +754,15 @@ begin
     else
       raise;
   end;
+  //NB: loading the content leaves an undo entry behind, so the first Ctrl+Z
+  //emptied the file just opened - and left Modified True, so a save right
+  //after would have written an empty file over the document.
+  //TSynUndoPlugin.LinesInserted pushes a TSynLinesInsertedUndoItem for the
+  //lines the load inserts, and the ClearUndo that TCustomSynEdit.ListCleared
+  //would normally perform never runs: TSynEditStringList.Clear has its whole
+  //body guarded by "if FCount <> 0", so on a still-empty buffer it does
+  //nothing at all and no OnCleared is fired.
+  SynEditor.ClearUndo;
   SynEditor.Modified := False;
   FileAge(AFileName, FFileAge);
 end;
@@ -868,7 +932,7 @@ begin
       actnReduceFont.Execute;
       Handled := True;
     end
-    else if CurrentEditFile.HTMLViewer.Focused then
+    else if (CurrentEditFile.HTMLViewer <> nil) and CurrentEditFile.HTMLViewer.Focused then
     begin
       //Defer: reloading the viewer inside its own wheel message causes an
       //External Exception (see WMHtmlViewerZoom). WParam 0 = zoom out.
@@ -888,7 +952,7 @@ begin
       actnEnlargeFont.Execute;
       Handled := True;
     end
-    else if CurrentEditFile.HTMLViewer.Focused then
+    else if (CurrentEditFile.HTMLViewer <> nil) and CurrentEditFile.HTMLViewer.Focused then
     begin
       //Defer: reloading the viewer inside its own wheel message causes an
       //External Exception (see WMHtmlViewerZoom). WParam 1 = zoom in.
@@ -996,7 +1060,7 @@ begin
     LEditingFile.ShowMarkDownAsHTML(FEditorSettings, True, FCodeHighlightEmitter);
     var LContainerWidth := ClientWidth - catMenuItems.Width;
     FEditorSettings.ViewerPercentSize := Round(
-      CurrentEditFile.HTMLViewer.Width * 100 / LContainerWidth);
+      CurrentEditFile.PreviewControl.Width * 100 / LContainerWidth);
   end;
 end;
 
@@ -1351,7 +1415,10 @@ end;
 
 procedure TfrmMain.acEditCopyExecute(Sender: TObject);
 begin
-  if (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil) and
+  if (CurrentEditFile <> nil) and (CurrentEditFile.EdgeViewer <> nil) and
+    CurrentEditFile.EdgeViewer.HasFocus then
+    CurrentEditFile.EdgeViewer.CopyToClipboard
+  else if (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil) and
     (CurrentEditFile.HTMLViewer.SelLength <> 0) and
     (CurrentEditFile.HTMLViewer.Focused or not CurrentEditFile.SynEditor.Focused) then
     CurrentEditFile.HTMLViewer.CopyToClipboard
@@ -1363,6 +1430,8 @@ procedure TfrmMain.acEditCopyUpdate(Sender: TObject);
 begin
   acEditCopy.Enabled := (CurrentEditFile <> nil) and
     (((CurrentEditFile.HTMLViewer <> nil) and (CurrentEditFile.HTMLViewer.SelLength <> 0))
+     or
+     ((CurrentEditFile.EdgeViewer <> nil) and CurrentEditFile.EdgeViewer.HasFocus)
      or
      (CurrentEditFile.SynEditor.SelEnd - CurrentEditFile.SynEditor.SelStart > 0));
 end;
@@ -1379,7 +1448,10 @@ end;
 
 procedure TfrmMain.acEditSelectAllExecute(Sender: TObject);
 begin
-  if (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil) and
+  if (CurrentEditFile <> nil) and (CurrentEditFile.EdgeViewer <> nil) and
+    CurrentEditFile.EdgeViewer.HasFocus then
+    CurrentEditFile.EdgeViewer.SelectAll
+  else if (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil) and
     CurrentEditFile.HTMLViewer.Focused then
     CurrentEditFile.HTMLViewer.SelectAll
   else
@@ -1563,6 +1635,17 @@ begin
   if (LFile = nil) or (Sender <> LFile.SynEditor) or LFile.FSyncingScroll then
     Exit;
   LEdit := LFile.SynEditor;
+  if LFile.EdgeViewer <> nil then
+  begin
+    //WebView2: the position as a ratio (the scroll it causes is not notified)
+    LEditMax := GetEditorMaxTopLine(LEdit);
+    if LEditMax <= 1 then
+      LRatio := 0
+    else
+      LRatio := (LEdit.TopLine - 1) / (LEditMax - 1);
+    LFile.EdgeViewer.ScrollToRatio(LRatio);
+    Exit;
+  end;
   LViewer := LFile.HTMLViewer;
   if (LViewer = nil) or not LViewer.HandleAllocated then
     Exit;
@@ -1622,6 +1705,49 @@ begin
   finally
     AFile.FSyncingScroll := False;
   end;
+end;
+
+procedure TfrmMain.SyncEditorFromRatio(const AFile: TEditingFile;
+  const ARatio: Double);
+var
+  LEdit: TSynEdit;
+  LRatio: Double;
+  LEditMax: Integer;
+begin
+  if (AFile = nil) or AFile.FSyncingScroll then
+    Exit;
+  if not FEditorSettings.SyncScroll then
+    Exit;
+  if FEditorSettings.LayoutMode <> lmBoth then
+    Exit;
+  LEdit := AFile.SynEditor;
+  if LEdit = nil then
+    Exit;
+  LRatio := ARatio;
+  if LRatio < 0 then LRatio := 0
+  else if LRatio > 1 then LRatio := 1;
+  LEditMax := GetEditorMaxTopLine(LEdit);
+  AFile.FSyncingScroll := True;
+  try
+    LEdit.TopLine := 1 + Round(LRatio * (LEditMax - 1));
+  finally
+    AFile.FSyncingScroll := False;
+  end;
+end;
+
+procedure TfrmMain.EdgeViewerScrollChanged(Sender: TObject);
+begin
+  //The user scrolled the WebView2 preview of the current file
+  if (CurrentEditFile <> nil) and (CurrentEditFile.EdgeViewer = Sender) then
+    SyncEditorFromRatio(CurrentEditFile, CurrentEditFile.EdgeViewer.ScrollRatio);
+end;
+
+procedure TfrmMain.EdgeViewerSaveAs(Sender: TObject);
+begin
+  //"Save as" of the WebView2 preview (context menu, Ctrl+S): the export of
+  //the current file in HTML
+  if (CurrentEditFile <> nil) and (CurrentEditFile.EdgeViewer = Sender) then
+    acSaveHTMLFile.Execute;
 end;
 
 procedure TfrmMain.SyncScrollTimerTimer(Sender: TObject);
@@ -1741,7 +1867,7 @@ end;
 procedure TfrmMain.acHTMLViewerUpdate(Sender: TObject);
 begin
   (Sender as TAction).Enabled :=
-    (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil);
+    (CurrentEditFile <> nil) and (CurrentEditFile.PreviewControl <> nil);
 end;
 
 procedure TfrmMain.acHelpExecute(Sender: TObject);
@@ -1769,17 +1895,17 @@ begin
     case ALayoutMode of
       lmBoth:
       begin
-        CurrentEditFile.HTMLViewer.Align := alRight;
+        CurrentEditFile.PreviewControl.Align := alRight;
         AdjustViewerWidth;
-        CurrentEditFile.HTMLViewer.Visible := True;
+        CurrentEditFile.PreviewControl.Visible := True;
         CurrentEditFile.Splitter.Visible := True;
-        CurrentEditFile.Splitter.Left := CurrentEditFile.HTMLViewer.left -1;
+        CurrentEditFile.Splitter.Left := CurrentEditFile.PreviewControl.left -1;
         CurrentEditFile.SynEditor.Visible := True;
         btLayoutBoth.Down := True;
       end;
       lmMarkDown:
       begin
-        CurrentEditFile.HTMLViewer.Visible := False;
+        CurrentEditFile.PreviewControl.Visible := False;
         CurrentEditFile.Splitter.Visible := False;
         CurrentEditFile.SynEditor.Visible := True;
         btLayoutMarkDown.Down := True;
@@ -1788,13 +1914,13 @@ begin
       begin
         CurrentEditFile.SynEditor.Visible := False;
         CurrentEditFile.Splitter.Visible := False;
-        CurrentEditFile.HTMLViewer.Align := alClient;
-        CurrentEditFile.HTMLViewer.Visible := True;
+        CurrentEditFile.PreviewControl.Align := alClient;
+        CurrentEditFile.PreviewControl.Visible := True;
         CurrentEditFile.Splitter.Visible := False;
         btLayoutViewer.Down := True;
       end;
     end;
-    if CurrentEditFile.HTMLViewer.Visible and not
+    if CurrentEditFile.PreviewControl.Visible and not
        CurrentEditFile.FViewerUpdated then
       UpdateMDViewer(True);
   end;
@@ -1830,7 +1956,7 @@ function TfrmMain.AddEditingFile(const EditingFile: TEditingFile): Integer;
 var
   LTabSheet: TTabSheet;
   LEditor: TSynEdit;
-  LFEViewer: THtmlViewer;
+  LPreview: TWinControl;
   LSplitter: TSplitter;
 begin
   //Create the Tabsheet page associated to the file
@@ -1847,20 +1973,14 @@ begin
     EditingFile.TabSheet := LTabSheet;
     EditingFile.UpdateTabSheetCaption;
 
-    LFEViewer := THtmlViewer.Create(nil);
-    LFEViewer.ScrollBars := ssNone;
-    LFEViewer.Align := alRight;
-    LFEViewer.Width := LTabSheet.Width div 2;
-    LFEViewer.Parent := LTabSheet;
-    LFEViewer.PopupMenu := PopHTMLViewer;
-    LFEViewer.DefBackground := StyleServices.GetSystemColor(clWindow);
-    LFEViewer.OnHotSpotClick := HtmlViewerHotSpotClick;
-    LFEViewer.OnImageRequest := dmResources.HtmlViewerImageRequest;
-    LFEViewer.ScrollBars := TScrollStyle.ssVertical;
+    //The preview: WebView2 (when available and enabled) or HTMLViewer
+    LPreview := CreatePreviewViewer(EditingFile, LTabSheet);
+    LPreview.Align := alRight;
+    LPreview.Width := LTabSheet.Width div 2;
 
     LSplitter := TSplitter.Create(LTabSheet);
     LSplitter.Align := alRight;
-    LSplitter.Left := LFEViewer.Left-1;
+    LSplitter.Left := LPreview.Left-1;
     LSplitter.AutoSnap := False;
     LSplitter.Width := 6;
     LSplitter.Parent := LTabSheet;
@@ -1869,7 +1989,6 @@ begin
     LSplitter.Tag := NativeInt(EditingFile);
 
     EditingFile.Splitter := LSplitter;
-    EditingFile.HTMLViewer := LFEViewer;
 
     //Create the SynEdit object editor into the TabSheet that is the owner
     LEditor := TSynEdit.Create(nil);
@@ -1905,6 +2024,7 @@ begin
     //yet, so the caller remains its sole owner and can free it exactly once.
     EditingFile.SynEditor := nil;
     EditingFile.HTMLViewer := nil;
+    EditingFile.EdgeViewer := nil;
     EditingFile.Splitter := nil;
     EditingFile.TabSheet := nil;
     LTabSheet.Free;
@@ -1924,7 +2044,7 @@ begin
   if (CurrentEditor <> nil) and (CurrentEditFile <> nil) then
   begin
     LoadTimer.Enabled := False;
-    if (CurrentEditFile.HTMLViewer.Visible) then
+    if (CurrentEditFile.PreviewControl.Visible) then
     begin
       Screen.Cursor := crHourGlass;
       //NB: FProcessingFiles is raised for the whole rendering, not only read on
@@ -2308,6 +2428,12 @@ procedure TfrmMain.actnPrintPreviewExecute(Sender: TObject);
 var
   PreviewForm: TBegaHtmlPrintPreviewForm;
 begin
+  //WebView2: its print dialog, with the preview of the pages
+  if CurrentEditFile.EdgeViewer <> nil then
+  begin
+    CurrentEditFile.EdgeViewer.ShowPrintUI(TCustomEdgeBrowser.TPrintUIDialogKind.Browser);
+    Exit;
+  end;
   PreviewForm := TBegaHtmlPrintPreviewForm.Create(nil);
   try
     PreviewForm.HtmlViewer := CurrentEditFile.HTMLViewer;
@@ -2368,6 +2494,13 @@ begin
   SaveDialog.FileName := ChangeFileExt(CurrentEditFile.FileName, '.htm');
   if SaveDialog.Execute then
   begin
+    if CurrentEditFile.EdgeViewer <> nil then
+    begin
+      //the full page, with the scripts of math formulas and mermaid diagrams
+      CurrentEditFile.EdgeViewer.ExportToFileHTMLPage(SaveDialog.FileName);
+      FileSavedAskToOpen(SaveDialog.FileName);
+      Exit;
+    end;
     Screen.Cursor := crHourGlass;
     try
       LStream := TStringStream.Create(
@@ -2390,6 +2523,12 @@ begin
   SaveDialogPDF.FileName := ChangeFileExt(CurrentEditFile.FileName, '.pdf');
   if SaveDialogPDF.Execute then
   begin
+    if CurrentEditFile.EdgeViewer <> nil then
+    begin
+      //asynchronous: the file is offered when it is ready (EdgeViewerPDFCompleted)
+      HTMLToPDF(SaveDialogPDF.FileName);
+      Exit;
+    end;
     Screen.Cursor := crHourGlass;
     try
       HTMLToPDF(SaveDialogPDF.FileName);
@@ -2404,7 +2543,13 @@ procedure TfrmMain.SetHTMLFontSize(const Value: Integer);
 var
   LScaleFactor: Single;
 begin
-  if (CurrentEditor <> nil) and (Value >= MinfontSize) and (Value <= MaxfontSize) then
+  if (CurrentEditor <> nil) and (CurrentEditFile.EdgeViewer <> nil) and
+    (Value >= MinfontSize) and (Value <= MaxfontSize) then
+  begin
+    CurrentEditFile.EdgeViewer.DefFontSize := Value;
+    FEditorSettings.HTMLFontSize := Value;
+  end
+  else if (CurrentEditor <> nil) and (Value >= MinfontSize) and (Value <= MaxfontSize) then
   begin
     if FHTMLFontSize <> 0 then
       LScaleFactor := CurrentEditFile.HTMLViewer.DefFontSize / FEditorFontSize
@@ -2460,6 +2605,11 @@ begin
   for i := 0 to EditFileList.Count -1 do
   begin
     EditingFile := TEditingFile(EditFileList.items[i]);
+    if EditingFile.EdgeViewer <> nil then
+    begin
+      UpdateEdgeViewerStyle(EditingFile.EdgeViewer);
+      Continue;
+    end;
     EditingFile.HTMLViewer.DefFontName := FEditorSettings.HTMLFontName;
     EditingFile.HTMLViewer.DefFontSize := FEditorSettings.HTMLFontSize;
     EditingFile.HTMLViewer.DefBackground := StyleServices.GetSystemColor(clWindow);
@@ -2903,7 +3053,8 @@ begin
     //from the editor whose Highlighter may be unhooked.
     FEditorSettings.WriteSettings(LHighlighter, FEditorOptions);
     UpdateFromSettings(CurrentEditor);
-    UpdateMDViewer(True);
+    //WebView2 or HTMLViewer, as chosen in the settings (it also refreshes)
+    UpdatePreviewViewers;
     UpdateHighlighters;
   end;
 end;
@@ -2936,11 +3087,11 @@ end;
 
 procedure TfrmMain.AdjustViewerWidth;
 begin
-  if (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil) then
+  if (CurrentEditFile <> nil) and (CurrentEditFile.PreviewControl <> nil) then
   begin
     var LContainerWidth := ClientWidth - catMenuItems.Width;
     var LNewWidth := Round(LContainerWidth * FEditorSettings.ViewerPercentSize / 100);
-    CurrentEditFile.HTMLViewer.Width := LNewWidth;
+    CurrentEditFile.PreviewControl.Width := LNewWidth;
   end;
 end;
 
@@ -2952,8 +3103,8 @@ begin
     SV.CompactWidth := Round(SV_COLLAPSED_WIDTH * ScaleFactor)
   else
     SV.CompactWidth := Round(SV_COLLAPSED_WIDTH_WITH_SCROLLBARS * ScaleFactor);
-  if (CurrentEditFile <> nil) and (CurrentEditFile.HTMLViewer <> nil) and (CurrentEditFile.HTMLViewer.Width > PageControl.Width) then
-    CurrentEditFile.HTMLViewer.Width := width div 3;
+  if (CurrentEditFile <> nil) and (CurrentEditFile.PreviewControl <> nil) and (CurrentEditFile.PreviewControl.Width > PageControl.Width) then
+    CurrentEditFile.PreviewControl.Width := width div 3;
 end;
 
 procedure TfrmMain.FormAfterMonitorDpiChanged(Sender: TObject; OldDPI,
@@ -3044,7 +3195,30 @@ procedure TfrmMain.HTMLToPDF(const APDFFileName: TFileName);
 var
   lHtmlToPdf: TvmHtmlToPdfGDI;
   LOldColor: TColor;
+  LSettings: ICoreWebView2PrintSettings;
 begin
+  if CurrentEditFile.EdgeViewer <> nil then
+  begin
+    //WebView2: PrintToPDF (asynchronous), margins of the settings in cm
+    FPDFFileName := APDFFileName;
+    LSettings := CurrentEditFile.EdgeViewer.CreatePrintSettings;
+    if Assigned(LSettings) then
+    begin
+      LSettings.Set_MarginLeft(FEditorSettings.PDFPageSettings.MarginLeft / 2.54);
+      LSettings.Set_MarginTop(FEditorSettings.PDFPageSettings.MarginTop / 2.54);
+      LSettings.Set_MarginRight(FEditorSettings.PDFPageSettings.MarginRight / 2.54);
+      LSettings.Set_MarginBottom(FEditorSettings.PDFPageSettings.MarginBottom / 2.54);
+      if FEditorSettings.PDFPageSettings.PrintOrientation = TPrinterOrientation.poLandscape then
+        LSettings.Set_Orientation(COREWEBVIEW2_PRINT_ORIENTATION_LANDSCAPE)
+      else
+        LSettings.Set_Orientation(COREWEBVIEW2_PRINT_ORIENTATION_PORTRAIT);
+      LSettings.Set_ShouldPrintHeaderAndFooter(0);
+    end;
+    Screen.Cursor := crHourGlass;
+    if not CurrentEditFile.EdgeViewer.PrintToPDF(APDFFileName, LSettings) then
+      Screen.Cursor := crDefault;
+    Exit;
+  end;
   lHtmlToPdf := TvmHtmlToPdfGDI.Create();
   try
     lHtmlToPdf.PDFMarginLeft := FEditorSettings.PDFPageSettings.MarginLeft;
@@ -3078,6 +3252,159 @@ begin
   end;
 end;
 
+function TfrmMain.CreatePreviewViewer(const AEditingFile: TEditingFile;
+  const AParent: TWinControl): TWinControl;
+var
+  LEdge: TEdgeMarkdownViewer;
+  LHtml: THtmlViewer;
+begin
+  //WebView2 when enabled in the settings and available (WebView2Loader.dll
+  //next to the executable and the WebView2 runtime), else HTMLViewer
+  if FEditorSettings.UseWebView2 and TEdgeMarkdownViewer.EdgeAvailable then
+  begin
+    LEdge := TEdgeMarkdownViewer.Create(nil);
+    //the links are handled by the editor (as with HTMLViewer)
+    LEdge.AutoLoadOnHotSpotClick := False;
+    LEdge.OnFileNameClicked := EdgeViewerFileNameClicked;
+    LEdge.OnURLClicked := EdgeViewerURLClicked;
+    LEdge.OnScrollChanged := EdgeViewerScrollChanged;
+    LEdge.OnSaveAs := EdgeViewerSaveAs;
+    LEdge.OnPrintToPDFCompleted := EdgeViewerPDFCompleted;
+    UpdateEdgeViewerStyle(LEdge);
+    LEdge.Parent := AParent;
+    AEditingFile.EdgeViewer := LEdge;
+    Result := LEdge;
+  end
+  else
+  begin
+    LHtml := THtmlViewer.Create(nil);
+    LHtml.ScrollBars := ssNone;
+    LHtml.Parent := AParent;
+    LHtml.PopupMenu := PopHTMLViewer;
+    LHtml.DefBackground := StyleServices.GetSystemColor(clWindow);
+    LHtml.OnHotSpotClick := HtmlViewerHotSpotClick;
+    LHtml.OnImageRequest := dmResources.HtmlViewerImageRequest;
+    LHtml.ScrollBars := TScrollStyle.ssVertical;
+    AEditingFile.HTMLViewer := LHtml;
+    Result := LHtml;
+  end;
+end;
+
+procedure TfrmMain.UpdatePreviewViewers;
+var
+  I: Integer;
+  LFile: TEditingFile;
+  LOld, LNew: TWinControl;
+  LUseEdge: Boolean;
+begin
+  //The option "Use WebView2" changed: the previews are created again
+  LUseEdge := FEditorSettings.UseWebView2 and TEdgeMarkdownViewer.EdgeAvailable;
+  for I := 0 to EditFileList.Count - 1 do
+  begin
+    LFile := TEditingFile(EditFileList.Items[I]);
+    if (LFile.EdgeViewer <> nil) = LUseEdge then
+      Continue;
+    LOld := LFile.PreviewControl;
+    if LOld = nil then
+      Continue;
+    LFile.FHTMLViewer := nil;
+    LFile.FEdgeViewer := nil;
+    LNew := CreatePreviewViewer(LFile, LOld.Parent);
+    LNew.BoundsRect := LOld.BoundsRect;
+    LNew.Align := LOld.Align;
+    LNew.Visible := LOld.Visible;
+    LOld.Free;
+    LFile.FViewerUpdated := False;
+  end;
+  if CurrentEditFile <> nil then
+    UpdateApplicationLayout(FEditorSettings.LayoutMode);
+  UpdateMDViewer(True);
+end;
+
+procedure TfrmMain.UpdateEdgeViewerStyle(const AViewer: TEdgeMarkdownViewer);
+var
+  LDetails: TThemedElementDetails;
+  LColor: TColor;
+begin
+  //the page uses the HTML font of the settings and the colors of the VCL style
+  AViewer.DefFontName := FEditorSettings.HTMLFontName;
+  AViewer.DefFontSize := FEditorSettings.HTMLFontSize;
+  AViewer.DefBackground := StyleServices.GetSystemColor(clWindow);
+  AViewer.DefFontColor := StyleServices.GetSystemColor(clWindowText);
+  LColor := clBlue;
+  if StyleServices.Enabled then
+  begin
+    LDetails := StyleServices.GetElementDetails(tbCommandLinkNormal);
+    if not StyleServices.GetElementColor(LDetails, ecTextColor, LColor) then
+      LColor := clBlue;
+  end;
+  AViewer.DefHotSpotColor := LColor;
+end;
+
+function TfrmMain.ConfirmCreateFile(const AFileName: TFileName): Boolean;
+begin
+  //A link to a local file that does not exist: it can be created
+  Result := StyledTaskMessageDlg(CREATE_NEW_FILE,
+    Format(CONFIRM_CREATE_NEW_FILE, [AFileName]),
+    TMsgDlgType.mtConfirmation,
+    [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo, TMsgDlgBtn.mbCancel],
+    0, TMsgDlgBtn.mbYes) = mrYes;
+  if Result then
+  begin
+    var LStreamWriter := TFile.CreateText(AFileName);
+    LStreamWriter.Write(Format('# %s', [ExtractFileName(AFileName)]));
+    LStreamWriter.Flush;
+    LStreamWriter.Close;
+  end;
+end;
+
+procedure TfrmMain.EdgeViewerFileNameClicked(const AFileName: TFileName;
+  out AHandled: Boolean);
+var
+  LFileName: TFileName;
+begin
+  //A link of the WebView2 preview: AFileName is the folder of the document
+  //followed by the link (the same rules of HtmlViewerHotSpotClick)
+  AHandled := False;
+  LFileName := AFileName;
+  if not FileExists(LFileName) then
+    FileWithExtExists(LFileName, AMarkDownFileExt);
+  if FileExists(LFileName) then
+  begin
+    OpenFile(LFileName, True);
+    UpdateMDViewer(True);
+    AHandled := True;
+  end
+  else if (Pos('://', LFileName) = 0) and (Pos('mailto:', LowerCase(LFileName)) = 0) then
+  begin
+    //a local file that does not exist
+    if ConfirmCreateFile(LFileName) then
+    begin
+      OpenFile(LFileName, True);
+      UpdateMDViewer(True);
+    end;
+    AHandled := True;
+  end;
+end;
+
+procedure TfrmMain.EdgeViewerURLClicked(const AURL: string; out AHandled: Boolean);
+var
+  LHandled: Boolean;
+begin
+  //An external link: in the default browser
+  LHandled := False;
+  dmResources.HtmlViewerHotSpotClick(Self, AURL, LHandled);
+  AHandled := True;
+end;
+
+procedure TfrmMain.EdgeViewerPDFCompleted(Sender: TCustomEdgeBrowser;
+  ErrorCode: HResult; IsSuccessful: Boolean);
+begin
+  Screen.Cursor := crDefault;
+  if IsSuccessful then
+    FileSavedAskToOpen(FPDFFileName);
+end;
+
 procedure TfrmMain.HtmlViewerHotSpotClick(Sender: TObject;
   const ASource: ThtString; var Handled: Boolean);
 var
@@ -3089,7 +3416,7 @@ begin
   begin
     //Search file in local folder same as current edit file
     LWorkingFolder := IncludeTrailingPathDelimiter(
-      CurrentEditFile.HTMLViewer.ServerRoot);
+      CurrentEditFile.GetServerRoot);
     LFileName := LWorkingFolder+LFileName;
   end;
   //Search file with markdown extensions

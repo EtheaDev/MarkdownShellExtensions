@@ -71,6 +71,7 @@ type
     FCodeBlockEmitter: TBlockEmitter;
     FAllowUnsafe: Boolean;
     FCSS: string;
+    FMathRendering: TMarkdownMathRendering;
     procedure SetMarkDownContent(const AValue: string);
   public
     //Built-in default stylesheet (the <style>...</style> block prepended to the
@@ -82,7 +83,10 @@ type
       const AParseImmediately: Boolean = True;
       const ACodeBlockEmitter: TBlockEmitter = nil;
       const AAllowUnsafe: Boolean = False;
-      const ACSS: string = '');
+      const ACSS: string = '';
+      //Formulas as images for HTMLViewer (no JavaScript), as markup for KaTeX
+      //with WebView2
+      const AMathRendering: TMarkdownMathRendering = mmrCodeCogsImage);
 
     procedure Clear;
     procedure Parse;
@@ -155,6 +159,7 @@ implementation
 uses
   System.StrUtils
   , Vcl.Themes
+  , MarkDownViewerCommon
   , Winapi.GDIPOBJ
   , Winapi.GDIPAPI
   , System.IOUtils
@@ -670,9 +675,11 @@ constructor TMarkDownFile.Create(const AMarkDownContent: string;
   const AParseImmediately: Boolean = True;
   const ACodeBlockEmitter: TBlockEmitter = nil;
   const AAllowUnsafe: Boolean = False;
-  const ACSS: string = '');
+  const ACSS: string = '';
+  const AMathRendering: TMarkdownMathRendering = mmrCodeCogsImage);
 begin
   Clear;
+  FMathRendering := AMathRendering;
   FCodeBlockEmitter := ACodeBlockEmitter;
   FProcessorDialect := AProcessorDialect;
   FAllowUnsafe := AAllowUnsafe;
@@ -684,46 +691,10 @@ end;
 
 class function TMarkDownFile.GetDefaultCSS: string;
 begin
-  Result :=
-    '<style type="text/css">'+sLineBreak+
-    'body{'+sLineBreak+
-    '  font-family: Arial, Helvetica, sans-serif;'+sLineBreak+
-    '}'+sLineBreak+
-    'img{'+sLineBreak+
-    '  max-width: 100%;'+sLineBreak+
-    '  height: auto;'+sLineBreak+
-    '}'+sLineBreak+
-    'code{'+sLineBreak+
-    '  font-family: "Consolas", monospace;'+sLineBreak+
-    '}'+sLineBreak+
-    'pre{'+sLineBreak+
-    '  border: 1px solid #ddd;'+sLineBreak+
-    '  border-left: 3px solid #f36d33;'+sLineBreak+
-    '  overflow: auto;'+sLineBreak+
-    '  padding: 1em 1.5em;'+sLineBreak+
-    '  display: block;'+sLineBreak+
-    '}'+sLineBreak+
-    'Blockquote{'+sLineBreak+
-    '  border-left: 3px solid #d0d0d0;'+sLineBreak+
-    '  padding-left: 0.5em;'+sLineBreak+
-    '  margin-left:1em;'+sLineBreak+
-    '}'+sLineBreak+
-    'Blockquote p{'+sLineBreak+
-    '  margin: 0;'+sLineBreak+
-    '}'+sLineBreak+
-    'table{'+sLineBreak+
-    '  border:1px solid;'+sLineBreak+
-    '  border-collapse:collapse;'+sLineBreak+
-    '}'+sLineBreak+
-    'th{'+
-    '  padding:5px;'+sLineBreak+
-    '  border:1px solid;'+sLineBreak+
-    '}'+sLineBreak+
-    'td{'+sLineBreak+
-    '  padding:5px;'+sLineBreak+
-    '  border:1px solid;'+sLineBreak+
-    '}'+sLineBreak+
-    '</style>'+sLineBreak;
+  //The stylesheet of the Markdown viewers: MarkdownBaseCSS of the Markdown
+  //Processor (alerts, mark, math, mermaid...), without the font of the page,
+  //so that the HTML font of the settings is used
+  Result := MarkDownViewerCommon.GetMarkdownDefaultCSS;
 end;
 
 procedure TMarkDownFile.Parse;
@@ -735,6 +706,10 @@ begin
     //Safe mode by default: native HTML (script/iframe/object...) is neutralized.
     //Set to True only when the user explicitly allows unsafe HTML in Settings.
     LMDProcessor.AllowUnsafe := FAllowUnsafe;
+    //The same extensions as the viewer components: the ones of the dialect
+    //plus the legacy ones (subscript, superscript, mark, heading ids...)
+    LMDProcessor.Config.Extensions := TMarkdownViewerEngine.DefaultExtensions(FProcessorDialect);
+    LMDProcessor.Config.MathRendering := FMathRendering;
     //Optional syntax-highlighting emitter for fenced code blocks.
     //NB: the caller owns the emitter, so we detach it before freeing the
     //processor (TConfiguration.Destroy frees its codeBlockEmitter).

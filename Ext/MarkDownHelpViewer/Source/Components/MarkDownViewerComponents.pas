@@ -1,4 +1,4 @@
-{******************************************************************************}
+﻿{******************************************************************************}
 {                                                                              }
 {       Viewer Components to show Markdown and HTML content                    }
 {                                                                              }
@@ -39,6 +39,13 @@
 {******************************************************************************}
 unit MarkDownViewerComponents;
 
+{ TMarkdownViewer: a THTMLViewer that shows Markdown (and HTML) content.
+  The conversion is made by TMarkdownViewerEngine (MarkDownViewerCommon), a
+  TCustomMarkdownToHTML of the Markdown Processor: the Markdown properties
+  (ProcessorDialect, Extensions, AllowUnsafe, MathRendering, CssStyle,
+  MarkdownContent, HtmlContent) are the same as TMarkdownToHTML and
+  TEdgeMarkdownViewer. }
+
 interface
 
 uses
@@ -52,6 +59,7 @@ uses
   , HtmlGlobals
   , MarkdownUtils
   , MarkdownProcessor
+  , MarkDownViewerCommon
   , MDCodeHighlightEmitter
   ;
 
@@ -60,20 +68,17 @@ resourcestring
   HTML_FILES = 'HTML text files';
 
 Type
-  TFolderName = string;
-
-  TFileNameClicked = procedure (const AFileName: TFileName; out AHandled: Boolean) of Object;
-  TURLClicked = procedure (const AURL: string; out AHandled: Boolean) of Object;
+  //declared in MarkDownViewerCommon: here for compatibility
+  TFolderName = MarkDownViewerCommon.TFolderName;
+  TFileNameClicked = MarkDownViewerCommon.TFileNameClicked;
+  TURLClicked = MarkDownViewerCommon.TURLClicked;
 
   TCustomMarkdownViewer = class(THTMLViewer)
   private
     FFileName: TFileName;
-    FMarkdownContent: TStringList;
-    FHTMLContent: TStringList;
-    FCssStyle: TStringList;
-    FProcessorDialect: TMarkdownProcessorDialect;
-    FAllowUnsafe: Boolean;
+    FEngine: TMarkdownViewerEngine;
     FRescalingImage: Boolean;
+    FResetPosition: Boolean;
     FStream: TMemoryStream;
     FImageRequest: TGetImageEvent;
     FTabStop: Boolean;
@@ -82,8 +87,19 @@ Type
     FOnFileNameClicked: TFileNameClicked;
     FCodeHighlightEmitter: TCodeHighlightEmitterBase;
     procedure SetFileName(const AValue: TFileName);
+    function GetProcessorDialect: TMarkdownProcessorDialect;
     procedure SetProcessorDialect(const AValue: TMarkdownProcessorDialect);
+    function GetExtensions: TMarkdownExtensions;
+    procedure SetExtensions(const AValue: TMarkdownExtensions);
+    function GetAllowUnsafe: Boolean;
+    procedure SetAllowUnsafe(const AValue: Boolean);
+    function GetMathRendering: TMarkdownMathRendering;
+    procedure SetMathRendering(const AValue: TMarkdownMathRendering);
+    function GetCssStyle: TStringList;
+    function GetHTMLContent: TStringList;
+    function GetMarkdownContent: TStringList;
     function IsCssStyleStored: Boolean;
+    function IsExtensionsStored: Boolean;
     function IsDefFontName: Boolean;
     function IsPrintMarginStored: Boolean;
     function IsPrintScaleStored: Boolean;
@@ -113,17 +129,20 @@ Type
     function GetText: string;
     function GetLines: TStrings;
     procedure SetLines(const Value: TStrings);
-    procedure MDContentChanged(Sender: TObject);
     procedure HTMLContentChanged(Sender: TObject);
+    procedure EngineBeforeProcess(Sender: TObject);
     function IsServerRootStored: Boolean;
   protected
     procedure DefineProperties(Filer: TFiler); override;
+    procedure ReadState(Reader: TReader); override;
     procedure AutoLoadFile; virtual;
     procedure SetOnImageRequest(const AValue: TGetImageEvent); reintroduce;
     function FindHelpFile(var AFileName: TFileName; const AContext: Integer;
       const HelpKeyword: string): boolean; virtual;
     procedure Loaded; override;
     function HotSpotClickHandled: Boolean; override;
+    /// <summary>The Markdown engine (options, contents, conversion).</summary>
+    property Engine: TMarkdownViewerEngine read FEngine;
   public
     procedure LoadFromFile(const AFileName: TFileName);
     procedure ExportToFileHTML(const AFileName: TFileName);
@@ -131,8 +150,10 @@ Type
       const IsHTMLContent: Boolean = False);
     procedure LoadFromString(const AValue: string;
       const IsHTMLContent: Boolean = False);
+    /// <summary>Converts a Markdown text with the given dialect (and its
+    /// default extensions), stylesheet and safe mode.</summary>
     function TransformContent(const AMarkdownContent: string;
-      AProcessorDialect: TMarkdownProcessorDialect = mdCommonMark;
+      AProcessorDialect: TMarkdownProcessorDialect = DefaultMarkdownDialect;
       const ACssStyle: string = '';
       const AAllowUnsafe: Boolean = False): string;
     constructor Create(AOwner: TComponent); override;
@@ -142,15 +163,21 @@ Type
 
     //specific properties
     property AutoLoadOnHotSpotClick: boolean read FAutoLoadOnHotSpotClick write FAutoLoadOnHotSpotClick default True;
-    property CssStyle: TStringList read FCssStyle write SetCssStyle stored IsCssStyleStored;
+    property CssStyle: TStringList read GetCssStyle write SetCssStyle stored IsCssStyleStored;
     property FileName: TFileName read FFileName write SetFileName;
-    property ProcessorDialect: TMarkdownProcessorDialect read FProcessorDialect write SetProcessorDialect default mdCommonMark;
+    //Changing the dialect resets Extensions to its defaults
+    property ProcessorDialect: TMarkdownProcessorDialect read GetProcessorDialect write SetProcessorDialect default DefaultMarkdownDialect;
+    //Optional syntax of mdCommonMark, mdGFM and mdGitHub (ignored by the
+    //legacy dialects). Default: the extensions of the dialect + LegacyExtensions
+    property Extensions: TMarkdownExtensions read GetExtensions write SetExtensions stored IsExtensionsStored;
     //When True, native HTML (script/iframe/object...) in the markdown is passed
-    //through to the output; default False (safe mode: such tags are escaped).
-    property AllowUnsafe: Boolean read FAllowUnsafe write FAllowUnsafe default False;
+    //through to the output; default False (safe mode).
+    property AllowUnsafe: Boolean read GetAllowUnsafe write SetAllowUnsafe default False;
+    //HTMLViewer does not run JavaScript: math formulas as images by default
+    property MathRendering: TMarkdownMathRendering read GetMathRendering write SetMathRendering default mmrCodeCogsImage;
     property RescalingImage: Boolean read FRescalingImage write SetRescalingImage default False;
-    property HtmlContent: TStringList read FHTMLContent write SetHTMLContent stored IsHtmlContentStored;
-    property MarkdownContent: TStringList read FMarkdownContent write SetMarkdownContent;
+    property HtmlContent: TStringList read GetHTMLContent write SetHTMLContent stored IsHtmlContentStored;
+    property MarkdownContent: TStringList read GetMarkdownContent write SetMarkdownContent;
     property OnImageRequest: TGetImageEvent read GetOnImageRequest write SetOnImageRequest;
     property Lines: TStrings read GetLines write SetLines;
   published
@@ -190,7 +217,9 @@ Type
     property CssStyle;
     property FileName;
     property ProcessorDialect;
+    property Extensions;
     property AllowUnsafe;
+    property MathRendering;
     property RescalingImage;
     property HtmlContent;
     property MarkdownContent;
@@ -199,16 +228,14 @@ Type
     property OnURLClicked;
   end;
 
-  THookControlActionLink = class(TControlActionLink)
-  protected
-    function IsHelpContextLinked: Boolean; override;
-  end;
+  //declared in MarkDownViewerCommon: here for compatibility
+  THookControlActionLink = MarkDownViewerCommon.THookControlActionLink;
 
+//declared in MarkDownViewerCommon: here for compatibility
 function TryLoadTextFile(const AFileName: TFileName): string;
 procedure SaveUTF8File(const AFileName: TFileName;
   const AContent: string);
 function GetMarkdownDefaultCSS: string;
-
 procedure RegisterMDViewerServerRoot(const AFolder: string);
 
 implementation
@@ -218,192 +245,28 @@ uses
   , HTMLSubs
   , Winapi.GDIPOBJ
   , Winapi.GDIPAPI
-  , Winapi.ShLwApi
-  , Winapi.ShellAPI
   , Vcl.Imaging.pngImage
   ;
 
-var
-  //To automate loading of component content
-  _ServerRoot: string;
-  AMarkdownFileExt: TArray<String>;
-  AHTMLFileExt: TArray<String>;
-
-function FileWithExtExists(var AFileName: TFileName;
-  const AFileExt: array of string): boolean;
-var
-  I: Integer;
-  LExt: string;
-  LFileName: TFileName;
+function TryLoadTextFile(const AFileName: TFileName): string;
 begin
-  Result := False;
-  if Length(AFileExt) = 0 then
-    Exit;
-  LExt := ExtractFileExt(AFileName);
-  if LExt = '' then
-    LFileName := AFileName+AFileExt[0]
-  else
-    LFileName := AFileName;
-  Result := FileExists(LFileName);
-  if not Result then
-  begin
-    LFileName := ExtractFilePath(AFileName)+ChangeFileExt(ExtractFileName(AFileName),'');
-    for I := Low(AFileExt) to High(AFileExt) do
-    begin
-      LExt := AFileExt[I];
-      LFileName := ChangeFileExt(LFileName, LExt);
-      if FileExists(LFileName) then
-      begin
-        AFileName := LFileName;
-        Result := True;
-        break;
-      end;
-    end;
-  end
-  else
-    AFileName := LFileName;
-end;
-
-procedure RegisterMDViewerServerRoot(const AFolder: string);
-begin
-  _ServerRoot := IncludeTrailingPathDelimiter(AFolder);
-end;
-
-function GetMarkdownDefaultCSS: string;
-begin
-  Result :=
-    '<style type="text/css">'+sLineBreak+
-    'img{'+sLineBreak+
-    '  max-width: 100%;'+sLineBreak+
-    '  height: auto;'+sLineBreak+
-    '}'+sLineBreak+
-    'code{'+sLineBreak+
-    '  font-family: "Consolas", monospace;'+sLineBreak+
-    '}'+sLineBreak+
-    'pre{'+sLineBreak+
-    '  border: 1px solid #ddd;'+sLineBreak+
-    '  border-left: 3px solid #f36d33;'+sLineBreak+
-    '  overflow: auto;'+sLineBreak+
-    '  padding: 1em 1.5em;'+sLineBreak+
-    '  display: block;'+sLineBreak+
-    '}'+sLineBreak+
-    'Blockquote{'+sLineBreak+
-    '  border-left: 3px solid #d0d0d0;'+sLineBreak+
-    '  padding-left: 0.5em;'+sLineBreak+
-    '  margin-left:1em;'+sLineBreak+
-    '}'+sLineBreak+
-    'Blockquote p{'+sLineBreak+
-    '  margin: 0;'+sLineBreak+
-    '}'+sLineBreak+
-    'table{'+sLineBreak+
-    '  border:1px solid;'+sLineBreak+
-    '  border-collapse:collapse;'+sLineBreak+
-    '}'+sLineBreak+
-    'th{'+
-    '  padding:5px;'+sLineBreak+
-    '  border:1px solid;'+sLineBreak+
-    '}'+sLineBreak+
-    'td{'+sLineBreak+
-    '  padding:5px;'+sLineBreak+
-    '  border:1px solid;'+sLineBreak+
-    '}'+sLineBreak+
-    '</style>'+sLineBreak;
-end;
-
-//True when the buffer is a valid UTF-8 sequence: it is how UTF-8 is told from
-//ANSI in a file without BOM.
-//NB: the previous implementation obtained the same result by letting
-//TStreamReader raise EEncodingError on an invalid UTF-8 file and then reading
-//the file a second time as ANSI. That worked, but it drove normal control flow
-//with an exception and read the file twice; here the encoding is decided up
-//front, on the bytes already in memory.
-function IsValidUTF8(const ABytes: TBytes): Boolean;
-var
-  I, LLen, LTrailing: Integer;
-  B: Byte;
-begin
-  LLen := Length(ABytes);
-  I := 0;
-  while I < LLen do
-  begin
-    B := ABytes[I];
-    if B < $80 then
-      LTrailing := 0
-    else if (B and $E0) = $C0 then
-      LTrailing := 1
-    else if (B and $F0) = $E0 then
-      LTrailing := 2
-    else if (B and $F8) = $F0 then
-      LTrailing := 3
-    else
-      Exit(False);
-    //The sequence must fit in the buffer...
-    if I + LTrailing >= LLen then
-      Exit(False);
-    //...and every continuation byte must be 10xxxxxx
-    while LTrailing > 0 do
-    begin
-      Inc(I);
-      if (ABytes[I] and $C0) <> $80 then
-        Exit(False);
-      Dec(LTrailing);
-    end;
-    Inc(I);
-  end;
-  Result := True;
-end;
-
-function TryLoadTextFile(const AFileName : TFileName): string;
-var
-  LStream: TFileStream;
-  LBytes: TBytes;
-  LEncoding: TEncoding;
-  LPreambleLen: Integer;
-begin
-  //NB: the content is decoded in a single pass. Reading it line by line and
-  //concatenating (Result := Result + ...) was quadratic in the file size, and
-  //an ANSI file was read twice (once to fail, once through the fallback).
-  Result := '';
-  LStream := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
-  try
-    SetLength(LBytes, LStream.Size);
-    if Length(LBytes) > 0 then
-      LStream.ReadBuffer(LBytes[0], Length(LBytes));
-  finally
-    FreeAndNil(LStream);
-  end;
-  if Length(LBytes) = 0 then
-    Exit;
-
-  //A BOM, when present, decides the encoding
-  LEncoding := nil;
-  LPreambleLen := TEncoding.GetBufferEncoding(LBytes, LEncoding);
-  if LPreambleLen = 0 then
-  begin
-    if IsValidUTF8(LBytes) then
-      LEncoding := TEncoding.UTF8
-    else
-      LEncoding := TEncoding.ANSI;
-  end;
-  Result := LEncoding.GetString(LBytes, LPreambleLen, Length(LBytes) - LPreambleLen);
-
-  //Rebuilding the text line by line always added a final line break: it is
-  //preserved here, because the last markdown block can be closed by it.
-  if (Result <> '') and (Result[Length(Result)] <> #10) then
-    Result := Result + sLineBreak;
+  Result := MarkDownViewerCommon.TryLoadTextFile(AFileName);
 end;
 
 procedure SaveUTF8File(const AFileName: TFileName;
   const AContent: string);
-var
-  LStream: TStringStream;
 begin
-  LStream := TStringStream.Create(AContent, TEncoding.UTF8);
-  try
-    LStream.SaveToFile(AFileName);
-  finally
-    FreeAndNil(LStream);
-  end;
+  MarkDownViewerCommon.SaveUTF8File(AFileName, AContent);
+end;
+
+function GetMarkdownDefaultCSS: string;
+begin
+  Result := MarkDownViewerCommon.GetMarkdownDefaultCSS;
+end;
+
+procedure RegisterMDViewerServerRoot(const AFolder: string);
+begin
+  MarkDownViewerCommon.RegisterMDViewerServerRoot(AFolder);
 end;
 
 { TCustomMarkdownViewer }
@@ -412,15 +275,18 @@ constructor TCustomMarkdownViewer.Create(AOwner: TComponent);
 begin
   inherited;
   FStream := TMemoryStream.Create;
-  FMarkdownContent := TStringList.Create;
-  FMarkdownContent.OnChange := MDContentChanged;
-  FHTMLContent := TStringList.Create;
-  FHTMLContent.OnChange := HTMLContentChanged;
-  FCssStyle := TStringList.Create;
   FAutoLoadOnHotSpotClick := True;
   //Optional syntax-highlighting emitter for fenced code blocks (nil when the
   //MD_SYNTAX_HIGHLIGHTING define is off, so no SynEdit dependency is linked).
   FCodeHighlightEmitter := CreateCodeHighlightEmitter;
+
+  //The Markdown engine: the viewer is refreshed when its HTML changes
+  FEngine := TMarkdownViewerEngine.Create(nil);
+  FEngine.CssStyle.Text := GetMarkdownDefaultCSS;
+  FEngine.MathRendering := mmrCodeCogsImage;
+  FEngine.CodeBlockEmitter := FCodeHighlightEmitter;
+  FEngine.OnBeforeProcess := EngineBeforeProcess;
+  FEngine.HtmlContent.OnChange := HTMLContentChanged;
 
   inherited OnImageRequest := HtmlViewerImageRequest;
 
@@ -435,11 +301,8 @@ begin
   //Use my version of FormControlEnterEvent (move to link only if TabStop is true)
   SectionList.ControlEnterEvent := FormControlEnterEvent;
 
-  FProcessorDialect := mdCommonMark;
-  FCssStyle.Text := GetMarkdownDefaultCSS;
-
-  if _ServerRoot <> '' then
-    ServerRoot := _ServerRoot;
+  if GetMDViewerServerRoot <> '' then
+    ServerRoot := GetMDViewerServerRoot;
 end;
 
 procedure TCustomMarkdownViewer.FormControlEnterEvent(Sender: TObject);
@@ -470,23 +333,19 @@ end;
 
 procedure TCustomMarkdownViewer.ReadLines(Reader: TReader);
 var
-  LOldMDChange: TNotifyEvent;
+  LLines: TStringList;
 begin
-  //OnChange is suspended while reading: every Add would otherwise trigger a
-  //full markdown transformation. The content is transformed once by
-  //LoadFromString below.
-  LOldMDChange := FMarkdownContent.OnChange;
-  FMarkdownContent.OnChange := nil;
+  //Old property "Lines.Strings": its content is Markdown
+  LLines := TStringList.Create;
   try
     Reader.ReadListBegin;
-    FMarkdownContent.Clear;
     while not Reader.EndOfList do
-      FMarkdownContent.Add(Reader.ReadString);
+      LLines.Add(Reader.ReadString);
     Reader.ReadListEnd;
+    LoadFromString(LLines.Text, False);
   finally
-    FMarkdownContent.OnChange := LOldMDChange;
+    LLines.Free;
   end;
-  LoadFromString(FMarkdownContent.Text, False);
 end;
 
 procedure TCustomMarkdownViewer.DefineProperties(Filer: TFiler);
@@ -495,20 +354,30 @@ begin
   Filer.DefineProperty('Lines.Strings', ReadLines, nil, False);
 end;
 
+procedure TCustomMarkdownViewer.ReadState(Reader: TReader);
+begin
+  //Options and contents are read in any order: a single conversion at the end
+  FEngine.BeginUpdate;
+  try
+    inherited;
+  finally
+    FEngine.EndUpdate;
+  end;
+end;
+
 destructor TCustomMarkdownViewer.Destroy;
 begin
+  if Assigned(FEngine) then
+    FEngine.HtmlContent.OnChange := nil;
+  FreeAndNil(FEngine);
   FreeAndNil(FStream);
-  FreeAndNil(FMarkdownContent);
-  FreeAndNil(FHTMLContent);
-  FreeAndNil(FCssStyle);
   FreeAndNil(FCodeHighlightEmitter);
-
   inherited;
 end;
 
 procedure TCustomMarkdownViewer.ExportToFileHTML(const AFileName: TFileName);
 begin
-  SaveUTF8File(AFileName, FHTMLContent.Text);
+  FEngine.ExportToFileHTML(AFileName);
 end;
 
 procedure TCustomMarkdownViewer.SetOnImageRequest(const AValue: TGetImageEvent);
@@ -518,6 +387,21 @@ begin
     inherited OnImageRequest := FImageRequest
   else
     inherited OnImageRequest := HtmlViewerImageRequest;
+end;
+
+function TCustomMarkdownViewer.GetAllowUnsafe: Boolean;
+begin
+  Result := FEngine.AllowUnsafe;
+end;
+
+function TCustomMarkdownViewer.GetCssStyle: TStringList;
+begin
+  Result := FEngine.CssStyle;
+end;
+
+function TCustomMarkdownViewer.GetExtensions: TMarkdownExtensions;
+begin
+  Result := FEngine.Extensions;
 end;
 
 function TCustomMarkdownViewer.GetHelpContext: THelpContext;
@@ -530,14 +414,34 @@ begin
   Result := inherited HelpKeyword;
 end;
 
+function TCustomMarkdownViewer.GetHTMLContent: TStringList;
+begin
+  Result := FEngine.HtmlContent;
+end;
+
 function TCustomMarkdownViewer.GetLines: TStrings;
 begin
-  Result := FHTMLContent;
+  Result := FEngine.HtmlContent;
+end;
+
+function TCustomMarkdownViewer.GetMarkdownContent: TStringList;
+begin
+  Result := FEngine.MarkdownContent;
+end;
+
+function TCustomMarkdownViewer.GetMathRendering: TMarkdownMathRendering;
+begin
+  Result := FEngine.MathRendering;
 end;
 
 function TCustomMarkdownViewer.GetOnImageRequest: TGetImageEvent;
 begin
   Result := FImageRequest;
+end;
+
+function TCustomMarkdownViewer.GetProcessorDialect: TMarkdownProcessorDialect;
+begin
+  Result := FEngine.ProcessorDialect;
 end;
 
 function TCustomMarkdownViewer.GetText: string;
@@ -553,9 +457,14 @@ end;
 function TCustomMarkdownViewer.IsCssStyleStored: Boolean;
 begin
   Result := not SameText(
-    StringReplace(FCssStyle.Text,sLineBreak,'',[rfReplaceAll]),
+    StringReplace(FEngine.CssStyle.Text,sLineBreak,'',[rfReplaceAll]),
     StringReplace(GetMarkdownDefaultCSS, sLineBreak,'',[rfReplaceAll])
     );
+end;
+
+function TCustomMarkdownViewer.IsExtensionsStored: Boolean;
+begin
+  Result := FEngine.Extensions <> TMarkdownViewerEngine.DefaultExtensions(FEngine.ProcessorDialect);
 end;
 
 function TCustomMarkdownViewer.IsDefFontName: Boolean;
@@ -577,7 +486,7 @@ end;
 
 function TCustomMarkdownViewer.IsHtmlContentStored: Boolean;
 begin
-  Result := (FHTMLContent.Text <> '') and  (FMarkdownContent.Text = '');
+  Result := (FEngine.HtmlContent.Text <> '') and (FEngine.MarkdownContent.Text = '');
 end;
 
 function TCustomMarkdownViewer.IsPrintMarginStored: Boolean;
@@ -608,30 +517,13 @@ procedure TCustomMarkdownViewer.Loaded;
 begin
   inherited;
   //Load html content into HtmlViewer, reset scrollbar position
-  if FMarkdownContent.text <> '' then
+  if FEngine.MarkdownContent.Text <> '' then
     RefreshViewer(True, FRescalingImage, False);
 end;
 
 procedure TCustomMarkdownViewer.LoadFromFile(const AFileName: TFileName);
-var
-  I: Integer;
-  LExt: string;
-  LIsHTMLContent: Boolean;
 begin
-  //Load file
-  //NB: ExtractFileExt returns the extension *with* the dot ('.html'), so it
-  //must be compared against AHTMLFileExt and not against 'HTML'/'HTM'.
-  LExt := ExtractFileExt(AFileName);
-  LIsHTMLContent := False;
-  for I := Low(AHTMLFileExt) to High(AHTMLFileExt) do
-  begin
-    if SameText(LExt, AHTMLFileExt[I]) then
-    begin
-      LIsHTMLContent := True;
-      Break;
-    end;
-  end;
-  LoadFromString(TryLoadTextFile(AFileName), LIsHTMLContent);
+  LoadFromString(TryLoadTextFile(AFileName), IsHTMLFileName(AFileName));
 end;
 
 procedure TCustomMarkdownViewer.LoadFromStream(const AStream: TStringStream;
@@ -642,45 +534,15 @@ end;
 
 procedure TCustomMarkdownViewer.LoadFromString(const AValue: string;
   const IsHTMLContent: Boolean = False);
-var
-  LOldMDChange, LOldHTMLChange: TNotifyEvent;
 begin
-  //Load file
-  //The OnChange handlers are suspended while both contents are assigned:
-  //TStrings.SetTextStr always fires OnChange (even when assigning an empty
-  //string), so leaving them active would transform/render the content once per
-  //assignment and - for HTML input - MDContentChanged would overwrite the HTML
-  //just assigned with the transformation of an empty markdown. A single
-  //RefreshViewer is performed below.
-  LOldMDChange := FMarkdownContent.OnChange;
-  LOldHTMLChange := FHTMLContent.OnChange;
-  FMarkdownContent.OnChange := nil;
-  FHTMLContent.OnChange := nil;
+  //A new content: the viewer is refreshed once (HTMLContentChanged), from the
+  //top of the document
+  FResetPosition := True;
   try
-    if not IsHTMLContent then
-    begin
-      FMarkdownContent.Text := AValue;
-      FHTMLContent.Text := TransformContent(FMarkdownContent.Text,
-        FProcessorDialect, FCssStyle.Text, FAllowUnsafe);
-    end
-    else
-    begin
-      //Do not trasform content
-      FMarkdownContent.Text := '';
-      FHTMLContent.Text := AValue;
-    end;
+    FEngine.LoadFromString(AValue, IsHTMLContent);
   finally
-    FMarkdownContent.OnChange := LOldMDChange;
-    FHTMLContent.OnChange := LOldHTMLChange;
+    FResetPosition := False;
   end;
-  //Load html content into HtmlViewer, reset scrollbar position
-  RefreshViewer(True, FRescalingImage, False);
-end;
-
-procedure TCustomMarkdownViewer.MDContentChanged(Sender: TObject);
-begin
-  //Transform content into HtmlViewer
-  FHTMLContent.Text := TransformContent(FMarkdownContent.Text, FProcessorDialect, FCssStyle.Text, FAllowUnsafe);
 end;
 
 procedure TCustomMarkdownViewer.RefreshViewer(
@@ -694,20 +556,30 @@ begin
   LOldPos := Self.VScrollBarPosition;
   if AReloadImages then
     Self.Clear;
-  if FHTMLContent.Text = '' then
+  if FEngine.HtmlContent.Text = '' then
     Exit;
   //Load HTML content into HTML-Viewer
   try
-    inherited LoadFromString(FHTMLContent.Text);
+    inherited LoadFromString(FEngine.HtmlContent.Text);
   finally
     if APreservePosition then
       Self.VScrollBarPosition := LOldPos;
   end;
 end;
 
+procedure TCustomMarkdownViewer.SetAllowUnsafe(const AValue: Boolean);
+begin
+  FEngine.AllowUnsafe := AValue;
+end;
+
 procedure TCustomMarkdownViewer.SetCssStyle(const AValue: TStringList);
 begin
-  FCssStyle.Assign(AValue);
+  FEngine.CssStyle := AValue;
+end;
+
+procedure TCustomMarkdownViewer.SetExtensions(const AValue: TMarkdownExtensions);
+begin
+  FEngine.Extensions := AValue;
 end;
 
 procedure TCustomMarkdownViewer.SetFileName(const AValue: TFileName);
@@ -723,35 +595,10 @@ end;
 procedure TCustomMarkdownViewer.AutoLoadFile;
 var
   LFileName: TFileName;
-  LRootFolder: string;
 begin
-  LRootFolder := ServerRoot;
-  if LRootFolder = '' then
-    LRootFolder := _ServerRoot;
-  if LRootFolder <> '' then
-  begin
-    LRootFolder := IncludeTrailingPathDelimiter(LRootFolder);
-    case HelpType of
-      htKeyword:
-      begin
-        if HelpKeyword <> '' then
-        begin
-          LFileName := LRootFolder+HelpKeyword+'.md';
-          if FindHelpFile(LFileName, 0, ChangeFileExt(HelpKeyword,'.md')) then
-            LoadFromFile(LFileName);
-        end;
-      end;
-      htContext:
-      begin
-        if HelpContext <> 0 then
-        begin
-          LFileName := LRootFolder+IntToStr(HelpContext)+'.md';
-          if FindHelpFile(LFileName, HelpContext, '') then
-            LoadFromFile(LFileName);
-        end;
-      end;
-    end;
-  end;
+  if ResolveHelpFile(ServerRoot, HelpType, HelpKeyword, HelpContext,
+    FindHelpFile, LFileName) then
+    LoadFromFile(LFileName);
 end;
 
 procedure TCustomMarkdownViewer.SetHelpContext(const AValue: THelpContext);
@@ -774,25 +621,30 @@ end;
 
 procedure TCustomMarkdownViewer.SetHTMLContent(const AValue: TStringList);
 begin
-  if FHTMLContent.Text <> AValue.Text then
+  if FEngine.HtmlContent.Text <> AValue.Text then
     LoadFromString(AValue.Text, True);
 end;
 
 procedure TCustomMarkdownViewer.SetLines(const Value: TStrings);
 begin
-  FHTMLContent.Assign(Value);
+  FEngine.HtmlContent.Assign(Value);
 end;
 
 procedure TCustomMarkdownViewer.SetMarkdownContent(const AValue: TStringList);
 begin
-  if FMarkdownContent.Text <> AValue.Text then
+  if FEngine.MarkdownContent.Text <> AValue.Text then
     LoadFromString(AValue.Text, False);
+end;
+
+procedure TCustomMarkdownViewer.SetMathRendering(const AValue: TMarkdownMathRendering);
+begin
+  FEngine.MathRendering := AValue;
 end;
 
 procedure TCustomMarkdownViewer.SetProcessorDialect(
   const AValue: TMarkdownProcessorDialect);
 begin
-  FProcessorDialect := AValue;
+  FEngine.ProcessorDialect := AValue;
 end;
 
 procedure TCustomMarkdownViewer.SetRescalingImage(const AValue: Boolean);
@@ -814,43 +666,35 @@ begin
   end;
 end;
 
-function TCustomMarkdownViewer.TransformContent(const AMarkdownContent: string;
-  AProcessorDialect: TMarkdownProcessorDialect = mdCommonMark;
-  const ACssStyle: string = '';
-  const AAllowUnsafe: Boolean = False): string;
+procedure TCustomMarkdownViewer.EngineBeforeProcess(Sender: TObject);
 var
-  LMarkdownProcessor: TMarkdownProcessor;
   LBackground: TColor;
   LForeground: TColor;
   LDark: Boolean;
 begin
-  //Transform file Markdown in HTML using TMarkdownProcessor
-  LMarkdownProcessor := TMarkdownProcessor.CreateDialect(AProcessorDialect);
-  Try
-    //Safe mode by default: native HTML is neutralized unless AllowUnsafe is set.
-    LMarkdownProcessor.AllowUnsafe := AAllowUnsafe;
-    //Optional syntax highlighting of fenced code blocks. The caller owns the
-    //emitter, so we detach it before freeing the processor (TConfiguration
-    //frees its codeBlockEmitter).
-    if FCodeHighlightEmitter <> nil then
-    begin
-      LBackground := ColorToRGB(DefBackground);
-      LDark := (GetRValue(LBackground) * 299 + GetGValue(LBackground) * 587 +
-        GetBValue(LBackground) * 114) div 1000 < 128;
-      if LDark then
-        LForeground := clWhite
-      else
-        LForeground := clBlack;
-      FCodeHighlightEmitter.SetTheme(LDark, DefBackground, LForeground,
-        DefFontName, DefFontSize);
-      LMarkdownProcessor.Config.codeBlockEmitter := FCodeHighlightEmitter;
-    end;
-    Result := ACssStyle+LMarkdownProcessor.Process(AMarkdownContent);
-  Finally
-    if FCodeHighlightEmitter <> nil then
-      LMarkdownProcessor.Config.codeBlockEmitter := nil;
-    LMarkdownProcessor.Free;
-  End;
+  //Syntax highlighting of the code blocks with the colors of the viewer
+  if FCodeHighlightEmitter <> nil then
+  begin
+    LBackground := ColorToRGB(DefBackground);
+    LDark := (GetRValue(LBackground) * 299 + GetGValue(LBackground) * 587 +
+      GetBValue(LBackground) * 114) div 1000 < 128;
+    if LDark then
+      LForeground := clWhite
+    else
+      LForeground := clBlack;
+    FCodeHighlightEmitter.SetTheme(LDark, DefBackground, LForeground,
+      DefFontName, DefFontSize);
+  end;
+end;
+
+function TCustomMarkdownViewer.TransformContent(const AMarkdownContent: string;
+  AProcessorDialect: TMarkdownProcessorDialect = DefaultMarkdownDialect;
+  const ACssStyle: string = '';
+  const AAllowUnsafe: Boolean = False): string;
+begin
+  EngineBeforeProcess(Self);
+  Result := FEngine.TransformContent(AMarkdownContent, AProcessorDialect,
+    ACssStyle, AAllowUnsafe);
 end;
 
 procedure TCustomMarkdownViewer.ConvertImage(AFileName: string;
@@ -998,45 +842,17 @@ begin
 end;
 
 function TCustomMarkdownViewer.HotSpotClickHandled: Boolean;
-var
-  LFileName: TFileName;
-  LRootFolder: string;
 begin
   Result := Inherited HotSpotClickHandled;
   if not Result then
-  begin
-    //Prepare FileName
-    LRootFolder := ServerRoot;
-    if LRootFolder = '' then
-      LRootFolder := _ServerRoot;
-    LFileName := IncludeTrailingPathDelimiter(LRootFolder)+URL;
-    //User Event
-    if Assigned(FOnFileNameClicked) then
-      FOnFileNameClicked(LFileName, Result);
-    //Auto load file
-    if not Result and FileExists(LFileName) and FAutoLoadOnHotSpotClick then
-    begin
-      LoadFromFile(LFileName);
-      Result := True;
-    end
-    else if PathIsURL(PChar(URL)) then
-    begin
-      if Assigned(FOnURLClicked) then
-        FOnURLClicked(URL, Result);
-      if not Result and FAutoLoadOnHotSpotClick  then
-      begin
-        //Try to Open an URL
-        ShellExecute(0, 'open', PChar(URL), nil, nil, SW_SHOWNORMAL);
-        Result := True;
-      end;
-    end;
-  end;
+    Result := HandleLinkClicked(ServerRoot, URL, FAutoLoadOnHotSpotClick,
+      FOnFileNameClicked, FOnURLClicked, LoadFromFile);
 end;
 
 procedure TCustomMarkdownViewer.HTMLContentChanged(Sender: TObject);
 begin
-  //Refresh viewer
-  RefreshViewer(True, FRescalingImage);
+  //Refresh viewer: from the top for a new content, else at the same position
+  RefreshViewer(True, FRescalingImage, not FResetPosition);
 end;
 
 procedure TCustomMarkdownViewer.HtmlViewerImageRequest(Sender: TObject;
@@ -1054,7 +870,7 @@ Begin
   else if FFileName <> '' then
     LWorkingPath := ExtractFilePath(FFileName)
   else
-    LWorkingPath := _ServerRoot;
+    LWorkingPath := GetMDViewerServerRoot;
   // is "fullName" a local file, if not acquire file from internet
   // replace %20 spaces to normal spaces
   LFullName := StringReplace(ASource,'%20',' ',[rfReplaceAll]);
@@ -1080,65 +896,8 @@ End;
 function TCustomMarkdownViewer.FindHelpFile(
   var AFileName: TFileName;
   const AContext: Integer; const HelpKeyword: string): boolean;
-var
-  LHelpFileName: TFileName;
-  LName, LPath, LKeyWord: string;
 begin
-  //WARNING: if changing this function, change also TMarkdownHelpViewer.FindHelpFile
-  if HelpKeyword <> '' then
-    LKeyWord := HelpKeyword
-  else if AContext <> 0 then
-    LKeyWord := IntToStr(AContext)+'.md'
-  else
-    LKeyword := '';
-
-  //First, Try the Keyword only
-  LPath := ExtractFilePath(AFileName);
-  LHelpFileName := LPath+LKeyword;
-  Result := FileWithExtExists(LHelpFileName, AMarkdownFileExt) or
-    FileWithExtExists(LHelpFileName, AHTMLFileExt);
-
-  if not Result then
-  begin
-    //Then, try the Help Name and the Keyword (eg.Home1000.ext)
-    LName := ChangeFileExt(ExtractFileName(AFileName),'');
-    LHelpFileName := LPath+LName+LKeyword;
-    Result := FileWithExtExists(LHelpFileName, AMarkdownFileExt) or
-      FileWithExtExists(LHelpFileName, AHTMLFileExt);
-    if not Result then
-    begin
-      //At least, try the Help Name and the Keyword with '_' (eg.Home_1000.ext)
-      LHelpFileName := LPath+LName+'_'+LKeyword;
-      Result := FileWithExtExists(LHelpFileName, AMarkdownFileExt) or
-        FileWithExtExists(LHelpFileName, AHTMLFileExt);
-    end;
-  end;
-
-  if Result then
-    AFileName := LHelpFileName;
+  Result := FindMarkdownHelpFile(AFileName, AContext, HelpKeyword);
 end;
-
-{ THookControlActionLink }
-
-function THookControlActionLink.IsHelpContextLinked: Boolean;
-begin
-  Result := inherited IsHelpContextLinked;
-end;
-
-initialization
-  SetLength(AMarkdownFileExt, 9);
-  AMarkdownFileExt[0] := '.md';
-  AMarkdownFileExt[1] := '.mkd';
-  AMarkdownFileExt[2] := '.mdwn';
-  AMarkdownFileExt[3] := '.mdown';
-  AMarkdownFileExt[4] := '.mdtxt';
-  AMarkdownFileExt[5] := '.mdtext';
-  AMarkdownFileExt[6] := '.markdown';
-  AMarkdownFileExt[7] := '.txt';
-  AMarkdownFileExt[8] := '.text';
-
-  SetLength(AHTMLFileExt, 2);
-  AHTMLFileExt[0] := '.html';
-  AHTMLFileExt[1] := '.htm';
 
 end.

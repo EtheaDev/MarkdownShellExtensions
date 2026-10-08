@@ -124,6 +124,14 @@ type
     FStyleClass: TStyledButtonClass;
     FStyleAppearance: TStyledButtonAppearance;
     FStyleApplied: Boolean;
+    //Attributes of an item whose style differs from the container, resolved
+    //once and kept until the item style or the container style changes
+    FCachedNormal, FCachedPressed, FCachedSelected, FCachedHot,
+      FCachedDisabled: TStyledButtonAttributes;
+    FCachedKey: string;
+    FCachedGeneration: Integer;
+    function GetCachedAttributes(const AGeneration: Integer;
+      const AState: TStyledButtonState): TStyledButtonAttributes;
     procedure InvalidateOwner;
     function IsCustomDrawType: Boolean;
     function IsCustomRoundedCorners: Boolean;
@@ -140,6 +148,10 @@ type
     procedure LoadDefaultStyles;
   public
     constructor Create(Collection: TCollection); override;
+    destructor Destroy; override;
+    /// <summary>Sets the item style using family, class, and appearance</summary>
+    /// <remarks>An empty value keeps the current one or, if the item has none,
+    /// uses the ButtonGroup style</remarks>
     procedure SetButtonStyle(const AStyleFamily: TStyledButtonFamily;
       const AStyleClass: TStyledButtonClass;
       const AStyleAppearance: TStyledButtonAppearance);
@@ -168,6 +180,7 @@ type
   TStyledButtonGroup = class(TButtonGroup)
   private
     //StyledButton Attributes
+    FStyleGeneration: Integer; //bumped by ApplyButtonStyle: invalidates the items' cached attributes
     FButtonStyleNormal: TStyledButtonAttributes;
     FButtonStylePressed: TStyledButtonAttributes;
     FButtonStyleSelected: TStyledButtonAttributes;
@@ -871,6 +884,7 @@ var
   LStyleClass: TStyledButtonClass;
   LStyleAppearance: TStyledButtonAppearance;
 begin
+  Inc(FStyleGeneration); //the items re-resolve their cached attributes
   if AsVCLStyle then
   begin
     //if StyleElements contains seClient then use
@@ -1304,39 +1318,25 @@ begin
   LCustomAttributes := ((AItem.FStyleFamily) <> FStyleFamily) or
     ((AItem.FStyleClass) <> FStyleClass) or
     ((AItem.FStyleAppearance) <> FStyleAppearance);
-  try
-    if LCustomAttributes then
-    begin
-      //Getting custom drawing styles for single button
-      StyleFamilyUpdateAttributes(
-        AItem.FStyleFamily, AItem.FStyleClass, AItem.FStyleAppearance,
-        FButtonStyleNormal, FButtonStylePressed, FButtonStyleSelected,
-        FButtonStyleHot, FButtonStyleDisabled);
-    end;
-
-    //Getting custom drawing styles for all buttons
+  if LCustomAttributes then
+    //Item with its own style: attributes resolved once and cached by the item
+    //(they were resolved twice per item per paint: swapped into the container
+    //attributes and restored, see StyledPerfTests)
+    LSyleAttributes := AItem.GetCachedAttributes(FStyleGeneration, AButtonState)
+  else
+    //Drawing styles of the container, shared by all the buttons
     LSyleAttributes := GetAttributes(AButtonState);
 
-    ACanvas.Pen.Style := LSyleAttributes.PenStyle;
-    ACanvas.Pen.Width := Round(LSyleAttributes.BorderWidth{$IFDEF D10_3+}*ScaleFactor{$ENDIF});
-    ACanvas.Pen.Color := LSyleAttributes.BorderColor;
-    ACanvas.Brush.Style := LSyleAttributes.BrushStyle;
-    if LSyleAttributes.ButtonDrawStyle <> btnClear then
-      ACanvas.Brush.Color := LSyleAttributes.ButtonColor;
-    ACanvas.Font := Font;
-    ACanvas.Font.Color := LSyleAttributes.FontColor;
-    if ParentFont then
-      ACanvas.Font.Style := LSyleAttributes.FontStyle;
-  finally
-    if LCustomAttributes then
-    begin
-      //Restore drawing styles for every buttons
-      StyleFamilyUpdateAttributes(
-        FStyleFamily, FStyleClass, FStyleAppearance,
-        FButtonStyleNormal, FButtonStylePressed, FButtonStyleSelected,
-        FButtonStyleHot, FButtonStyleDisabled);
-    end;
-  end;
+  ACanvas.Pen.Style := LSyleAttributes.PenStyle;
+  ACanvas.Pen.Width := Round(LSyleAttributes.BorderWidth{$IFDEF D10_3+}*ScaleFactor{$ENDIF});
+  ACanvas.Pen.Color := LSyleAttributes.BorderColor;
+  ACanvas.Brush.Style := LSyleAttributes.BrushStyle;
+  if LSyleAttributes.ButtonDrawStyle <> btnClear then
+    ACanvas.Brush.Color := LSyleAttributes.ButtonColor;
+  ACanvas.Font := Font;
+  ACanvas.Font.Color := LSyleAttributes.FontColor;
+  if ParentFont then
+    ACanvas.Font.Style := LSyleAttributes.FontStyle;
 end;
 
 function TStyledButtonGroup.GetGrpButtonItems: TStyledGrpButtonItems;
@@ -1389,7 +1389,11 @@ end;
 
 procedure TStyledGrpButtonItem.LoadDefaultStyles;
 begin
-  if Assigned(ButtonGroup) and (ButtonGroup.FStyleApplied) and not FStyleApplied then
+  //Inherit the container's style and shape when the item has none of its own.
+  //Do not require the container's FStyleApplied: an empty group can never set
+  //it, so items added at runtime would keep the class defaults.
+  if Assigned(ButtonGroup) and not FStyleApplied and
+    not (csLoading in ButtonGroup.ComponentState) then
   begin
     FStyleFamily := ButtonGroup.StyleFamily;
     FStyleClass := ButtonGroup.StyleClass;
@@ -1397,6 +1401,54 @@ begin
     FStyleRadius := ButtonGroup.StyleRadius;
     FStyleRoundedCorners := ButtonGroup.StyleRoundedCorners;
     FStyleDrawType := ButtonGroup.StyleDrawType;
+  end;
+end;
+
+destructor TStyledGrpButtonItem.Destroy;
+begin
+  FCachedNormal.Free;
+  FCachedPressed.Free;
+  FCachedSelected.Free;
+  FCachedHot.Free;
+  FCachedDisabled.Free;
+  inherited;
+end;
+
+function TStyledGrpButtonItem.GetCachedAttributes(const AGeneration: Integer;
+  const AState: TStyledButtonState): TStyledButtonAttributes;
+var
+  LKey: string;
+  LClass: TStyledButtonClass;
+  LAppearance: TStyledButtonAppearance;
+begin
+  if not Assigned(FCachedNormal) then
+  begin
+    FCachedNormal := TStyledButtonAttributes.Create(nil);
+    FCachedPressed := TStyledButtonAttributes.Create(nil);
+    FCachedSelected := TStyledButtonAttributes.Create(nil);
+    FCachedHot := TStyledButtonAttributes.Create(nil);
+    FCachedDisabled := TStyledButtonAttributes.Create(nil);
+  end;
+  //Self-validating cache: keyed by the item style, invalidated by the
+  //container generation (bumped on every container ApplyButtonStyle, i.e.
+  //on CM_STYLECHANGED and on the container style setters)
+  LKey := FStyleFamily + '|' + FStyleClass + '|' + FStyleAppearance;
+  if (LKey <> FCachedKey) or (AGeneration <> FCachedGeneration) then
+  begin
+    LClass := FStyleClass;
+    LAppearance := FStyleAppearance;
+    StyleFamilyUpdateAttributes(FStyleFamily, LClass, LAppearance,
+      FCachedNormal, FCachedPressed, FCachedSelected, FCachedHot, FCachedDisabled);
+    FCachedKey := LKey;
+    FCachedGeneration := AGeneration;
+  end;
+  case AState of
+    bsmPressed: Result := FCachedPressed;
+    bsmSelected: Result := FCachedSelected;
+    bsmHot: Result := FCachedHot;
+    bsmDisabled: Result := FCachedDisabled;
+  else
+    Result := FCachedNormal;
   end;
 end;
 
@@ -1492,12 +1544,22 @@ procedure TStyledGrpButtonItem.SetButtonStyle(
   const AStyleAppearance: TStyledButtonAppearance);
 begin
   FStyleApplied := False;
-  FStyleFamily := AStyleFamily;
-  FStyleClass := AStyleClass;
-  FStyleAppearance := AStyleAppearance;
+  //Empty values keep the current style, or use the ButtonGroup style
+  if AStyleFamily <> '' then
+    FStyleFamily := AStyleFamily
+  else if (FStyleFamily = '') and Assigned(ButtonGroup) then
+    FStyleFamily := ButtonGroup.StyleFamily;
+  if AStyleClass <> '' then
+    FStyleClass := AStyleClass
+  else if (FStyleClass = '') and Assigned(ButtonGroup) then
+    FStyleClass := ButtonGroup.StyleClass;
+  if AStyleAppearance <> '' then
+    FStyleAppearance := AStyleAppearance
+  else if (FStyleAppearance = '') and Assigned(ButtonGroup) then
+    FStyleAppearance := ButtonGroup.StyleAppearance;
   if not ApplyButtonStyle then
     raise EStyledButtonGroupError.CreateFmt(ERROR_SETTING_BUTTON_STYLE,
-      [AStyleFamily, AStyleClass, AStyleAppearance]);
+      [FStyleFamily, FStyleClass, FStyleAppearance]);
 end;
 
 procedure TStyledGrpButtonItem.SetStyleAppearance(

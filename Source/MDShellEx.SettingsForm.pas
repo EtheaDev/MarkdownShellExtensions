@@ -113,6 +113,7 @@ type
     ProcessorDialectLabel: TLabel;
     ProcessorDialectComboBox: TComboBox;
     AllowUnsafeHTMLCheckBox: TCheckBox;
+    UseWebView2CheckBox: TCheckBox;
     RenderingGroupBox: TGroupBox;
     DownloadFromWebCheckBox: TCheckBox;
     RescalingImageCheckBox: TCheckBox;
@@ -205,6 +206,7 @@ uses
 {$ENDIF}
   MarkdownProcessor,
   MarkdownUtils,
+  MarkDownViewerCommon,
   SynHighlighterCss,
   uRegistry;
 
@@ -646,6 +648,7 @@ begin
   HTMLFontComboBox.ItemIndex := HTMLFontComboBox.Items.IndexOf(ASettings.HTMLFontName);
   HTMLUpDown.Position := ASettings.HTMLFontSize;
 
+  FillDialectItems(ProcessorDialectComboBox.Items);
   ProcessorDialectComboBox.ItemIndex := ord(ASettings.ProcessorDialect);
   AllowUnsafeHTMLCheckBox.Checked := ASettings.AllowUnsafeHTML;
 
@@ -673,6 +676,13 @@ begin
     AutoRefreshCheckBox.Checked := TEditorSettings(ASettings).AutoRefreshWhenEditing
   else
     AutoRefreshCheckBox.Checked := False;
+
+  //WebView2 is used only by the preview of the editor
+  UseWebView2CheckBox.Visible := ASettings is TEditorSettings;
+  if UseWebView2CheckBox.Visible then
+    UseWebView2CheckBox.Checked := TEditorSettings(ASettings).UseWebView2
+  else
+    UseWebView2CheckBox.Checked := False;
 
   SyncScrollCheckBox.Visible := ASettings is TEditorSettings;
   if SyncScrollCheckBox.Visible then
@@ -761,6 +771,7 @@ begin
     TEditorSettings(ASettings).DownloadFromWEB := DownloadFromWEBCheckBox.Checked;
     TEditorSettings(ASettings).AutoRefreshWhenEditing := AutoRefreshCheckBox.Checked;
     TEditorSettings(ASettings).SyncScroll := SyncScrollCheckBox.Checked;
+    TEditorSettings(ASettings).UseWebView2 := UseWebView2CheckBox.Checked;
     TEditorSettings(ASettings).RestoreLastSession := RestoreLastSessionCheckBox.Checked;
     TEditorSettings(ASettings).DarkActiveLineColor := DarkActiveLineColorColorBox.Selected;
     TEditorSettings(ASettings).LightActiveLineColor := LightActiveLineColorColorBox.Selected;

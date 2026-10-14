@@ -129,6 +129,12 @@ type
     FButtonsWidth: Integer;
     FButtonsHeight: Integer;
     FDialogBtnFamily: TStyledButtonFamily;
+    //Form that launched the dialog: reference for the position, NOT the popup parent
+    //(it can be destroyed while the dialog is modal)
+    FReferenceForm: TCustomForm;
+    //Position requested by the dialog (screen or owner centering): the VCL one is
+    //replaced by CenterOverReferenceForm, so Position itself stays poDesigned
+    FDesiredPosition: TPosition;
     FDialogBtnDrawType: TStyledButtonDrawType;
     FDialogBtnRadius: Integer;
     FDialogBtnRoundedCorners: TRoundedCorners;
@@ -201,12 +207,15 @@ type
     function GetExpanded: Boolean;
     procedure CalcMessageText(const AExpanded: Boolean);
     procedure SetProgressBar(const AValue: TTaskDialogProgressBar);
+    procedure SetReferenceForm(const AValue: TCustomForm);
+    procedure CenterOverReferenceForm;
   protected
     procedure WndProc(var Message: TMessage); override;
     procedure TimerEvent(Sender: TObject);
     /// <summary>Window the dialog is positioned relative to (popup parent,
     /// else active form, else the application window)</summary>
     function GetReferenceWnd: HWND; virtual;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   	function GetScaleFactor: Single; virtual;
     class function CanUseAnimations: Boolean; virtual; abstract;
     function GetButtonsHeight: Integer; virtual;
@@ -1607,6 +1616,7 @@ begin
       FTickCount := 0;
       FTimer.Enabled := True;
     end;
+    CenterOverReferenceForm;
   finally
     Screen.Cursor := crDefault;
   end;
@@ -1673,7 +1683,16 @@ end;
 
 procedure TStyledTaskDialogForm.Loaded;
 begin
-  Position := _DialogPosition;
+  //The VCL centers poScreenCenter/poOwnerFormCenter after OnShow, on the monitor of
+  //the popup parent or over the Owner: here the popup parent is the main form and
+  //the owner is Application, so the position is resolved by CenterOverReferenceForm
+  //(called from FormShow, against the form that launched the dialog). Position is
+  //set while the window does not exist yet: changing it later recreates the window.
+  FDesiredPosition := _DialogPosition;
+  if _DialogPosition in [poScreenCenter, poOwnerFormCenter] then
+    Position := poDesigned
+  else
+    Position := _DialogPosition;
   TextLabel.Align := alTop;
   inherited;
 end;
@@ -1723,11 +1742,80 @@ begin
   UpdateButtonStyle(CloseButton);
 end;
 
+procedure TStyledTaskDialogForm.SetReferenceForm(const AValue: TCustomForm);
+begin
+  if FReferenceForm <> AValue then
+  begin
+    if Assigned(FReferenceForm) then
+      FReferenceForm.RemoveFreeNotification(Self);
+    FReferenceForm := AValue;
+    if Assigned(FReferenceForm) then
+      FReferenceForm.FreeNotification(Self);
+  end;
+end;
+
+procedure TStyledTaskDialogForm.Notification(AComponent: TComponent;
+  Operation: TOperation);
+begin
+  inherited;
+  //The form that launched the dialog can be destroyed while the dialog is modal
+  if (Operation = opRemove) and (AComponent = FReferenceForm) then
+    FReferenceForm := nil;
+end;
+
+procedure TStyledTaskDialogForm.CenterOverReferenceForm;
+var
+  LRect: TRect;
+  LCenterForm: TCustomForm;
+  LMonitor: TMonitor;
+  LLeft, LTop: Integer;
+begin
+  //Only for the positions replaced in Loaded (Position = poDesigned): an explicit
+  //position (SetPosition, poDefault) is left alone.
+  if (Position <> poDesigned) or
+    not (FDesiredPosition in [poScreenCenter, poOwnerFormCenter]) then
+    Exit;
+  //Form the dialog is centered on: the one that launched it, else the main form
+  LCenterForm := FReferenceForm;
+  if not Assigned(LCenterForm) or not LCenterForm.HandleAllocated then
+    LCenterForm := Application.MainForm;
+  if Assigned(LCenterForm) and not LCenterForm.HandleAllocated then
+    LCenterForm := nil;
+  if Assigned(LCenterForm) then
+    LMonitor := Screen.MonitorFromWindow(LCenterForm.Handle)
+  else
+    LMonitor := Monitor;
+  if (FDesiredPosition = poOwnerFormCenter) and Assigned(LCenterForm) then
+    //centered over that form (as the native task dialog with the position flag)
+    LRect := LCenterForm.BoundsRect
+  else if Assigned(LMonitor) then
+    //centered on the monitor of that form (as the native task dialog without it)
+    LRect := LMonitor.WorkareaRect
+  else
+    Exit;
+  LLeft := LRect.Left + ((LRect.Right - LRect.Left) - Width) div 2;
+  LTop := LRect.Top + ((LRect.Bottom - LRect.Top) - Height) div 2;
+  if Assigned(LMonitor) then
+  begin
+    if LLeft + Width > LMonitor.WorkareaRect.Right then
+      LLeft := LMonitor.WorkareaRect.Right - Width;
+    if LTop + Height > LMonitor.WorkareaRect.Bottom then
+      LTop := LMonitor.WorkareaRect.Bottom - Height;
+    if LLeft < LMonitor.WorkareaRect.Left then
+      LLeft := LMonitor.WorkareaRect.Left;
+    if LTop < LMonitor.WorkareaRect.Top then
+      LTop := LMonitor.WorkareaRect.Top;
+  end;
+  SetBounds(LLeft, LTop, Width, Height);
+end;
+
 function TStyledTaskDialogForm.GetReferenceWnd: HWND;
 begin
   //Prefer the popup parent (the form that launched the dialog), then the active
   //form, then the application window, so positioning has a real reference window.
-  if Assigned(PopupParent) and PopupParent.HandleAllocated then
+  if Assigned(FReferenceForm) and FReferenceForm.HandleAllocated then
+    Result := FReferenceForm.Handle
+  else if Assigned(PopupParent) and PopupParent.HandleAllocated then
     Result := PopupParent.Handle
   else if Assigned(Screen.ActiveForm) and Screen.ActiveForm.HandleAllocated then
     Result := Screen.ActiveForm.Handle
@@ -1811,15 +1899,29 @@ begin
         ['Skia.Vcl.StyledTaskDialogAnimatedUnit'])
     else
     begin
-      LForm := _AnimatedTaskDialogFormClass.Create(LOwnerForm);
+      LForm := _AnimatedTaskDialogFormClass.Create(Application);
       TStyledTaskDialogForm(LForm).AnimationLoop := ATaskDialog.UseAnimationLoop;
       TStyledTaskDialogForm(LForm).AnimationInverse := ATaskDialog.UseAnimationInverse;
     end;
   end
   else
-    LForm := _TaskDialogFormClass.Create(LOwnerForm);
+    LForm := _TaskDialogFormClass.Create(Application);
   try
-    LForm.PopupParent := LOwnerForm;
+    //The dialog must not depend on the form that launched it: if that form is
+    //destroyed while the dialog is modal, a dialog owned by it (Delphi owner) or
+    //popup-parented to it (Win32 owner window) is destroyed with it, and the Free
+    //below then freed it a second time. Delphi owner: Application. Popup parent:
+    //the main form, when it is alive. The launching form is kept only as a
+    //reference for the position (with a free notification).
+    if Assigned(Application.MainForm) and
+      not (csDestroying in Application.MainForm.ComponentState) then
+    begin
+      LForm.PopupMode := pmExplicit;
+      LForm.PopupParent := Application.MainForm;
+    end
+    else
+      LForm.PopupParent := nil;
+    LForm.SetReferenceForm(LOwnerForm);
     //Call event handler OnDialogConstructed
     if Assigned(ATaskDialog.OnDialogConstructed) then
       ATaskDialog.OnDialogConstructed(ATaskDialog);

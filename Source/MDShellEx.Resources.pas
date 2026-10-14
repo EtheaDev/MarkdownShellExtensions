@@ -296,10 +296,16 @@ begin
     // HTMLViewer needs to be nil'ed
     AStream := nil;
 
-    LFullName := ASource;
-    TryExpandSpaces(LHtmlViewer.ServerRoot, LFullName);
-    LFullName := LHtmlViewer.HTMLExpandFilename(LFullName);
-  
+    //The local file as a browser resolves the URL: no image for a URL that is
+    //not valid (e.g. a Windows path), as in WebView2
+    if not URLToLocalFileName(LHtmlViewer.ServerRoot, ASource, LFullName) then
+    begin
+      if StartsText('http:', ASource) or StartsText('https:', ASource) then
+        LFullName := ASource
+      else
+        Exit;
+    end;
+
     LoadFileContent(LFullName, LHtmlViewer.ServerRoot, LMaxWidth,
       LHtmlViewer.DefBackground, AStream);
   Finally

@@ -35,6 +35,7 @@ uses
   System.SysUtils,
   System.Variants,
   System.Classes,
+  System.Generics.Collections,
   System.Actions,
   Vcl.ActnList,
   Vcl.ComCtrls,
@@ -49,7 +50,7 @@ uses
   Vcl.BootstrapButtonStyles,
   Vcl.AngularButtonStyles,
   Vcl.ColorButtonStyles,
-  Vcl.ImgList;
+  Vcl.ImgList{$IFDEF DXE8+}, System.ImageList{$ENDIF};
 
 const
   BUTTON_WIDTH = 100;
@@ -86,7 +87,10 @@ type
     BottomRightCheckBox: TCheckBox;
     CornerRadiusGroupBox: TGroupBox;
     RadiusTrackBar: TTrackBar;
-    StyleRadiusLabel: TLabel;
+    ShadowSizeTrackBar: TTrackBar;
+    RadiusLabel: TLabel;
+    ShadowSizeLabel: TLabel;
+    ShadowGroupBox: TGroupBox;
     procedure FormCreate(Sender: TObject);
     procedure OKButtonClick(Sender: TObject);
     procedure ApplyButtonClick(Sender: TObject);
@@ -103,6 +107,7 @@ type
     procedure RoundedCheckBoxClick(Sender: TObject);
     procedure TabControlGetImageIndex(Sender: TObject; TabIndex: Integer;
       var ImageIndex: Integer);
+    procedure ShadowSizeTrackBarChange(Sender: TObject);
   private
     FSourceButton: TStyledGraphicButton;
     FDestButton: TStyledGraphicButton;
@@ -114,6 +119,7 @@ type
     FStyledPanel: TStyledPanel;
     FStyledControl: TControl;
     FCustomStyleDrawType: Boolean;
+    function OrderedFamilyNames: TArray<TStyledButtonFamily>;
     procedure BuildTabControls;
     procedure ShowFamilyPreview;
     procedure BuildFamilyPreview(const AFamily: TStyledButtonFamily);
@@ -429,25 +435,66 @@ begin
   end;
 end;
 
+function TStyledButtonEditor.OrderedFamilyNames: TArray<TStyledButtonFamily>;
+const
+  //Families of the library, in the order of the tabs: the order of registration
+  //depends on the initialization order of the units, which is not stable (it
+  //depends on the project and on the IDE), so it cannot decide the order of the tabs
+  KNOWN_FAMILIES: array[0..7] of string = (
+    DEFAULT_CLASSIC_FAMILY, BOOTSTRAP_FAMILY, ANGULAR_LIGHT_FAMILY, ANGULAR_DARK_FAMILY,
+    ANGULAR_M3_LIGHT_FAMILY, ANGULAR_M3_DARK_FAMILY, BASIC_COLOR_FAMILY, SVG_COLOR_FAMILY);
+var
+  LList: TList<TStyledButtonFamily>;
+  LFamilies: TObjectList;
+  LName: string;
+  I, J: Integer;
+  LKnown: Boolean;
+begin
+  LList := TList<TStyledButtonFamily>.Create;
+  try
+    LFamilies := GetButtonFamilies;
+    //Known families first, in the fixed order, when registered
+    for J := Low(KNOWN_FAMILIES) to High(KNOWN_FAMILIES) do
+      if StyleFamilyExists(KNOWN_FAMILIES[J]) then
+        LList.Add(KNOWN_FAMILIES[J]);
+    //Then any other family (custom), in order of registration
+    if Assigned(LFamilies) then
+      for I := 0 to LFamilies.Count - 1 do
+      begin
+        LName := GetButtonFamilyName(I);
+        LKnown := False;
+        for J := Low(KNOWN_FAMILIES) to High(KNOWN_FAMILIES) do
+          if SameText(LName, KNOWN_FAMILIES[J]) then
+            LKnown := True;
+        if not LKnown then
+          LList.Add(LName);
+      end;
+    Result := LList.ToArray;
+  finally
+    LList.Free;
+  end;
+end;
+
 procedure TStyledButtonEditor.BuildTabControls;
 var
-  LFamilies: TObjectList;
+  LFamilies: TArray<TStyledButtonFamily>;
   LFamily: TStyledButtonFamily;
+  LCurrent: TStyledButtonFamily;
   I: Integer;
 begin
   TabControl.Tabs.Clear;
-  LFamilies := GetButtonFamilies;
-  if Assigned(LFamilies) then
+  LCurrent := '';
+  if Assigned(FStyledButtonRender) then
+    LCurrent := FStyledButtonRender.StyleFamily
+  else if Assigned(FStyledPanel) then
+    LCurrent := FStyledPanel.StyleFamily;
+  LFamilies := OrderedFamilyNames;
+  for I := 0 to Length(LFamilies) - 1 do
   begin
-    for I := 0 to LFamilies.Count -1 do
-    begin
-      LFamily := GetButtonFamilyName(I);
-      TabControl.Tabs.Add(LFamily);
-      if Assigned(FStyledButtonRender) and SameText(LFamily, FStyledButtonRender.StyleFamily) then
-        TabControl.TabIndex := I
-      else if Assigned(FStyledPanel) and SameText(LFamily, FStyledPanel.StyleFamily) then
-        TabControl.TabIndex := I
-    end;
+    LFamily := LFamilies[I];
+    TabControl.Tabs.Add(LFamily);
+    if SameText(LFamily, LCurrent) then
+      TabControl.TabIndex := I;
   end;
   ShowFamilyPreview;
 end;
@@ -591,8 +638,12 @@ begin
       LPos := StyleComboBox.Items.Add(LStyleName);
       if Assigned(FSourceButton) and (J = FSourceButton.Style) then
         StyleComboBox.ItemIndex := LPos;
-      if Assigned(FSourcePanel) then
-        StyleComboBox.Visible := False;
+    end;
+    //A panel has no button Style: hide the label together with the combo box
+    if Assigned(FSourcePanel) then
+    begin
+      StyleLabel.Visible := False;
+      StyleComboBox.Visible := False;
     end;
 
     if Assigned(FSourceButton) then
@@ -600,6 +651,7 @@ begin
       EnabledCheckBox.Checked := FSourceButton.Enabled;
       AsVCLComponentCheckBox.Checked := FSourceButton.AsVCLComponent;
       RadiusTrackBar.Position := FSourceButton.StyleRadius;
+      ShadowSizeTrackBar.Position := FSourceButton.StyleShadowSize;
       RoundedCorners := FSourceButton.StyleRoundedCorners;
       FlatButtonCheckBox.Checked := FSourceButton.Flat;
     end
@@ -705,6 +757,21 @@ begin
   TabControlChange(TabControl);
 end;
 
+procedure TStyledButtonEditor.ShadowSizeTrackBarChange(Sender: TObject);
+begin
+  if Assigned(FDestButton) then
+  begin
+//    FDestButton.StyleShadowSize := ShadowSizeTrackBar.Position;
+  end
+  else if Assigned(FDestPanel) then
+  begin
+  end;
+  UpdateDestFromGUI;
+  FFamilyBuilt := '';
+  TabControlChange(TabControl);
+end;
+
+
 procedure TStyledButtonEditor.RoundedCheckBoxClick(Sender: TObject);
 begin
   UpdateDestFromGUI;
@@ -742,11 +809,33 @@ end;
 
 procedure TStyledButtonEditor.TabControlGetImageIndex(Sender: TObject;
   TabIndex: Integer; var ImageIndex: Integer);
+var
+  FamilyName: string;
 begin
-  //Use always Image n.6 for custom Families
-  if TabIndex <= 5 then
-    ImageIndex := TabIndex
+  //The icon depends on the family (not on the position of the tab): the images of
+  //the ImageList are, in order, Classic, Bootstrap, Angular-Light, Angular-Dark,
+  //Basic-Colors, SVG-Colors, custom family, Angular-M3-Light, Angular-M3-Dark
+  if (TabIndex < 0) or (TabIndex >= TabControl.Tabs.Count) then
+    Exit;
+  FamilyName := TabControl.Tabs[TabIndex];
+  if SameText(FamilyName, DEFAULT_CLASSIC_FAMILY) then
+    ImageIndex := 0
+  else if SameText(FamilyName, BOOTSTRAP_FAMILY) then
+    ImageIndex := 1
+  else if SameText(FamilyName, ANGULAR_LIGHT_FAMILY) then
+    ImageIndex := 2
+  else if SameText(FamilyName, ANGULAR_DARK_FAMILY) then
+    ImageIndex := 3
+  else if SameText(FamilyName, BASIC_COLOR_FAMILY) then
+    ImageIndex := 4
+  else if SameText(FamilyName, SVG_COLOR_FAMILY) then
+    ImageIndex := 5
+  else if SameText(FamilyName, ANGULAR_M3_LIGHT_FAMILY) then
+    ImageIndex := 7
+  else if SameText(FamilyName, ANGULAR_M3_DARK_FAMILY) then
+    ImageIndex := 8
   else
+    //custom families
     ImageIndex := 6;
 end;
 
@@ -757,6 +846,7 @@ begin
     FDestButton.Style := TCustomButton.TButtonStyle(StyleComboBox.ItemIndex);
     FDestButton.StyleDrawType := TStyledButtonDrawType(StyleDrawTypeComboBox.ItemIndex);
     FDestButton.StyleRadius := RadiusTrackBar.Position;
+    FDestButton.StyleShadowSize := ShadowSizeTrackBar.Position;
     CornerRadiusGroupBox.Visible := FDestButton.StyleDrawType = btRoundRect;
     RoundedCornersGroupBox.Visible := FDestButton.StyleDrawType in [btRoundRect, btRounded];
     FDestButton.StyleRoundedCorners := RoundedCorners;
@@ -765,7 +855,8 @@ begin
     FSourceButton.Hint := ActualGroupBox.Caption;
     FDestButton.Flat := FlatButtonCheckBox.Checked;
     FDestButton.AsVCLComponent := AsVCLComponentCheckBox.Checked;
-    StyleRadiusLabel.Caption := Format('StyleRadius: %d', [FDestButton.StyleRadius]);
+    RadiusLabel.Caption := Format('Radius: %d', [FDestButton.StyleRadius]);
+    ShadowSizeLabel.Caption := Format('Size: %d', [FDestButton.StyleShadowSize]);
     ActualGroupBox.Caption := Format('ACTUAL: %s/%s/%s',
       [FSourceButton.StyleFamily, FSourceButton.StyleClass, FSourceButton.StyleAppearance]);
     NewGroupBox.Caption := Format('NEW: %s/%s/%s',
@@ -783,7 +874,7 @@ begin
     FSourcePanel.Hint := ActualGroupBox.Caption;
     //FDestPanel.Flat := FlatButtonCheckBox.Checked;
     FDestPanel.AsVCLComponent := AsVCLComponentCheckBox.Checked;
-    StyleRadiusLabel.Caption := Format('StyleRadius: %d', [FDestPanel.StyleRadius]);
+    //RadiusLabel.Caption := Format('Radius: %d', [FDestPanel.StyleRadius]);
     ActualGroupBox.Caption := Format('ACTUAL: %s/%s/%s',
       [FSourcePanel.StyleFamily, FSourcePanel.StyleClass, FSourcePanel.StyleAppearance]);
     NewGroupBox.Caption := Format('NEW: %s/%s/%s',
@@ -853,6 +944,7 @@ var
     LStyledButton.StyleDrawType := TStyledButtonDrawType(StyleDrawTypeComboBox.ItemIndex);
     LStyledButton.StyleRadius := RadiusTrackBar.Position;
     LStyledButton.StyleRoundedCorners := RoundedCorners;
+    //LStyledButton.StyleShadowSize := ShadowSizeTrackBar.Position;
     //Only the Classic/Windows preview follows the active VCL style (AsVCL): choosing
     //it must give back a button AsVCL, like the Windows preview of the panels
     LStyledButton.AsVCLComponent :=

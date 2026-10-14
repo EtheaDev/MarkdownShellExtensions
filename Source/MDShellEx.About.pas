@@ -44,7 +44,7 @@ resourcestring
 
   NewVersionAvailable = 'A new installer is available to download:'+sLineBreak+
     'Current version: %s - Available version: %s'+sLineBreak+
-    'Do you want to dowload and install the new version?';
+    'Do you want to download and install the new version?';
   NewVersionNotAvailable = 'No updates available.'+sLineBreak+
     'You have already the latest version: %s';
   Stop_Download_Msg = 'Stop download installer!';

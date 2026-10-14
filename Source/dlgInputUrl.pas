@@ -79,6 +79,7 @@ type
     function LoadImage(const AFileName: TFileName): Boolean;
     function DefaultDialogPath: string;
     function IsUrl(const AText: string): Boolean;
+    function LocalFileName(const AText: string): TFileName;
   public
     constructor CreateUrl(AOwner: TComponent;
       const ARootFolder, AText, AUrl: string;
@@ -101,28 +102,71 @@ uses
   , System.IOUtils
   , Winapi.ShLwApi
   , u_dzAutoCompleteFiles
+  , MarkDownViewerCommon
+  , MarkdownHtmlRenderer
+  , Vcl.StyledTaskDialog
   ;
 
-function PathRelativePathTo(pszPath: PChar; pszFrom: PChar; dwAttrFrom: DWORD;
-  pszTo: PChar; dwAtrTo: DWORD): LongBool; stdcall; external 'shlwapi.dll' name 'PathRelativePathToW';
+resourcestring
+  WARNING_FILE_URL = 'The file is not on the drive of the document (or the '+
+    'document has not been saved yet), so it cannot be linked with a path '+
+    'relative to the document: the link will be "%s".'+sLineBreak+sLineBreak+
+    'In safe mode (the default) the file: links are removed, so the file will '+
+    'not be shown: copy it in the folder of the document (or in a subfolder), '+
+    'or enable the unsafe mode.'+sLineBreak+sLineBreak+
+    'Do you want to insert the link anyway?';
 
-function AbsToRel(const AbsPath, BasePath: string): string;
-var
-  Path: array[0..MAX_PATH-1] of char;
+const
+  //the videos of mexVideo (IsVideoUrl)
+  VideoFileMask = '*.mp4;*.m4v;*.webm;*.ogv;*.mov';
+
+//A Windows path ("C:\folder\file", "C:/folder/file", "\\server\share"):
+//in Markdown it must become a URL
+function IsWindowsPath(const AText: string): Boolean;
 begin
-  PathRelativePathTo(@Path[0], PChar(BasePath), FILE_ATTRIBUTE_DIRECTORY, PChar(AbsPath), 0);
-  result := Path;
+  Result := ((Length(AText) >= 3) and CharInSet(AText[1], ['A'..'Z', 'a'..'z']) and
+    (AText[2] = ':') and CharInSet(AText[3], ['\', '/'])) or
+    StartsStr('\\', AText);
 end;
 
-function PathCanonicalize(lpszDst: PChar; lpszSrc: PChar): LongBool; stdcall;
-  external 'shlwapi.dll' name 'PathCanonicalizeW';
-
-function RelToAbs(const RelPath, BasePath: string): string;
+//The chars of a path that are not valid (or have a meaning) in the URL of a
+//Markdown link: percent-encoded
+function EncodeURLPath(const APath: string): string;
 var
-  Dst: array[0..MAX_PATH-1] of char;
+  I: Integer;
+  C: Char;
 begin
-  PathCanonicalize(@Dst[0], PChar(IncludeTrailingPathDelimiter(BasePath) + RelPath));
-  result := Dst;
+  Result := '';
+  for I := 1 to Length(APath) do
+  begin
+    C := APath[I];
+    if (Ord(C) <= 32) or CharInSet(C, ['%', '#', '?', '(', ')', '<', '>', '"',
+      '[', ']', '^', '`', '{', '}', '|']) then
+      Result := Result + Format('%%%.2X', [Ord(C)])
+    else
+      Result := Result + C;
+  end;
+end;
+
+//The URL of a local file for the Markdown document of ARootFolder: relative
+//to the document, with "/" ("../images/image.png"); a file URL when it cannot
+//be relative (another drive, document not saved yet): "file:///D:/image.png"
+function FileNameToURL(const AFileName, ARootFolder: string): string;
+var
+  LFileName: string;
+begin
+  LFileName := ExpandFileName(AFileName);
+  if (ARootFolder <> '') and SameText(ExtractFileDrive(LFileName),
+    ExtractFileDrive(ExpandFileName(ARootFolder))) then
+  begin
+    Result := ExtractRelativePath(IncludeTrailingPathDelimiter(
+      ExpandFileName(ARootFolder)), LFileName);
+    Result := EncodeURLPath(StringReplace(Result, '\', '/', [rfReplaceAll]));
+  end
+  else if StartsStr('\\', LFileName) then
+    Result := 'file:' + EncodeURLPath(StringReplace(LFileName, '\', '/', [rfReplaceAll]))
+  else
+    Result := 'file:///' + EncodeURLPath(StringReplace(LFileName, '\', '/', [rfReplaceAll]));
 end;
 
 function CalcText(const AStrStart, AStrEnd, ASelectedText: string): string;
@@ -198,6 +242,10 @@ begin
     caption := Format('Insert image (%s)', [FRootFolder]);
     lbText.Caption := 'Alt Text';
     btOpenDlg.Action := acOpenPictureDlg;
+    //also the videos: an image of a video file is a video (mexVideo)
+    OpenPictureDialog.Filter := 'Images and videos|' + GraphicFileMask(TGraphic) +
+      ';' + VideoFileMask + '|Videos (' + VideoFileMask + ')|' + VideoFileMask +
+      '|' + OpenPictureDialog.Filter;
   end
   else if FInputType = itLink then
   begin
@@ -219,21 +267,32 @@ end;
 
 function TInputUrlDialog.GetEditedUrl: string;
 begin
-  Result := edUrl.Text;
+  //Never a Windows path in the document: the URL, relative to the document
+  Result := Trim(edUrl.Text);
+  if IsWindowsPath(Result) then
+    Result := FileNameToURL(Result, FRootFolder)
+  else if not IsUrl(Result) then
+    //a relative path written by hand: "/" and no spaces
+    Result := StringReplace(StringReplace(Result, '\', '/', [rfReplaceAll]),
+      ' ', '%20', [rfReplaceAll]);
+end;
+
+function TInputUrlDialog.LocalFileName(const AText: string): TFileName;
+begin
+  //The local file of the text of edUrl: a Windows path or the URL of the
+  //document; empty for a web URL
+  if IsWindowsPath(AText) then
+    Result := AText
+  else if not URLToLocalFileName(FRootFolder, AText, Result) then
+    Result := '';
 end;
 
 function TInputUrlDialog.DefaultDialogPath: string;
-var
-  LFileName: TFileName;
 begin
   Result := '';
   if edUrl.Text <> '' then
   begin
-    LFileName := edUrl.Text;
-    dmResources.TryExpandSpaces(FRootFolder, LFileName);
-    LFileName := StringReplace(LFileName, '/', '\', [rfReplaceAll]);
-    LFileName := StringReplace(LFileName, '\.\', '\', [rfReplaceAll]);
-    Result := ExtractFilePath(LFileName);
+    Result := ExtractFilePath(LocalFileName(Trim(edUrl.Text)));
     if not DirectoryExists(Result) then
       Result := '';
   end;
@@ -263,18 +322,26 @@ procedure TInputUrlDialog.acOpenDlgExecute(Sender: TObject);
 begin
   OpenDialog.InitialDir := DefaultDialogPath;
   if OpenDialog.Execute then
-    edUrl.Text := OpenDialog.FileName;
+    edUrl.Text := FileNameToURL(OpenDialog.FileName, FRootFolder);
 end;
 
 procedure TInputUrlDialog.acOpenPictureDlgExecute(Sender: TObject);
 begin
   OpenPictureDialog.InitialDir := DefaultDialogPath;
   if OpenPictureDialog.Execute then
-    edUrl.Text := OpenPictureDialog.FileName;
+    edUrl.Text := FileNameToURL(OpenPictureDialog.FileName, FRootFolder);
 end;
 
 procedure TInputUrlDialog.acConfirmExecute(Sender: TObject);
 begin
+  //a file URL (another drive): emptied in safe mode
+  if StartsText('file:', EditedUrl) and (StyledMessageDlg(Format(WARNING_FILE_URL,
+    [EditedUrl]), TMsgDlgType.mtWarning, [TMsgDlgBtn.mbYes, TMsgDlgBtn.mbNo], 0) <> mrYes) then
+  begin
+    //the button has already set ModalResult: the dialog stays open
+    ModalResult := mrNone;
+    Exit;
+  end;
   Close;
   ModalResult := mrOk;
 end;
@@ -311,8 +378,10 @@ begin
   LMaxWidth := Self.Monitor.Width;
 
   LStream := nil;
-  LFullName := AFileName;
-  dmResources.TryExpandSpaces(FRootFolder, LFullName);
+  //a local file (Windows path or URL of the document), else a web URL
+  LFullName := LocalFileName(AFileName);
+  if LFullName = '' then
+    LFullName := AFileName;
 
   if dmResources.LoadFileContent(LFullName, FRootFolder, LMaxWidth,
     Self.Color, LStream) then
@@ -331,23 +400,23 @@ begin
 end;
 
 procedure TInputUrlDialog.edUrlChange(Sender: TObject);
+var
+  LFileName: TFileName;
 begin
   //Defaults to the file name as alternative text for the image
+  //(the URL written in the document is GetEditedUrl)
+  LFileName := LocalFileName(Trim(edUrl.Text));
   if (FInputType = itImage) then
   begin
-    if LoadImage(edUrl.Text) and (FSelectedText = '') then
-      edText.Text := ChangeFileExt(ExtractFileName(edUrl.Text),'');
+    if (LoadImage(Trim(edUrl.Text)) or IsVideoUrl(LFileName)) and
+      (FSelectedText = '') and (LFileName <> '') then
+      edText.Text := ChangeFileExt(ExtractFileName(LFileName),'');
   end
   else if (FInputType = itLink) then
   begin
-    if FileExists(edUrl.Text) and (FSelectedText = '') then
-      edText.Text := ChangeFileExt(ExtractFileName(edUrl.Text),'');
+    if (LFileName <> '') and FileExists(LFileName) and (FSelectedText = '') then
+      edText.Text := ChangeFileExt(ExtractFileName(LFileName),'');
   end;
-  //Replaces the full path with the relative path when the path matches the
-  //path of the open file
-  if AnsiStartsText(FRootFolder, edUrl.Text) then
-    edUrl.Text := StringReplace(StringReplace(edUrl.Text, FRootFolder, '.',
-      [rfReplaceAll, rfIgnoreCase]), '\', '/', [rfReplaceAll]);
 end;
 
 end.

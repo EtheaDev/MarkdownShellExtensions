@@ -47,7 +47,8 @@ const
   /// <summary>The legacy (Ethea) extensions, enabled by default in the component
   /// for mdCommonMark, mdGFM and mdGitHub.</summary>
   LegacyExtensions: TMarkdownExtensions = [mexSubscript, mexSuperscript, mexInsert,
-    mexMark, mexSmartTypography, mexHeadingAttributes, mexAutoHeadingIds, mexWikiLinks];
+    mexMark, mexSmartTypography, mexHeadingAttributes, mexAutoHeadingIds, mexWikiLinks,
+    mexVideo];
 
 type
   TCustomMarkdownToHTML = class(TComponent)

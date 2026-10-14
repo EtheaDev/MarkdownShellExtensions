@@ -57,6 +57,10 @@ const
   //Virtual hosts of the page: the folder of the document and ScriptsFolder
   MDViewerContentHost = 'mdviewer-content.local';
   MDViewerScriptsHost = 'mdviewer-scripts.local';
+  //Virtual host of a drive, for the file URLs (file:///C:/... is
+  //https://mdviewer-drive-c.local/...): WebView2 does not load file URLs
+  //from the page of the viewer
+  MDViewerDriveHost = 'mdviewer-drive-%s.local';
   //Scripts from CDN, when there is no local scripts folder (the same versions
   //of the Scripts folder distributed with the viewers)
   KaTeXCDN = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/';
@@ -73,6 +77,7 @@ type
     FBaseFolder: string;
     FMappedFolder: string;
     FMappedScriptsFolder: string;
+    FMappedDrives: string;
     FServerRoot: TFolderName;
     FScriptsFolder: TFolderName;
     FAutoLoadOnHotSpotClick: Boolean;
@@ -140,6 +145,9 @@ type
     function GetEffectiveScriptsFolder: string;
     function GetScrollRatio: Double;
     procedure UpdateFolderMappings;
+    function DriveHostURL(const ADrive: Char): string;
+    function BaseURL: string;
+    function MapLocalFiles(const AHTML: string): string;
     procedure EnsureWebView;
     function LinkClicked(const AURI: string): Boolean;
     function ScriptsURL: string;
@@ -205,6 +213,12 @@ type
     property OnScrollChanged: TNotifyEvent read FOnScrollChanged write FOnScrollChanged;
     /// <summary>Saves the page as PDF (asynchronous: OnPrintToPDFCompleted).</summary>
     function ExportToPDF(const AFileName: TFileName): Boolean;
+    /// <summary>Prints the page on a printer (empty: the default one) without
+    /// dialogs, with header (date and title: the name of DocumentFileName) and
+    /// footer (DocumentFileName and page number), as the print preview of
+    /// WebView2 (asynchronous). False when WebView2 cannot print so.</summary>
+    function PrintPage(const APrinterName: string = '';
+      const ACopies: Integer = 1): Boolean;
     /// <summary>Asks the file name (proposed from DocumentFileName) and saves
     /// the full page with ExportToFileHTMLPage.</summary>
     procedure SaveAsHTMLPage;
@@ -444,6 +458,7 @@ begin
     RegisterSaveAsHandler;
     FMappedFolder := '';
     FMappedScriptsFolder := '';
+    FMappedDrives := '';
     //The content set before the creation of the WebView
     if FPendingRefresh or (FEngine.HtmlContent.Text <> '') then
       RefreshViewer(False);
@@ -494,6 +509,92 @@ begin
         PChar(LFolder), COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_ALLOW);
     FMappedScriptsFolder := LFolder;
   end;
+end;
+
+function TCustomEdgeMarkdownViewer.DriveHostURL(const ADrive: Char): string;
+var
+  LWebView3: ICoreWebView2_3;
+  LDrive: Char;
+begin
+  //The virtual host of a drive, mapped when it is used for the first time
+  Result := '';
+  if not Supports(DefaultInterface, ICoreWebView2_3, LWebView3) then
+    Exit;
+  LDrive := LowerCase(ADrive)[1];
+  if Pos(LDrive, FMappedDrives) = 0 then
+  begin
+    if DirectoryExists(UpperCase(LDrive) + ':' + PathDelim) then
+      LWebView3.SetVirtualHostNameToFolderMapping(
+        PChar(Format(MDViewerDriveHost, [LDrive])),
+        PChar(UpperCase(LDrive) + ':' + PathDelim),
+        COREWEBVIEW2_HOST_RESOURCE_ACCESS_KIND_ALLOW);
+    FMappedDrives := FMappedDrives + LDrive;
+  end;
+  Result := 'https://' + Format(MDViewerDriveHost, [LDrive]) + '/';
+end;
+
+function TCustomEdgeMarkdownViewer.BaseURL: string;
+var
+  LFolder, LPath: string;
+  LBytes: TBytes;
+  I: Integer;
+begin
+  //The folder of the document on the virtual host of its drive: the relative
+  //URLs can go up to its parent folders ("../images/image.png"), as in a
+  //browser. The host of the folder only for a network folder
+  LFolder := GetContentFolder;
+  Result := '';
+  if LFolder = '' then
+    Exit;
+  if (Length(LFolder) >= 2) and CharInSet(LFolder[1], ['A'..'Z', 'a'..'z']) and
+    (LFolder[2] = ':') then
+    Result := DriveHostURL(LFolder[1]);
+  if Result = '' then
+    Exit('https://' + MDViewerContentHost + '/');
+  //the path of the folder, percent-encoded (UTF-8)
+  LPath := StringReplace(Copy(LFolder, 4, MaxInt), PathDelim, '/', [rfReplaceAll]);
+  LBytes := TEncoding.UTF8.GetBytes(LPath);
+  for I := 0 to Length(LBytes) - 1 do
+    if CharInSet(Char(LBytes[I]), ['A'..'Z', 'a'..'z', '0'..'9', '-', '.', '_', '~', '/']) then
+      Result := Result + Char(LBytes[I])
+    else
+      Result := Result + '%' + IntToHex(LBytes[I], 2);
+  if (LPath <> '') and not EndsStr('/', Result) then
+    Result := Result + '/';
+end;
+
+function TCustomEdgeMarkdownViewer.MapLocalFiles(const AHTML: string): string;
+const
+  FileURL = 'file:///';
+var
+  LLower, LHostURL: string;
+  LStart, P: Integer;
+begin
+  //The file URLs of the attributes (src="file:///C:/...") on the virtual host
+  //of their drive
+  Result := AHTML;
+  if Pos(FileURL, LowerCase(AHTML)) = 0 then
+    Exit;
+  Result := '';
+  LLower := LowerCase(AHTML);
+  LStart := 1;
+  P := Pos(FileURL, LLower);
+  while P > 0 do
+  begin
+    if (P > 1) and CharInSet(AHTML[P - 1], ['"', '''']) and
+      (P + 10 <= Length(AHTML)) and CharInSet(LLower[P + 8], ['a'..'z']) and
+      CharInSet(AHTML[P + 9], [':', '|']) and (AHTML[P + 10] = '/') then
+    begin
+      LHostURL := DriveHostURL(LLower[P + 8]);
+      if LHostURL <> '' then
+      begin
+        Result := Result + Copy(AHTML, LStart, P - LStart) + LHostURL;
+        LStart := P + 11;
+      end;
+    end;
+    P := PosEx(FileURL, LLower, P + 1);
+  end;
+  Result := Result + Copy(AHTML, LStart, MaxInt);
 end;
 
 function TCustomEdgeMarkdownViewer.ScriptsURL: string;
@@ -574,19 +675,33 @@ end;
 
 function TCustomEdgeMarkdownViewer.BuildPage(const AScrollY: Integer): string;
 var
-  LHTML, LBase: string;
+  LHTML, LBase, LTitle: string;
 begin
   LHTML := FEngine.HtmlContent.Text;
-  //the exported page keeps the relative links (no virtual host)
-  if (GetContentFolder <> '') and not FExporting then
-    LBase := '<base href="https://' + MDViewerContentHost + '/">' + sLineBreak
+  //the exported page keeps the file URLs and the relative links (no virtual
+  //host)
+  if not FExporting then
+    LHTML := MapLocalFiles(LHTML);
+  if not FExporting then
+    LBase := BaseURL
   else
     LBase := '';
+  if LBase <> '' then
+    LBase := '<base href="' + LBase + '">' + sLineBreak;
+  //the title: the name proposed by "Print" (a PDF printer) instead of the
+  //data: URL of the page
+  if FDocumentFileName <> '' then
+    LTitle := ChangeFileExt(ExtractFileName(FDocumentFileName), '')
+  else
+    LTitle := 'Markdown';
+  LTitle := StringReplace(StringReplace(StringReplace(LTitle, '&', '&amp;',
+    [rfReplaceAll]), '<', '&lt;', [rfReplaceAll]), '>', '&gt;', [rfReplaceAll]);
   Result :=
     '<!DOCTYPE html>' + sLineBreak +
     '<html>' + sLineBreak +
     '<head>' + sLineBreak +
     '<meta charset="utf-8">' + sLineBreak +
+    '<title>' + LTitle + '</title>' + sLineBreak +
     LBase +
     PageStyle +
     PageScripts(LHTML, AScrollY) +
@@ -701,27 +816,27 @@ end;
 
 function TCustomEdgeMarkdownViewer.LinkClicked(const AURI: string): Boolean;
 var
-  LPrefix, LRelative: string;
-  LHashPos: Integer;
+  LPrefix, LURL, LHost: string;
+  LSlash: Integer;
 begin
+  LURL := AURI;
   LPrefix := 'https://' + MDViewerContentHost + '/';
-  if AURI.StartsWith(LPrefix, True) then
+  if LURL.StartsWith(LPrefix, True) then
+    //A file of the folder of the document: the relative URL
+    LURL := Copy(LURL, Length(LPrefix) + 1, MaxInt)
+  else if LURL.StartsWith('https://mdviewer-drive-', True) then
   begin
-    //A file of the folder of the document
-    LRelative := Copy(AURI, Length(LPrefix) + 1, MaxInt);
-    LHashPos := Pos('#', LRelative);
-    if LHashPos > 0 then
-      LRelative := Copy(LRelative, 1, LHashPos - 1);
-    LHashPos := Pos('?', LRelative);
-    if LHashPos > 0 then
-      LRelative := Copy(LRelative, 1, LHashPos - 1);
-    LRelative := StringReplace(TNetEncoding.URL.Decode(LRelative), '/', '\', [rfReplaceAll]);
-    Result := HandleLinkClicked(GetContentFolder, LRelative, FAutoLoadOnHotSpotClick,
-      FOnFileNameClicked, FOnURLClicked, LoadFromFile);
-  end
-  else
-    Result := HandleLinkClicked(GetContentFolder, AURI, FAutoLoadOnHotSpotClick,
-      FOnFileNameClicked, FOnURLClicked, LoadFromFile);
+    //A file URL (MapLocalFiles): file:///C:/...
+    LSlash := PosEx('/', LURL, Length('https://') + 1);
+    if LSlash = 0 then
+      LSlash := Length(LURL) + 1;
+    LHost := Copy(LURL, Length('https://') + 1, LSlash - Length('https://') - 1);
+    if (Length(LHost) = Length(Format(MDViewerDriveHost, ['c']))) and
+      SameText(LHost, Format(MDViewerDriveHost, [LHost[16]])) then
+      LURL := 'file:///' + UpperCase(LHost[16]) + ':/' + Copy(LURL, LSlash + 1, MaxInt);
+  end;
+  Result := HandleLinkClicked(GetContentFolder, LURL, FAutoLoadOnHotSpotClick,
+    FOnFileNameClicked, FOnURLClicked, LoadFromFile);
 end;
 
 function TCustomEdgeMarkdownViewer.IsDarkBackground: Boolean;
@@ -924,6 +1039,45 @@ end;
 function TCustomEdgeMarkdownViewer.ExportToPDF(const AFileName: TFileName): Boolean;
 begin
   Result := WebViewCreated and PrintToPDF(AFileName, nil);
+end;
+
+function TCustomEdgeMarkdownViewer.PrintPage(const APrinterName: string;
+  const ACopies: Integer): Boolean;
+var
+  LWebView16: ICoreWebView2_16;
+  LSettings: ICoreWebView2PrintSettings;
+  LSettings2: ICoreWebView2PrintSettings2;
+  LTitle: string;
+begin
+  Result := False;
+  if not WebViewCreated or
+    not Supports(DefaultInterface, ICoreWebView2_16, LWebView16) then
+    Exit;
+  LSettings := CreatePrintSettings;
+  if LSettings = nil then
+    Exit;
+  //header and footer: the document, not the data: URL of the page
+  if FDocumentFileName <> '' then
+    LTitle := ChangeFileExt(ExtractFileName(FDocumentFileName), '')
+  else
+    LTitle := 'Markdown';
+  LSettings.Set_ShouldPrintHeaderAndFooter(1);
+  LSettings.Set_ShouldPrintBackgrounds(1);
+  LSettings.Set_HeaderTitle(PChar(LTitle));
+  LSettings.Set_FooterUri(PChar(FDocumentFileName));
+  if Supports(LSettings, ICoreWebView2PrintSettings2, LSettings2) then
+  begin
+    if APrinterName <> '' then
+      LSettings2.Set_PrinterName(PChar(APrinterName));
+    if ACopies > 1 then
+      LSettings2.Set_Copies(ACopies);
+  end;
+  Result := Succeeded(LWebView16.Print(LSettings,
+    Callback<HResult, COREWEBVIEW2_PRINT_STATUS>.CreateAs<ICoreWebView2PrintCompletedHandler>(
+      function(AErrorCode: HResult; AStatus: COREWEBVIEW2_PRINT_STATUS): HResult stdcall
+      begin
+        Result := S_OK;
+      end)));
 end;
 
 function TCustomEdgeMarkdownViewer.TransformContent(const AMarkdownContent: string;

@@ -68,7 +68,9 @@ Type
     mexAutoHeadingIds,    // GitHub-style slug ids
     mexWikiLinks,         // [[...]]
     // diagrams
-    mexMermaid);          // ```mermaid -> <pre class="mermaid"> for mermaid.js
+    mexMermaid,           // ```mermaid -> <pre class="mermaid"> for mermaid.js
+    // media
+    mexVideo);            // ![alt](video.mp4) -> <video controls>
   TMarkdownExtensions = set of TMarkdownExtension;
 
   /// <summary>How the new engine writes math (mexMath).</summary>
@@ -106,6 +108,10 @@ const
   /// Only CSS that HTMLViewer understands.</summary>
   MarkdownBaseCSS =
     'img{'#10+
+    '  max-width: 100%;'#10+
+    '  height: auto;'#10+
+    '}'#10+
+    'video{'#10+
     '  max-width: 100%;'#10+
     '  height: auto;'#10+
     '}'#10+

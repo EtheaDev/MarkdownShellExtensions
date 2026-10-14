@@ -1,6 +1,5 @@
 ﻿# Markdown Editor and Shell Extensions
 
-<!-- badges -->
 [![License: Apache](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/EtheaDev/MarkdownShellExtensions?label=release&color=blue)](https://github.com/EtheaDev/MarkdownShellExtensions/releases)
 [![Delphi 12+](https://img.shields.io/badge/Delphi-12%2B-e62329.svg)](https://www.embarcadero.com/products/delphi)
@@ -14,7 +13,7 @@
 [![Microsoft Edge WebView2](https://img.shields.io/badge/WebView2-Edge-0078d4.svg)](https://developer.microsoft.com/microsoft-edge/webview2/)
 [![Windows 10 and 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078d6.svg)](https://www.microsoft.com/windows)
 
-![Delphi Support](/Setup/SupportingDelphi.jpg)
+![Delphi Support](./Images/SupportingDelphi.jpg)
 
 Related links: [embarcadero.com][3] - [learndelphi.org][4]
 
@@ -36,13 +35,17 @@ Follow the [Project Site](https://ethea.it/docs/markdowntools/) to know all the 
 
 - Supports Windows 10 and 11 (for 32 bits and 64 bits).
 
-- Themes (Dark and Light) according to user preferences of Windows Theme
+- Themes (Dark and Light) according to user preferences of Windows Theme, with the VCL styles: **Light**: Sky, Windows Modern, Windows11 Impressive Light, Windows11 Modern Light, Windows11 Polar Light; **Dark**: Glow, Windows Modern SlateGray, Windows11 Impressive Dark, Windows11 Modern Dark, Windows11 Polar Dark
 
-- Uses the latest, empowered version of the [Markdown Processor](https://github.com/EtheaDev/MarkdownProcessor) (2.0): CommonMark 0.31.2 and GitHub Flavored Markdown compliant engine. The default dialect is now **GitHub** (GFM + math formulas, alerts and mermaid diagrams, plus subscript, superscript, insert, mark, smart typography, heading ids and wiki links); CommonMark, GFM, DaringFireball and TxtMark are still available.
+- Uses the latest, empowered version of the [Markdown Processor](https://github.com/EtheaDev/MarkdownProcessor) (2.1): CommonMark 0.31.2 and GitHub Flavored Markdown compliant engine. The default dialect is now **GitHub** (GFM + math formulas, alerts and mermaid diagrams, plus subscript, superscript, insert, mark, smart typography, heading ids, wiki links and videos); CommonMark, GFM, DaringFireball and TxtMark are still available.
 
 - The preview of the **Markdown Text Editor** uses **Microsoft Edge WebView2** (TEdgeMarkdownViewer of the [Markdown Help Viewer](https://github.com/EtheaDev/MarkdownHelpViewer) project): math formulas with KaTeX, mermaid diagrams, GitHub alerts, synchronized scroll with the editor. When WebView2 is not available, or it is disabled in the Settings ("Use WebView2 (Edge) when available"), the preview uses HTMLViewer. **WebView2Loader.dll** is distributed with the editor (installed by the Setup). KaTeX and mermaid.js are installed with the editor too (Scripts folder): math formulas, mermaid diagrams and charts (pie, bar and line charts) are drawn also **without an Internet connection**.
 
 - The **Preview Panel** of Windows Explorer keeps the internal HTML viewer (HTMLViewer): math formulas are shown as images and mermaid diagrams as text.
+
+- **Videos** in the documents (`.mp4`, `.webm`...), written as an image of the video file: `![Demo](video/demo.mp4)`. The preview with WebView2 plays them; HTMLViewer shows a link that opens the player of the system.
+
+- Images, videos and links are resolved as a browser does: write their path relative to the document, with `/` (`images/logo.png`, `../images/logo.png`). The "Insert image" and "Insert link" dialogs of the editor write the paths so.
 
 - Integrated also with other Shell Applications (like XYplorer)
 
@@ -67,7 +70,7 @@ A useful Text editor with instant preview of Markdown formatted content:
 
 ### Manual Build and Installation (only for Delphi developers) ###
 
-Learn more about the manual within our [wiki](https://github.com/EtheaDev/MarkdownShellExtensions/wiki/Manual-Build-and-Installation). Dive deeper into everything related to this tool, its features, and how to make the most of it.
+How to build the projects with Delphi and how to manually register the Shell Extensions is explained in the [Manual Build and Installation](https://ethea.it/docs/markdowntools/MarkdownShellExtensions/Manual-Build-and-Installation) page of the Project Site.
 
 ### Preview Panel in action ###
 
@@ -94,6 +97,15 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+14 Oct 2026: ver. 3.1.0
+- Uses the Markdown Processor 2.1: **videos** in the documents, written as an image of the video file (`![Demo](video/demo.mp4)`: `.mp4`, `.m4v`, `.webm`, `.ogv`, `.mov`). The preview with WebView2 plays them; HTMLViewer shows a link that opens the video with the player of the system
+- Markdown Text Editor, "Insert image" and "Insert link" dialogs: the selected file is written as a path relative to the document, with `/` (e.g. `../images/image.png`), never as a Windows path; spaces and special characters are percent-encoded. A file of another drive (or of a document not saved yet) is written as a `file:///` URL, with a warning: the safe mode removes it. The image dialog can also select the videos
+- Preview: images, videos and links resolved as a browser does, both with WebView2 and with HTMLViewer (relative paths with `/`, percent-encoded characters, `file:///` URLs); with WebView2 the relative paths that go up from the folder of the document (`../Pictures/image.png`) are now found; a Windows path (`C:\folder\image.png`) is not a valid URL and is no longer shown also by HTMLViewer
+- Markdown Text Editor with WebView2: "Print file" asks the printer and prints the page shown in the preview, with header and footer (it printed the Markdown text); "Print" and "Save as" of the preview propose the name of the document instead of the data: URL of the page
+- MarkDown Support Test.md (Docs folder): new section "Video", with a short video
+- Markdown Text Editor and Preview: the obsolete Windows10 VCL styles have been removed; available styles: Sky, Windows Modern, Windows11 Impressive Light, Windows11 Modern Light, Windows11 Polar Light (light) and Glow, Windows Modern SlateGray, Windows11 Impressive Dark, Windows11 Modern Dark, Windows11 Polar Dark (dark). On Windows 10 the default style is "Windows Modern" (light) or "Windows Modern SlateGray" (dark); a style saved by a previous version and no longer available is replaced by the default one
+- Settings, Theme page: all the styles linked into the application are offered, classified as light or dark automatically (also a style added by who builds the editor)
+
 08 Oct 2026: ver. 3.0.0 (major version)
 - Uses the new Markdown Processor 2.0: CommonMark 0.31.2 and GitHub Flavored Markdown compliant engine, with math formulas, GitHub alerts, mermaid diagrams and the legacy extensions (subscript, superscript, insert, mark, smart typography, heading ids, wiki links)
 - New default dialect: GitHub. The dialect saved by the previous versions as CommonMark (the old default) is automatically converted to GitHub; the dialect is now stored by name in the settings, and the dialect combo lists all the dialects (DaringFireball, CommonMark, TxtMark, GFM, GitHub)
@@ -247,7 +259,7 @@ To manually install the SVGShellExtensions.dll follow these steps:
 - Added dialog for input of hyperlink for Images and Files
 - Updated Markdown library with best support for CommonMark transformation
 
-1. Subscript <sub>text</sub> and Superscript <sup>text</sup>
+1. Subscript `<sub>text</sub>` and Superscript `<sup>text</sup>`
 1. Formulas (using [Google Chart API])
 1. ==Markers==
 1. [Reference-style Links]

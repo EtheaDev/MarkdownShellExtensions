@@ -519,6 +519,8 @@ implementation
 
 uses
   Vcl.Themes
+  , Vcl.Printers
+  , MarkDownViewerCommon
   , System.IOUtils
   , System.StrUtils
   , Winapi.ShellAPI
@@ -543,7 +545,8 @@ uses
   , uLogExcept
   , Vcl.StyledTaskDialog
   , RegularExpressions
-  , MDShellEx.dlgCreateTable;
+  , MDShellEx.dlgCreateTable
+  , uRegistry;
 
 {$R *.dfm}
 
@@ -567,8 +570,15 @@ begin
     Result := VCLStyleName;
     if not TStyleManager.TrySetStyle(Result, False) then
     begin
-      Result := 'Windows Modern';
-      TStyleManager.TrySetStyle(Result);
+      //Style no longer linked (e.g. saved by an older version): use the
+      //default one, light or dark like the Windows theme, and "Windows
+      //Modern" only as a last resort
+      Result := DefaultStyleName;
+      if not TStyleManager.TrySetStyle(Result, False) then
+      begin
+        Result := 'Windows Modern';
+        TStyleManager.TrySetStyle(Result, False);
+      end;
     end;
   end
   else
@@ -697,7 +707,11 @@ begin
   if Assigned(HTMLViewer) then
     HTMLViewer.ServerRoot := ExtractFilePath(FFileName);
   if Assigned(EdgeViewer) then
+  begin
     EdgeViewer.ServerRoot := ExtractFilePath(FFileName);
+    //the name proposed by "Save as" and "Print" of WebView2
+    EdgeViewer.DocumentFileName := FFileName;
+  end;
 end;
 
 procedure TEditingFile.SetEdgeViewer(const Value: TEdgeMarkdownViewer);
@@ -2445,6 +2459,16 @@ end;
 
 procedure TfrmMain.actnPrintExecute(Sender: TObject);
 begin
+  //WebView2: the printer, then the print of the page (with header and footer,
+  //as from its print preview); its print preview when it cannot print so
+  if CurrentEditFile.EdgeViewer <> nil then
+  begin
+    if PrintDialog.Execute and
+      not CurrentEditFile.EdgeViewer.PrintPage(Printer.Printers[Printer.PrinterIndex],
+        PrintDialog.Copies) then
+      CurrentEditFile.EdgeViewer.ShowPrintUI(TCustomEdgeBrowser.TPrintUIDialogKind.Browser);
+    Exit;
+  end;
   SetSynEditPrintProperties(SynEditPrint);
   if PrintDialog.Execute then
   begin
@@ -3367,6 +3391,12 @@ begin
   //followed by the link (the same rules of HtmlViewerHotSpotClick)
   AHandled := False;
   LFileName := AFileName;
+  //a video with its player
+  if OpenVideoFile(LFileName) then
+  begin
+    AHandled := True;
+    Exit;
+  end;
   if not FileExists(LFileName) then
     FileWithExtExists(LFileName, AMarkDownFileExt);
   if FileExists(LFileName) then
@@ -3411,13 +3441,16 @@ var
   LFileName: TFileName;
   LWorkingFolder: string;
 begin
-  LFileName := ASource;
-  if not FileExists(LFileName) then
+  //The local file as a browser resolves the URL (relative to the document,
+  //percent-encoded, file:///)
+  LWorkingFolder := CurrentEditFile.GetServerRoot;
+  if not URLToLocalFileName(LWorkingFolder, ASource, LFileName) then
+    LFileName := IncludeTrailingPathDelimiter(LWorkingFolder) + ASource;
+  //a video with its player
+  if OpenVideoFile(LFileName) then
   begin
-    //Search file in local folder same as current edit file
-    LWorkingFolder := IncludeTrailingPathDelimiter(
-      CurrentEditFile.GetServerRoot);
-    LFileName := LWorkingFolder+LFileName;
+    Handled := True;
+    Exit;
   end;
   //Search file with markdown extensions
   if not FileExists(LFileName) then

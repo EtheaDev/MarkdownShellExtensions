@@ -98,6 +98,7 @@ type
     function IsStoredCursor: Boolean;
     function IsStoredFlat: Boolean;
     function IsCustomRadius: Boolean;
+    function IsCustomShadowSize: Boolean;
     function IsCustomRoundedCorners: Boolean;
     function IsCustomDrawType: Boolean;
     function IsStoredStyleFamily: Boolean;
@@ -218,6 +219,7 @@ type
     property Tag;
     //StyledComponents Attributes
     property StyleRadius stored IsCustomRadius;
+    property StyleShadowSize stored IsCustomShadowSize;
     property StyleRoundedCorners stored IsCustomRoundedCorners;
     property StyleDrawType: TStyledButtonDrawType read GetStyleDrawType write SetStyleDrawType stored IsCustomDrawType;
     property StyleFamily stored IsStoredStyleFamily;
@@ -300,6 +302,7 @@ type
 
     //Styled Attributes
     FStyleRadius: Integer;
+    FStyleShadowSize: Integer;
     FStyleDrawType: TStyledButtonDrawType;
     FStyleFamily: TStyledButtonFamily;
     FStyleClass: TStyledButtonClass;
@@ -347,6 +350,7 @@ type
     procedure ProcessControls(AControlProc: TControlProc);
     function IsCustomDrawType: Boolean;
     function IsCustomRadius: Boolean;
+    function IsCustomShadowSize: Boolean;
     function IsStoredStyleAppearance: Boolean;
     function IsStoredStyleClass: Boolean;
     function IsStoredStyleFamily: Boolean;
@@ -355,6 +359,7 @@ type
     procedure SetStyleDrawType(const AValue: TStyledButtonDrawType);
     procedure SetStyleFamily(const AValue: TStyledButtonFamily);
     procedure SetStyleRadius(const AValue: Integer);
+    procedure SetStyleShadowSize(const AValue: Integer);
     function ApplyToolbarStyle: Boolean;
     procedure SetStyleApplied(const AValue: Boolean);
     procedure UpdateButtons;
@@ -550,6 +555,7 @@ type
 
     //StyledComponents Attributes
     property StyleRadius: Integer read FStyleRadius write SetStyleRadius stored IsCustomRadius;
+    property StyleShadowSize: Integer read FStyleShadowSize write SetStyleShadowSize stored IsCustomShadowSize;
     property StyleDrawType: TStyledButtonDrawType read FStyleDrawType write SetStyleDrawType stored IsCustomDrawType;
     property StyleFamily: TStyledButtonFamily read FStyleFamily write SetStyleFamily stored IsStoredStyleFamily;
     property StyleClass: TStyledButtonClass read FStyleClass write SetStyleClass stored IsStoredStyleClass;
@@ -864,6 +870,7 @@ begin
       inherited DisabledImages := nil;
       inherited Images := nil;
       inherited StyleRadius := 1;
+      inherited StyleShadowSize := 0;
     end
     else
     begin
@@ -986,6 +993,18 @@ begin
     Visible := AValue.Visible;
   end;
   FMenuItem := AValue;
+end;
+
+function TStyledToolButton.IsCustomShadowSize: boolean;
+begin
+  Result := not IsSeparator;
+  if Result then
+  begin
+    if Assigned(FToolBar) then
+      Result := StyleShadowSize <> FToolBar.StyleShadowSize
+    else
+      Result := StyleShadowSize <> DEFAULT_SHADOW_SIZE;
+  end;
 end;
 
 function TStyledToolButton.IsCustomRadius: boolean;
@@ -1247,6 +1266,7 @@ begin
   FGradientStartColor := clWindow;
   FStyleDrawType := _DefaultStyleDrawType;
   FStyleRadius := _DefaultStyleRadius;
+  FStyleShadowSize := DEFAULT_SHADOW_SIZE;
   FStyleFamily := AFamily;
   FStyleClass := AClass;
   FStyleAppearance := AAppearance;
@@ -1459,6 +1479,7 @@ begin
       LButton.FToolBar := Self;
       LButton.Images := Self.Images;
       LButton.StyleRadius := FStyleRadius;
+      LButton.StyleShadowSize := FStyleShadowSize;
       LButton.StyleDrawType := FStyleDrawType;
       LButton.StyleFamily := FStyleFamily;
       LButton.StyleClass := FStyleClass;
@@ -1491,6 +1512,11 @@ end;
 function TStyledToolbar.IsCustomRadius: Boolean;
 begin
   Result := StyleRadius <> DEFAULT_RADIUS;
+end;
+
+function TStyledToolbar.IsCustomShadowSize: Boolean;
+begin
+  Result := StyleShadowSize <> DEFAULT_SHADOW_SIZE;
 end;
 
 function TStyledToolbar.IsGradientEndColorStored: Boolean;
@@ -1764,6 +1790,7 @@ begin
     FStyleClass := LToolbar.FStyleClass;
     FStyleAppearance := LToolbar.FStyleAppearance;
     FStyleRadius := LToolbar.FStyleRadius;
+    FStyleShadowSize := LToolbar.FStyleShadowSize;
     FStyleDrawType := LToolbar.FStyleDrawType;
     Invalidate;
   end;
@@ -2059,6 +2086,23 @@ begin
     StyleElements := [seFont, seClient, seBorder];
 end;
 
+procedure TStyledToolbar.SetStyleShadowSize(const AValue: Integer);
+begin
+  if FStyleShadowSize <> AValue then
+  begin
+    if AValue < DEFAULT_SHADOW_SIZE then
+      raise EReadError.create(SInvalidProperty);
+    ProcessButtons(
+      procedure (ABtn: TStyledToolButton)
+      begin
+        if ABtn.StyleShadowSize = FStyleShadowSize then
+          ABtn.StyleShadowSize := AValue;
+      end);
+    FStyleShadowSize := AValue;
+    StyleApplied := ApplyToolbarStyle;
+  end;
+end;
+
 procedure TStyledToolbar.SetStyleRadius(const AValue: Integer);
 begin
   if FStyleRadius <> AValue then
@@ -2335,16 +2379,20 @@ function TStyledToolbar.ControlsHeight: Integer;
 var
   LSize: Integer;
 begin
-  if AlignWithMargins then
-    LSize := Margins.Top + Margins.Bottom + 1
-  else
-    LSize := 1;
+  //Bottom of the lowest visible control: after the flow wraps the buttons on more
+  //rows their Top says how many rows there are (the previous sum of the heights
+  //did not follow the wrapping, so the extra rows were clipped)
+  LSize := 0;
   ProcessControls(
     procedure (AControl: TControl)
     begin
-      if AControl.Height > LSize then
-        LSize := LSize + AControl.Height;
+      if AControl.Visible then
+        LSize := Max(LSize, AControl.Top + AControl.Height);
     end);
+  if LSize = 0 then
+    LSize := 1;
+  if AlignWithMargins then
+    Inc(LSize, Margins.Top + Margins.Bottom);
   Result := LSize;
 end;
 
@@ -2352,16 +2400,19 @@ function TStyledToolbar.ControlsWidth: Integer;
 var
   LSize: Integer;
 begin
-  if AlignWithMargins then
-    LSize := Margins.Left + Margins.Right + 1
-  else
-    LSize := 1;
+  //Right edge of the rightmost visible control: with FlowStyle fsTopBottomLeftRight
+  //the flow wraps the buttons on more columns, which Left makes visible
+  LSize := 0;
   ProcessControls(
     procedure (AControl: TControl)
     begin
-      if AControl.Width > LSize then
-        LSize := AControl.Width;
+      if AControl.Visible then
+        LSize := Max(LSize, AControl.Left + AControl.Width);
     end);
+  if LSize = 0 then
+    LSize := 1;
+  if AlignWithMargins then
+    Inc(LSize, Margins.Left + Margins.Right);
   Result := LSize;
 end;
 

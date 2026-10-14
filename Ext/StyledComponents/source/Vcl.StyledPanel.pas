@@ -77,6 +77,7 @@ type
 
     //Styled Attributes
     FStyleRadius: Integer;
+    FStyleShadowSize: Integer;
     FStyleRoundedCorners: TRoundedCorners;
     FStyleDrawType: TStyledButtonDrawType;
     FStyleFamily: TStyledButtonFamily;
@@ -97,6 +98,9 @@ type
     class var _DefaultStyleRadius: Integer;
 
     procedure SetStyleRadius(const AValue: Integer);
+    procedure SetStyleShadowSize(const AValue: Integer);
+    function CalcShadowSize: Integer;
+    function CalcPanelScale: Single;
     procedure SetStyleRoundedCorners(const AValue: TRoundedCorners);
     procedure SetStyleDrawType(const AValue: TStyledButtonDrawType);
     procedure SetStyleFamily(const AValue: TStyledButtonFamily);
@@ -105,6 +109,7 @@ type
     procedure SetCaptionAlignment(const AValue: TAlignment);
     function IsCustomRoundedCorners: Boolean;
     function IsCustomRadius: Boolean;
+    function IsCustomShadowSize: Boolean;
     function IsStoredColor: Boolean;
     function IsStoredParentBackground: Boolean;
     /// <summary>Determines if StyleFamily should be stored</summary>
@@ -155,6 +160,8 @@ type
     {$ENDIF}
     /// <summary>Copies properties from another panel</summary>
     procedure Assign(Source: TPersistent); override;
+    /// <summary>The children are placed inside the face of the panel (the shadow is excluded)</summary>
+    procedure AdjustClientRect(var ARect: TRect); override;
     /// <summary>Copies Styled properties to another Panel</summary>
     procedure AssignStyleTo(Dest: TPersistent);
     /// <summary>Creates panel with default style settings</summary>
@@ -280,6 +287,7 @@ type
     property CaptionAlignment: TAlignment read FCaptionAlignment write SetCaptionAlignment default taCenter;
     property CaptionMargin: Integer read FCaptionMargin write SetCaptionMargin default DEFAULT_CAPTION_MARGIN;
     property StyleRadius: Integer read FStyleRadius write SetStyleRadius stored IsCustomRadius;
+    property StyleShadowSize: Integer read FStyleShadowSize write SetStyleShadowSize stored IsCustomShadowSize;
     property StyleDrawType: TStyledButtonDrawType read FStyleDrawType write SetStyleDrawType stored IsCustomDrawType;
     property StyleRoundedCorners: TRoundedCorners read FStyleRoundedCorners write SetStyleRoundedCorners stored IsCustomRoundedCorners;
     property StyleFamily: TStyledButtonFamily read FStyleFamily write SetStyleFamily stored IsStoredStyleFamily;
@@ -292,6 +300,7 @@ implementation
 uses
   Vcl.Forms
   , System.Math
+  , System.RTLConsts
   ;
 
 { TStyledPanel }
@@ -322,6 +331,7 @@ begin
   FStyleDrawType := _DefaultStyleDrawType;
   FCustomDrawType := True;
   FStyleRadius := _DefaultStyleRadius;
+  FStyleShadowSize := DEFAULT_SHADOW_SIZE;
   FStyleRoundedCorners := ALL_ROUNDED_CORNERS;
   FStyleFamily := AFamily;
   FStyleAppearance := AAppearance;
@@ -355,6 +365,7 @@ begin
   begin
     LDestPanel := TStyledPanel(Dest);
     LDestPanel.FStyleRadius := FStyleRadius;
+    LDestPanel.FStyleShadowSize := FStyleShadowSize;
     LDestPanel.FStyleRoundedCorners := FStyleRoundedCorners;
     LDestPanel.FStyleDrawType := FStyleDrawType;
     LDestPanel.FStyleFamily := FStyleFamily;
@@ -378,6 +389,7 @@ begin
   begin
     LSourcePanel := TStyledPanel(Source);
     FStyleRadius := LSourcePanel.FStyleRadius;
+    FStyleShadowSize := LSourcePanel.FStyleShadowSize;
     FStyleRoundedCorners := LSourcePanel.FStyleRoundedCorners;
     FStyleDrawType := LSourcePanel.FStyleDrawType;
     FStyleFamily := LSourcePanel.FStyleFamily;
@@ -493,6 +505,8 @@ procedure TStyledPanel.ChangeScale(M, D: Integer; isDpiChange: Boolean);
 begin
   inherited;
   FStyleRadius := MulDiv(FStyleRadius, M, D);
+  if FStyleShadowSize > 0 then
+    FStyleShadowSize := MulDiv(FStyleShadowSize, M, D);
   Invalidate;
 end;
 {$ENDIF}
@@ -585,6 +599,7 @@ var
   LDetails: TThemedElementDetails;
   LColor: TColor;
   LThemeAttribute: TPanelThemeAttribute;
+  LShadowSize: Integer;
 begin
   if not FStyleApplied then
     FStyleApplied := ApplyPanelStyle;
@@ -601,7 +616,11 @@ begin
     Exit;
   end;
 
-  LDrawRect := ClientRect;
+  //The face is reduced by the shadow, which is drawn inside the control
+  if AsVCLStyle then
+    LDrawRect := ClientRect
+  else
+    LDrawRect := CalcShadowFaceRect(ClientRect, CalcShadowSize);
 
   //Setup Canvas Pen for Border
   if AsVCLStyle then
@@ -655,6 +674,15 @@ begin
     LDrawType := btRect
   else
     LDrawType := FStyleDrawType;
+  if (not AsVCLStyle) and (Canvas.Brush.Style = bsSolid) then
+  begin
+    LShadowSize := CalcShadowSize;
+    if FStyleShadowSize < 0 then
+      LShadowSize := Max(0, Round(LAttributes.ShadowSize * CalcPanelScale));
+    if LShadowSize > 0 then
+      CanvasDrawShadow(Canvas, LDrawRect, LDrawType, FStyleRadius,
+        FStyleRoundedCorners, LShadowSize);
+  end;
   CanvasDrawShape(Canvas, LDrawRect,
     LDrawType,
     FStyleRadius,
@@ -734,6 +762,55 @@ begin
     FStyleRadius := AValue;
     Invalidate;
   end;
+end;
+
+procedure TStyledPanel.SetStyleShadowSize(const AValue: Integer);
+begin
+  if FStyleShadowSize <> AValue then
+  begin
+    if AValue < DEFAULT_SHADOW_SIZE then
+      raise EReadError.create(SInvalidProperty);
+    FStyleShadowSize := AValue;
+    //the children area depends on the shadow
+    if HandleAllocated then
+      Realign;
+    Invalidate;
+  end;
+end;
+
+function TStyledPanel.CalcPanelScale: Single;
+begin
+  {$IFDEF D10_3+}
+  Result := ScaleFactor;
+  {$ELSE}
+  Result := 1;
+  {$ENDIF}
+end;
+
+function TStyledPanel.CalcShadowSize: Integer;
+var
+  LMax: Integer;
+begin
+  //StyleShadowSize (already scaled, like StyleRadius) overrides the shadow of
+  //the style family; the family value is at 100% scale. The biggest of the two
+  //states decides the margin, so that the face does not move when Enabled changes.
+  if FStyleShadowSize >= 0 then
+    Result := FStyleShadowSize
+  else
+  begin
+    LMax := Max(FPanelStyleNormal.ShadowSize, FPanelStyleDisabled.ShadowSize);
+    if LMax <= 0 then
+      Result := 0
+    else
+      Result := Max(1, Round(LMax * CalcPanelScale));
+  end;
+end;
+
+procedure TStyledPanel.AdjustClientRect(var ARect: TRect);
+begin
+  inherited AdjustClientRect(ARect);
+  if not AsVCLStyle then
+    ARect := CalcShadowFaceRect(ARect, CalcShadowSize);
 end;
 
 procedure TStyledPanel.SetStyleRoundedCorners(const AValue: TRoundedCorners);
@@ -867,6 +944,11 @@ end;
 function TStyledPanel.IsCustomRadius: Boolean;
 begin
   Result := FStyleRadius <> _DefaultStyleRadius;
+end;
+
+function TStyledPanel.IsCustomShadowSize: Boolean;
+begin
+  Result := FStyleShadowSize <> DEFAULT_SHADOW_SIZE;
 end;
 
 function TStyledPanel.IsStoredStyleFamily: Boolean;

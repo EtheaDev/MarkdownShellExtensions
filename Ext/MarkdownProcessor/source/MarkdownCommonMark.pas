@@ -128,6 +128,7 @@ begin
       Renderer.SpecialLinkEmitter := Config.specialLinkEmitter;
     Renderer.CodeBlockEmitter := Config.codeBlockEmitter;
     Renderer.Mermaid := mexMermaid in Config.Extensions;
+    Renderer.Video := mexVideo in Config.Extensions;
     Renderer.MathRendering := Config.MathRendering;
     Result := Renderer.Render(ADocument);
   finally

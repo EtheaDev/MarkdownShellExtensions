@@ -229,6 +229,7 @@ uses
   , Winapi.Windows
 {$IFNDEF DISABLE_STYLES}
   , Vcl.Themes
+  , Vcl.StandardButtonStyles
 {$ENDIF}
   , uLogExcept
   , uRegistry
@@ -279,61 +280,63 @@ begin
   end;
 end;
 
-procedure InitDefaultThemesAttributes;
-
-  procedure RegisterThemeAttributes(
-    const AVCLStyleName: string;
-    const AThemeType: TThemeType);
-  var
-    LThemeAttribute: TThemeAttribute;
-
-    procedure UpdateThemeAttributes;
-    begin
-      LThemeAttribute.StyleName := AVCLStyleName;
-      LThemeAttribute.ThemeType := AThemeType;
-    end;
-
-  begin
-    for LThemeAttribute in ThemeAttributes do
-    begin
-      if SameText(LThemeAttribute.StyleName, AVCLStyleName) then
-      begin
-        UpdateThemeAttributes;
-        Exit; //Found: exit
-      end;
-    end;
-    //not found
-    LThemeAttribute := TThemeAttribute.Create;
-    ThemeAttributes.Add(LThemeAttribute);
-    UpdateThemeAttributes;
-  end;
-
-begin
-  ThemeAttributes := TList<TThemeAttribute>.Create;
-
+//Theme type (light or dark) of a VCL style: from the table of StyledComponents,
+//which knows the VCL styles shipped with Delphi; for any other style (e.g. a
+//custom one linked by who builds the editor), from the luminance of its
+//window color
+function StyleThemeType(const AStyleName: string; out AThemeType: TThemeType): Boolean;
 {$IFNDEF DISABLE_STYLES}
-  if StyleServices.Enabled then
+var
+  LStyledAttribute: Vcl.StandardButtonStyles.TThemeAttribute;
+  LStyle: TCustomStyleServices;
+  LColor: Integer;
+  LLuminance: Integer;
+{$ENDIF}
+begin
+  Result := False;
+  AThemeType := ttLight;
+{$IFNDEF DISABLE_STYLES}
+  //NB: for a style it does not know, GetStyleAttributes returns the attributes
+  //of "Windows": only an entry with the same name is taken
+  if Vcl.StandardButtonStyles.GetStyleAttributes(AStyleName, LStyledAttribute) and
+    Assigned(LStyledAttribute) and SameText(LStyledAttribute.StyleName, AStyleName) then
   begin
-    //High-DPI Themes
-    RegisterThemeAttributes('Sky'                       ,ttLight );
-    RegisterThemeAttributes('Windows10'                 ,ttLight );
-    RegisterThemeAttributes('Windows11 Impressive Light',ttLight );
-    RegisterThemeAttributes('Windows11 Modern Light'    ,ttLight );
-    RegisterThemeAttributes('Windows11 Polar Light'     ,ttLight );
-    RegisterThemeAttributes('Flat UI Light'             ,ttLight );
-    RegisterThemeAttributes('Windows10 Clear Day'       ,ttLight );
-    RegisterThemeAttributes('Windows10 Malibu'          ,ttLight );
-    RegisterThemeAttributes('Glow'                      ,ttDark  );
-    RegisterThemeAttributes('Windows10 Dark'            ,ttDark  );
-    RegisterThemeAttributes('Windows10 SlateGray'       ,ttDark  );
-    RegisterThemeAttributes('Windows11 Impressive Dark' ,ttDark  );
-    RegisterThemeAttributes('Windows11 Modern Dark'     ,ttDark  );
-    RegisterThemeAttributes('Windows11 Polar Dark'      ,ttDark  );
-    RegisterThemeAttributes('Windows10 BlackPearl'      ,ttDark  );
-    RegisterThemeAttributes('Windows10 Blue Whale'      ,ttDark  );
+    if LStyledAttribute.ThemeType = Vcl.StandardButtonStyles.ttDark then
+      AThemeType := ttDark;
+    Exit(True);
   end;
-{$ELSE}
-    RegisterThemeAttributes('Windows'            ,ttLight );
+  try
+    LStyle := TStyleManager.Style[AStyleName];
+  except
+    LStyle := nil; //style not registered
+  end;
+  if not Assigned(LStyle) then
+    Exit;
+  LColor := ColorToRGB(LStyle.GetSystemColor(clWindow));
+  LLuminance := (299 * (LColor and $FF) + 587 * ((LColor shr 8) and $FF) +
+    114 * ((LColor shr 16) and $FF)) div 1000;
+  if LLuminance < 128 then
+    AThemeType := ttDark;
+  Result := True;
+{$ENDIF}
+end;
+
+procedure InitDefaultThemesAttributes;
+{$IFDEF DISABLE_STYLES}
+var
+  LThemeAttribute: TThemeAttribute;
+{$ENDIF}
+begin
+  //NB: the light/dark type of the styles is no longer a fixed list, which had
+  //to be kept aligned by hand with the styles linked into the projects (the
+  //styles missing from it were not offered at all in Settings). It is worked
+  //out on demand from the colors of each style by GetStyleAttributes.
+  ThemeAttributes := TList<TThemeAttribute>.Create;
+{$IFDEF DISABLE_STYLES}
+  LThemeAttribute := TThemeAttribute.Create;
+  LThemeAttribute.StyleName := 'Windows';
+  LThemeAttribute.ThemeType := ttLight;
+  ThemeAttributes.Add(LThemeAttribute);
 {$ENDIF}
 end;
 
@@ -634,7 +637,13 @@ begin
     Exit(False);
   Result := Now() > FVersionCheckTime + FDaysForNextCheck;
   if Result then
+  begin
     FVersionCheckTime := Now(); //Update Next time for check
+    //Saved at once: the settings are read again from the file in many places,
+    //which would restore the old date before it is written at closing, and the
+    //check would run at every startup once the interval has passed
+    FIniFile.WriteDateTime('Global', 'VersionCheckTime', FVersionCheckTime);
+  end;
 end;
 
 procedure TEditorSettings.ReadSettings(
@@ -897,6 +906,7 @@ class function TThemeAttribute.GetStyleAttributes(const AStyleName: string;
   out AThemeAttribute: TThemeAttribute): Boolean;
 var
   LThemeAttribute: TThemeAttribute;
+  LThemeType: TThemeType;
 begin
   for LThemeAttribute in ThemeAttributes do
   begin
@@ -908,6 +918,19 @@ begin
   end;
   Result := False;
   AThemeAttribute := nil;
+{$IFNDEF DISABLE_STYLES}
+  //Not classified yet: any VCL style available, except the system style
+  //"Windows" (not a VCL style, as in SVGShellExtensions)
+  if SameText(AStyleName, TStyleManager.SystemStyleName) or
+    not StyleThemeType(AStyleName, LThemeType) then
+    Exit;
+  LThemeAttribute := TThemeAttribute.Create;
+  LThemeAttribute.StyleName := AStyleName;
+  LThemeAttribute.ThemeType := LThemeType;
+  ThemeAttributes.Add(LThemeAttribute);
+  AThemeAttribute := LThemeAttribute;
+  Result := True;
+{$ENDIF}
 end;
 
 procedure FreeThemesAttributes;

@@ -101,6 +101,20 @@ function FindMarkdownHelpFile(var AFileName: TFileName;
 function ResolveHelpFile(const ARootFolder: string; const AHelpType: THelpType;
   const AHelpKeyword: string; const AHelpContext: THelpContext;
   const AFindHelpFile: TFindHelpFileFunc; out AFileName: TFileName): Boolean;
+/// <summary>The local file of the URL of an image or of a link, resolved as
+/// a browser (WebView2) does: a path relative to ARootFolder, with "/" and
+/// percent-encoded ("../images/my%20image.png"), or a file URL
+/// ("file:///C:/folder/image.png", "file://server/share/image.png"). False
+/// for a web URL and for a URL that is not valid: an absolute Windows path
+/// ("C:\folder\image.png", "C:/folder/image.png": for a browser "C:" is a
+/// scheme) or a backslash encoded as "%5C" (as CommonMark encodes "\").</summary>
+function URLToLocalFileName(const ARootFolder, AURL: string;
+  out AFileName: TFileName): Boolean;
+/// <summary>Opens a local video file (an extension of IsVideoUrl: .mp4,
+/// .webm...) with the player of the system: True when AFileName is a video
+/// that exists. The link of a video in a viewer that cannot play it (the
+/// &lt;video&gt; of mexVideo in HTMLViewer).</summary>
+function OpenVideoFile(const AFileName: string): Boolean;
 /// <summary>Routing of a clicked link: OnFileNameClicked and auto-load for the
 /// files of ARootFolder, OnURLClicked and the default browser for the URLs.</summary>
 function HandleLinkClicked(const ARootFolder, AURL: string;
@@ -128,6 +142,7 @@ uses
   , Winapi.Windows
   , Winapi.ShLwApi
   , Winapi.ShellAPI
+  , MarkdownHtmlRenderer
   ;
 
 var
@@ -302,6 +317,112 @@ begin
   end;
 end;
 
+//The percent-encoded UTF-8 sequences of a URL (not "+": it is not a space in
+//a path); a "%" not followed by two hex digits stays as it is
+function DecodeURLPath(const AValue: string): string;
+var
+  LBytes, LChunk: TBytes;
+  LCount, I, LStart, LHex: Integer;
+begin
+  if Pos('%', AValue) = 0 then
+    Exit(AValue);
+  //each char at most 3 bytes in UTF-8 (a surrogate pair: 2 x 3 >= 4)
+  SetLength(LBytes, Length(AValue) * 3);
+  LCount := 0;
+  I := 1;
+  while I <= Length(AValue) do
+  begin
+    if (AValue[I] = '%') and (I + 2 <= Length(AValue)) and
+      CharInSet(AValue[I + 1], ['0'..'9', 'A'..'F', 'a'..'f']) and
+      CharInSet(AValue[I + 2], ['0'..'9', 'A'..'F', 'a'..'f']) then
+    begin
+      LHex := System.SysUtils.StrToInt('$' + Copy(AValue, I + 1, 2));
+      LBytes[LCount] := Byte(LHex);
+      Inc(LCount);
+      Inc(I, 3);
+    end
+    else
+    begin
+      //the chars up to the next escape, in UTF-8
+      LStart := I;
+      Inc(I);
+      while (I <= Length(AValue)) and (AValue[I] <> '%') do
+        Inc(I);
+      LChunk := TEncoding.UTF8.GetBytes(Copy(AValue, LStart, I - LStart));
+      if Length(LChunk) > 0 then
+        Move(LChunk[0], LBytes[LCount], Length(LChunk));
+      Inc(LCount, Length(LChunk));
+    end;
+  end;
+  Result := TEncoding.UTF8.GetString(LBytes, 0, LCount);
+end;
+
+function URLToLocalFileName(const ARootFolder, AURL: string;
+  out AFileName: TFileName): Boolean;
+var
+  LURL, LPath: string;
+  I: Integer;
+begin
+  Result := False;
+  AFileName := '';
+  LURL := Trim(AURL);
+  //the fragment and the query are not part of the file
+  I := Pos('#', LURL);
+  if I > 0 then
+    LURL := Copy(LURL, 1, I - 1);
+  I := Pos('?', LURL);
+  if I > 0 then
+    LURL := Copy(LURL, 1, I - 1);
+  if (LURL = '') or ContainsText(LURL, '%5C') then
+    Exit;
+  if StartsText('file:', LURL) then
+  begin
+    LPath := Copy(LURL, 6, MaxInt);
+    if StartsStr('///', LPath) then
+      //file:///C:/folder/file
+      LPath := Copy(LPath, 4, MaxInt)
+    else if StartsStr('//', LPath) then
+      //file://server/share/file
+      LPath := '\\' + Copy(LPath, 3, MaxInt)
+    else
+      Exit;
+    LPath := StringReplace(DecodeURLPath(LPath), '/', '\', [rfReplaceAll]);
+    if not (StartsStr('\\', LPath) or ((Length(LPath) >= 3) and
+      CharInSet(LPath[1], ['A'..'Z', 'a'..'z']) and (LPath[2] = ':') and
+      (LPath[3] = '\'))) then
+      Exit;
+  end
+  else
+  begin
+    //A scheme (http:, mailto:...): not a local file. Also a drive ("C:\",
+    //"C:/"), that a browser does not resolve
+    I := 1;
+    if CharInSet(LURL[1], ['A'..'Z', 'a'..'z']) then
+      while (I < Length(LURL)) and CharInSet(LURL[I + 1],
+        ['A'..'Z', 'a'..'z', '0'..'9', '+', '-', '.']) do
+        Inc(I);
+    if (I < Length(LURL)) and (LURL[I + 1] = ':') and
+      CharInSet(LURL[1], ['A'..'Z', 'a'..'z']) then
+      Exit;
+    //relative to the folder of the document ("/" as a browser on the root);
+    //a browser reads "\" in a relative path as "/"
+    LPath := StringReplace(DecodeURLPath(LURL), '/', '\', [rfReplaceAll]);
+    while StartsStr('\', LPath) do
+      Delete(LPath, 1, 1);
+    if ARootFolder <> '' then
+      LPath := IncludeTrailingPathDelimiter(ARootFolder) + LPath;
+  end;
+  AFileName := ExpandFileName(LPath);
+  Result := True;
+end;
+
+function OpenVideoFile(const AFileName: string): Boolean;
+begin
+  Result := IsVideoUrl(AFileName) and FileExists(AFileName);
+  if Result then
+    ShellExecute(0, 'open', PChar(AFileName), nil, nil, SW_SHOWNORMAL);
+end;
+
 function HandleLinkClicked(const ARootFolder, AURL: string;
   const AAutoLoad: Boolean; const AOnFileNameClicked: TFileNameClicked;
   const AOnURLClicked: TURLClicked; const ALoadFile: TLoadFileProc): Boolean;
@@ -314,14 +435,17 @@ begin
   LRootFolder := ARootFolder;
   if LRootFolder = '' then
     LRootFolder := _ServerRoot;
-  LFileName := IncludeTrailingPathDelimiter(LRootFolder)+AURL;
+  if not URLToLocalFileName(LRootFolder, AURL, LFileName) then
+    LFileName := IncludeTrailingPathDelimiter(LRootFolder)+AURL;
   //User Event
   if Assigned(AOnFileNameClicked) then
     AOnFileNameClicked(LFileName, Result);
   //Auto load file
   if not Result and FileExists(LFileName) and AAutoLoad then
   begin
-    ALoadFile(LFileName);
+    //a video with its player, a document in the viewer
+    if not OpenVideoFile(LFileName) then
+      ALoadFile(LFileName);
     Result := True;
   end
   else if PathIsURL(PChar(AURL)) then

@@ -56,6 +56,14 @@ Entities: &copy; &amp; &lt;tag&gt; &#8364; &#x1F600;
 
 ![Markdown logo](markdownlogo.png "Markdown")
 
+## Video
+
+A local video is written as an image of a video file (`.mp4`, `.webm`, `.ogv`, `.mov`, `.m4v`): WebView2 plays it, HTMLViewer shows a link to the file.
+
+![Rocket](rocket.mp4 "Growth Rocket")
+
+Rocket animation: "Growth Rocket" from [LottieFiles](https://lottiefiles.com/animations/growth-rocket-8RJByYsf5X), Lottie Simple License (see `rocket-LICENSE.txt`).
+
 ## Block quotes
 
 > Markdown is a plain text format for writing structured documents,

@@ -56,9 +56,12 @@ uses
 
 const
   /// <summary>Current version of the StyledComponents library</summary>
-  StyledComponentsVersion = '4.3.1';
+  StyledComponentsVersion = '4.4.0';
   /// <summary>Default corner radius for rounded buttons in pixels</summary>
   DEFAULT_RADIUS = 6;
+  //StyleShadowSize: -1 = the shadow of the style family (ShadowSize of the
+  //state attributes), 0 = no shadow, > 0 = the same shadow (pixels at 100%) in every state
+  DEFAULT_SHADOW_SIZE = -1;
   /// <summary>Resource name for the Windows shield admin icon</summary>
   RESOURCE_SHIELD_ICON = 'STYLED_BUTTON_SHIELD_ADMIN';
   /// <summary>Default maximum value for notification badge counter</summary>
@@ -221,6 +224,8 @@ Type
     FButtonColor: TColor;
     FRadius: Integer;
     FRoundedCorners: TRoundedCorners;
+    //Provided by the style family (never custom): elevation of the button
+    FShadowSize: Integer;
 
     FOwnerControl: TControl;
     FHasCustomDrawType: Boolean;
@@ -245,6 +250,7 @@ Type
     procedure SetFontStyle(const AValue: TFontStyles);
     procedure SetRadius(const AValue: Integer);
     procedure SetRoundedCorners(const AValue: TRoundedCorners);
+    procedure SetShadowSize(const AValue: Integer);
     function GetBorderColor: TColor;
     function GetBorderDrawStyle: TBorderDrawStyle;
     function GetBorderWidth: Integer;
@@ -291,6 +297,13 @@ Type
     property HasCustomRadius: Boolean read FHasCustomRadius;
     /// <summary>True if RoundedCorners has been customized</summary>
     property HasCustomRoundedCorners: Boolean read FHasCustomRoundedCorners;
+    /// <summary>
+    ///  Size in pixels (at 100% scale) of the shadow drawn around the button face,
+    ///  0 for no shadow. Set by the style family (e.g. the Elevated appearance of
+    ///  Angular-M3): the shadow is drawn inside the area of the control, so the face
+    ///  of the button is smaller by the shadow size of the biggest state.
+    /// </summary>
+    property ShadowSize: Integer read FShadowSize write SetShadowSize;
   published
     /// <summary>Shape drawing type (btRoundRect, btRounded, btRect, btEllipse)</summary>
     property DrawType: TStyledButtonDrawType read GetDrawType write SetDrawType stored FHasCustomDrawType;
@@ -522,6 +535,25 @@ procedure CanvasDrawShape(const ACanvas: TCanvas; ARect: TRect;
   const ARoundedCorners: TRoundedCorners;
   const APreserveBorderSpace: Boolean = True);
 
+/// <summary>
+///  The face of a button that has a shadow: ARect without the AShadowSize rows at
+///  the bottom (already scaled), where the shadow is drawn: the shadow is seen only
+///  below the face, the rest of the control is unchanged. ARect when there is no
+///  shadow or when it is too small for it.
+/// </summary>
+function CalcShadowFaceRect(const ARect: TRect; const AShadowSize: Integer): TRect;
+
+/// <summary>
+///  Draws the soft shadow of a button: AFaceRect is the rectangle of the face of the
+///  button (the one that CanvasDrawShape will fill, see CalcShadowFaceRect). The shadow
+///  is seen only below the face, AShadowSize pixels deep. It must be called before
+///  drawing the face. Does nothing without GDI+ or when AShadowSize is 0.
+/// </summary>
+procedure CanvasDrawShadow(const ACanvas: TCanvas; const AFaceRect: TRect;
+  const ADrawType: TStyledButtonDrawType; const ACornerRadius: Single;
+  const ARoundedCorners: TRoundedCorners;
+  const AShadowSize: Integer);
+
 /// <summary>Draws text on canvas with BiDi support</summary>
 procedure CanvasDrawText(const ACanvas: TCanvas; ARect: TRect;
   const AText: string; ABiDiModeFlags: LongInt);
@@ -701,7 +733,8 @@ begin
     (Style1.FFontName = Style2.FFontName) and
     (Style1.FButtonColor = Style2.FButtonColor) and
     (Style1.FRadius = Style2.FRadius) and
-    (Style1.FRoundedCorners = Style2.FRoundedCorners);
+    (Style1.FRoundedCorners = Style2.FRoundedCorners) and
+    (Style1.FShadowSize = Style2.FShadowSize);
 end;
 
 function SameNotificationBadgeAttributes(Attr1, Attr2: TNotificationBadgeAttributes): Boolean;
@@ -787,6 +820,7 @@ begin
   ADest.FButtonColor := ASource.FButtonColor;
   ADest.FRadius := ASource.FRadius;
   ADest.FRoundedCorners := ASource.FRoundedCorners;
+  ADest.FShadowSize := ASource.FShadowSize;
 
   ADest.FCustomDrawType := ASource.FCustomDrawType;
   ADest.FCustomBorderWidth := ASource.FCustomBorderWidth;
@@ -1419,7 +1453,8 @@ begin
     (FFontStyle <> ASource.FFontStyle) or
     (FButtonColor <> ASource.FButtonColor) or
     (FRadius <> ASource.FRadius) or
-    (FRoundedCorners <> ASource.FRoundedCorners);
+    (FRoundedCorners <> ASource.FRoundedCorners) or
+    (FShadowSize <> ASource.FShadowSize);
   if Result then
   begin
     FDrawType := ASource.FDrawType;
@@ -1432,6 +1467,7 @@ begin
     FButtonColor := ASource.FButtonColor;
     FRadius := ASource.FRadius;
     FRoundedCorners := ASource.FRoundedCorners;
+    FShadowSize := ASource.FShadowSize;
   end;
 end;
 
@@ -1749,6 +1785,15 @@ begin
       FRadius := AValue;
       InvalidateControl;
     end;
+  end;
+end;
+
+procedure TStyledButtonAttributes.SetShadowSize(const AValue: Integer);
+begin
+  if FShadowSize <> AValue then
+  begin
+    FShadowSize := AValue;
+    InvalidateControl;
   end;
 end;
 
@@ -2634,6 +2679,77 @@ begin
 end;
 
 {$ifdef GDIPlusSupport}
+function CalcShadowFaceRect(const ARect: TRect; const AShadowSize: Integer): TRect;
+begin
+  Result := ARect;
+  if AShadowSize > 0 then
+  begin
+    Dec(Result.Bottom, AShadowSize);
+    //too small for its shadow: the face uses the whole area
+    if Result.Height <= 0 then
+      Result := ARect;
+  end;
+end;
+
+procedure CanvasDrawShadow(const ACanvas: TCanvas; const AFaceRect: TRect;
+  const ADrawType: TStyledButtonDrawType; const ACornerRadius: Single;
+  const ARoundedCorners: TRoundedCorners;
+  const AShadowSize: Integer);
+const
+  //Opacity of each of the layers: the layers overlap near the face, so the
+  //shadow is darker there and fades out to the outside
+  LAYER_ALPHA = 24;
+var
+  LGraphics: TGPGraphics;
+  LBrush: TGPSolidBrush;
+  LPath: TGPGraphicsPath;
+  LRect: TGPRectF;
+  K: Integer;
+  X, Y, W, H, LRadius: Single;
+begin
+  if (AShadowSize <= 0) or (AFaceRect.Width <= 0) or (AFaceRect.Height <= 0) then
+    Exit;
+  LGraphics := nil;
+  LBrush := nil;
+  try
+    LGraphics := TGPGraphics.Create(ACanvas.Handle);
+    LGraphics.SetSmoothingMode(SmoothingModeAntiAlias);
+    LBrush := TGPSolidBrush.Create(MakeColor(LAYER_ALPHA, 0, 0, 0));
+    //the shadow is seen only below the face: the shape of the face is repeated
+    //moved down by 1..AShadowSize pixels, from the lowest layer to the nearest one
+    for K := AShadowSize downto 1 do
+    begin
+      X := AFaceRect.Left;
+      Y := AFaceRect.Top + K;
+      W := AFaceRect.Width - 1;
+      H := AFaceRect.Height; //down to the last row of the shadow
+      LRect := Winapi.GDIPAPI.MakeRect(X, Y, W, H);
+      case ADrawType of
+        btRect:
+          LGraphics.FillRectangle(LBrush, LRect);
+        btEllipse:
+          LGraphics.FillEllipse(LBrush, LRect);
+      else
+        begin
+          if ADrawType = btRoundRect then
+            LRadius := ACornerRadius
+          else
+            LRadius := LRect.Height; //pill: clamped by the path
+          LPath := GetRoundedCornersPath(LRect, LRadius * 2, ARoundedCorners);
+          try
+            LGraphics.FillPath(LBrush, LPath);
+          finally
+            LPath.Free;
+          end;
+        end;
+      end;
+    end;
+  finally
+    LBrush.Free;
+    LGraphics.Free;
+  end;
+end;
+
 procedure CanvasDrawShape(const ACanvas: TCanvas; ARect: TRect;
   const ADrawType: TStyledButtonDrawType; const ACornerRadius: Single;
   const ARoundedCorners: TRoundedCorners;
@@ -2727,6 +2843,14 @@ begin
   end;
 end;
 {$else}
+procedure CanvasDrawShadow(const ACanvas: TCanvas; const AFaceRect: TRect;
+  const ADrawType: TStyledButtonDrawType; const ACornerRadius: Single;
+  const ARoundedCorners: TRoundedCorners;
+  const AShadowSize: Integer);
+begin
+  //The shadow needs GDI+ (alpha blending): nothing to draw
+end;
+
 procedure CanvasDrawShape(const ACanvas: TCanvas; ARect: TRect;
   const ADrawType: TStyledButtonDrawType; const ACornerRadius: Single;
   const APreserveBorderSpace: Boolean = True);

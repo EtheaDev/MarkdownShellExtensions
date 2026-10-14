@@ -57,6 +57,7 @@ type
     FSpecialLinkEmitter: TSpanEmitter;
     FCodeBlockEmitter: TBlockEmitter;
     FMermaid: Boolean;
+    FVideo: Boolean;
     FMathRendering: TMarkdownMathRendering;
   protected
     /// <summary>Writes raw text.</summary>
@@ -90,6 +91,9 @@ type
     procedure RenderStrong(Node: TMarkdownNode; Entering: Boolean); virtual;
     procedure RenderLink(Node: TMarkdownNode; Entering: Boolean); virtual;
     procedure RenderImage(Node: TMarkdownNode; Entering: Boolean); virtual;
+    /// <summary>An image of a video file as &lt;video controls&gt; (mexVideo),
+    /// with a link to the file inside for the viewers that cannot play it.</summary>
+    procedure RenderVideo(Node: TMarkdownNode; Entering: Boolean); virtual;
     procedure RenderHtmlInline(Node: TMarkdownNode); virtual;
     // GFM
     procedure RenderTable(Node: TMarkdownNode; Entering: Boolean); virtual;
@@ -138,11 +142,17 @@ type
     property CodeBlockEmitter: TBlockEmitter read FCodeBlockEmitter write FCodeBlockEmitter;
     /// <summary>```mermaid fences as &lt;pre class="mermaid"&gt; (mexMermaid).</summary>
     property Mermaid: Boolean read FMermaid write FMermaid;
+    /// <summary>Images of video files as &lt;video&gt; (mexVideo).</summary>
+    property Video: Boolean read FVideo write FVideo;
     property MathRendering: TMarkdownMathRendering read FMathRendering write FMathRendering;
   end;
 
 /// <summary>True for javascript:, vbscript:, file: and non-image data: URLs.</summary>
 function IsDangerousUrl(const Url: string): Boolean;
+/// <summary>True when the path of Url (without query and fragment) ends with
+/// the extension of a video that a browser plays: .mp4, .m4v, .webm, .ogv,
+/// .mov.</summary>
+function IsVideoUrl(const Url: string): Boolean;
 
 implementation
 
@@ -179,6 +189,28 @@ begin
     Exit(False);
   Result := not (StartsAt(Probe, 1, 'data:image/png') or StartsAt(Probe, 1, 'data:image/gif') or
     StartsAt(Probe, 1, 'data:image/jpeg') or StartsAt(Probe, 1, 'data:image/webp'));
+end;
+
+function IsVideoUrl(const Url: string): Boolean;
+const
+  VideoExts: array[0..4] of string = ('.mp4', '.m4v', '.webm', '.ogv', '.mov');
+var
+  Path: string;
+  I: Integer;
+begin
+  Path := Url;
+  I := Pos('?', Path);
+  if I > 0 then
+    Path := Copy(Path, 1, I - 1);
+  I := Pos('#', Path);
+  if I > 0 then
+    Path := Copy(Path, 1, I - 1);
+  Path := LowerCase(Path);
+  Result := False;
+  for I := Low(VideoExts) to High(VideoExts) do
+    if (Length(Path) > Length(VideoExts[I])) and
+      (Copy(Path, Length(Path) - Length(VideoExts[I]) + 1, Length(VideoExts[I])) = VideoExts[I]) then
+      Exit(True);
 end;
 
 { TMarkdownHtmlRenderer }
@@ -504,6 +536,14 @@ end;
 
 procedure TMarkdownHtmlRenderer.RenderImage(Node: TMarkdownNode; Entering: Boolean);
 begin
+  //a video, unless it is in the alt text of an image (only text there): its
+  //end comes with FDisableTags = 1, raised by its own start
+  if FVideo and IsVideoUrl(Node.Destination) and
+    ((Entering and (FDisableTags = 0)) or (not Entering and (FDisableTags = 1))) then
+  begin
+    RenderVideo(Node, Entering);
+    Exit;
+  end;
   if Entering then
   begin
     if FDisableTags = 0 then
@@ -519,6 +559,43 @@ begin
         Lit('" title="' + EscapeHtml(Node.Title));
       Lit('" />');
     end;
+  end;
+end;
+
+procedure TMarkdownHtmlRenderer.RenderVideo(Node: TMarkdownNode; Entering: Boolean);
+var
+  Url, Name: string;
+  I: Integer;
+begin
+  Url := EscapeHtml(SafeUrl(Node.Destination));
+  if Entering then
+  begin
+    Lit('<video src="' + Url + '" controls');
+    if Node.Title <> '' then
+      Lit(' title="' + EscapeHtml(Node.Title) + '"');
+    //the alt text is the text of the link to the file (only text, as for an
+    //image); without alt text the name of the file
+    Lit('><a href="' + Url + '">');
+    if Node.FirstChild = nil then
+    begin
+      Name := Node.Destination;
+      I := Pos('?', Name);
+      if I > 0 then
+        Name := Copy(Name, 1, I - 1);
+      for I := Length(Name) downto 1 do
+        if (Name[I] = '/') or (Name[I] = '\') then
+        begin
+          Name := Copy(Name, I + 1, MaxInt);
+          Break;
+        end;
+      Esc(Name);
+    end;
+    Inc(FDisableTags);
+  end
+  else
+  begin
+    Dec(FDisableTags);
+    Lit('</a></video>');
   end;
 end;
 

@@ -858,7 +858,7 @@ end;
 procedure TCustomMarkdownViewer.HtmlViewerImageRequest(Sender: TObject;
   const ASource: UnicodeString; var AStream: TStream);
 var
-  LFullName: String;
+  LFullName: TFileName;
   LHtmlViewer: THtmlViewer;
   LMaxWidth: Integer;
   LWorkingPath: TFolderName;
@@ -871,17 +871,10 @@ Begin
     LWorkingPath := ExtractFilePath(FFileName)
   else
     LWorkingPath := GetMDViewerServerRoot;
-  // is "fullName" a local file, if not acquire file from internet
-  // replace %20 spaces to normal spaces
-  LFullName := StringReplace(ASource,'%20',' ',[rfReplaceAll]);
-  If not FileExists(LFullName) then
-  begin
-    LFullName := IncludeTrailingPathDelimiter(LWorkingPath)+LFullName;
-    If not FileExists(LFullName) then
-      LFullName := ASource;
-  end;
-
-  LFullName := Self.HTMLExpandFilename(LFullName);
+  //The local file as a browser resolves the URL: no image for a URL that is
+  //not valid (e.g. a Windows path), as in TEdgeMarkdownViewer
+  if not URLToLocalFileName(LWorkingPath, ASource, LFullName) then
+    Exit;
 
   LMaxWidth := LHtmlViewer.ClientWidth - LHtmlViewer.VScrollBar.Width - (LHtmlViewer.MarginWidth * 2);
   if FileExists(LFullName) then  // if local file, load it..

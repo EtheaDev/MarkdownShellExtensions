@@ -1,23 +1,12 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
 <style type="text/css">
-:root{color-scheme:dark;}
-body{font-family:"Arial",sans-serif;font-size:12pt;color:#FFFFFF;background-color:#191D22;}
-a{color:#0000FF;}
-.markdown-alert>:last-child{margin-bottom:0;}
-.markdown-alert-title{margin-top:0;}
-@media print{body{color:#000;background-color:#fff;}}
-</style>
-<script>
-document.addEventListener("click",function(e){var a=e.target.closest("a");if(a){var h=a.getAttribute("href");if(h&&h.charAt(0)==="#"){e.preventDefault();var t=document.getElementById(decodeURIComponent(h.substring(1)));if(t)t.scrollIntoView();}}});
-window.addEventListener("scroll",function(){if(window.chrome&&chrome.webview)chrome.webview.postMessage("scrollY:"+Math.round(window.scrollY)+":"+Math.max(0,Math.round(document.documentElement.scrollHeight-window.innerHeight)));});
-</script>
-</head>
-<body>
-<style type="text/css">
+body{
+  font-family: Arial, sans-serif;
+}
 img{
+  max-width: 100%;
+  height: auto;
+}
+video{
   max-width: 100%;
   height: auto;
 }
@@ -107,7 +96,6 @@ pre.mermaid{
 }
 </style>
 <h1 id="markdown-editor-and-shell-extensions">Markdown Editor and Shell Extensions</h1>
-<!-- raw HTML omitted -->
 <p><a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-green.svg" alt="License: Apache" /></a>
 <a href="https://github.com/EtheaDev/MarkdownShellExtensions/releases"><img src="https://img.shields.io/github/v/release/EtheaDev/MarkdownShellExtensions?label=release&amp;color=blue" alt="Latest release" /></a>
 <a href="https://www.embarcadero.com/products/delphi"><img src="https://img.shields.io/badge/Delphi-12%2B-e62329.svg" alt="Delphi 12+" /></a>
@@ -120,7 +108,7 @@ pre.mermaid{
 <a href="https://mermaid.js.org/"><img src="https://img.shields.io/badge/Mermaid-11.17.2-ff3670.svg" alt="Mermaid 11.17.2" /></a>
 <a href="https://developer.microsoft.com/microsoft-edge/webview2/"><img src="https://img.shields.io/badge/WebView2-Edge-0078d4.svg" alt="Microsoft Edge WebView2" /></a>
 <a href="https://www.microsoft.com/windows"><img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d6.svg" alt="Windows 10 and 11" /></a></p>
-<p><img src="/Setup/SupportingDelphi.jpg" alt="Delphi Support" /></p>
+<p><img src="./Images/SupportingDelphi.jpg" alt="Delphi Support" /></p>
 <p>Related links: <a href="https://www.embarcadero.com/">embarcadero.com</a> - <a href="https://learndelphi.org/">learndelphi.org</a></p>
 <p><strong>A collection of tools for markdown files, to edit and view content:</strong></p>
 <ul>
@@ -143,16 +131,22 @@ pre.mermaid{
 <p>Supports Windows 10 and 11 (for 32 bits and 64 bits).</p>
 </li>
 <li>
-<p>Themes (Dark and Light) according to user preferences of Windows Theme</p>
+<p>Themes (Dark and Light) according to user preferences of Windows Theme, with the VCL styles: <strong>Light</strong>: Sky, Windows Modern, Windows11 Impressive Light, Windows11 Modern Light, Windows11 Polar Light; <strong>Dark</strong>: Glow, Windows Modern SlateGray, Windows11 Impressive Dark, Windows11 Modern Dark, Windows11 Polar Dark</p>
 </li>
 <li>
-<p>Uses the latest, empowered version of the <a href="https://github.com/EtheaDev/MarkdownProcessor">Markdown Processor</a> (2.0): CommonMark 0.31.2 and GitHub Flavored Markdown compliant engine. The default dialect is now <strong>GitHub</strong> (GFM + math formulas, alerts and mermaid diagrams, plus subscript, superscript, insert, mark, smart typography, heading ids and wiki links); CommonMark, GFM, DaringFireball and TxtMark are still available.</p>
+<p>Uses the latest, empowered version of the <a href="https://github.com/EtheaDev/MarkdownProcessor">Markdown Processor</a> (2.1): CommonMark 0.31.2 and GitHub Flavored Markdown compliant engine. The default dialect is now <strong>GitHub</strong> (GFM + math formulas, alerts and mermaid diagrams, plus subscript, superscript, insert, mark, smart typography, heading ids, wiki links and videos); CommonMark, GFM, DaringFireball and TxtMark are still available.</p>
 </li>
 <li>
 <p>The preview of the <strong>Markdown Text Editor</strong> uses <strong>Microsoft Edge WebView2</strong> (TEdgeMarkdownViewer of the <a href="https://github.com/EtheaDev/MarkdownHelpViewer">Markdown Help Viewer</a> project): math formulas with KaTeX, mermaid diagrams, GitHub alerts, synchronized scroll with the editor. When WebView2 is not available, or it is disabled in the Settings (“Use WebView2 (Edge) when available”), the preview uses HTMLViewer. <strong>WebView2Loader.dll</strong> is distributed with the editor (installed by the Setup). KaTeX and mermaid.js are installed with the editor too (Scripts folder): math formulas, mermaid diagrams and charts (pie, bar and line charts) are drawn also <strong>without an Internet connection</strong>.</p>
 </li>
 <li>
 <p>The <strong>Preview Panel</strong> of Windows Explorer keeps the internal HTML viewer (HTMLViewer): math formulas are shown as images and mermaid diagrams as text.</p>
+</li>
+<li>
+<p><strong>Videos</strong> in the documents (<code>.mp4</code>, <code>.webm</code>…), written as an image of the video file: <code>![Demo](video/demo.mp4)</code>. The preview with WebView2 plays them; HTMLViewer shows a link that opens the player of the system.</p>
+</li>
+<li>
+<p>Images, videos and links are resolved as a browser does: write their path relative to the document, with <code>/</code> (<code>images/logo.png</code>, <code>../images/logo.png</code>). The “Insert image” and “Insert link” dialogs of the editor write the paths so.</p>
 </li>
 <li>
 <p>Integrated also with other Shell Applications (like XYplorer)</p>
@@ -171,7 +165,7 @@ pre.mermaid{
 <p>A useful Text editor with instant preview of Markdown formatted content:</p>
 <p><img src="./Images/MDTextEditorLight.png" alt="Markdown Text Editor Dark" /></p>
 <h3 id="manual-build-and-installation-only-for-delphi-developers">Manual Build and Installation (only for Delphi developers)</h3>
-<p>Learn more about the manual within our <a href="https://github.com/EtheaDev/MarkdownShellExtensions/wiki/Manual-Build-and-Installation">wiki</a>. Dive deeper into everything related to this tool, its features, and how to make the most of it.</p>
+<p>How to build the projects with Delphi and how to manually register the Shell Extensions is explained in the <a href="https://ethea.it/docs/markdowntools/MarkdownShellExtensions/Manual-Build-and-Installation">Manual Build and Installation</a> page of the Project Site.</p>
 <h3 id="preview-panel-in-action">Preview Panel in action</h3>
 <p>In Windows 10 with Dark theme:</p>
 <p><img src="./Images/PreviewPanelDark.png" alt="Preview Panel Dark" /></p>
@@ -193,6 +187,16 @@ pre.mermaid{
 </li>
 </ol>
 <h2 id="release-notes">Release Notes</h2>
+<p>14 Oct 2026: ver. 3.1.0</p>
+<ul>
+<li>Uses the Markdown Processor 2.1: <strong>videos</strong> in the documents, written as an image of the video file (<code>![Demo](video/demo.mp4)</code>: <code>.mp4</code>, <code>.m4v</code>, <code>.webm</code>, <code>.ogv</code>, <code>.mov</code>). The preview with WebView2 plays them; HTMLViewer shows a link that opens the video with the player of the system</li>
+<li>Markdown Text Editor, “Insert image” and “Insert link” dialogs: the selected file is written as a path relative to the document, with <code>/</code> (e.g. <code>../images/image.png</code>), never as a Windows path; spaces and special characters are percent-encoded. A file of another drive (or of a document not saved yet) is written as a <code>file:///</code> URL, with a warning: the safe mode removes it. The image dialog can also select the videos</li>
+<li>Preview: images, videos and links resolved as a browser does, both with WebView2 and with HTMLViewer (relative paths with <code>/</code>, percent-encoded characters, <code>file:///</code> URLs); with WebView2 the relative paths that go up from the folder of the document (<code>../Pictures/image.png</code>) are now found; a Windows path (<code>C:\folder\image.png</code>) is not a valid URL and is no longer shown also by HTMLViewer</li>
+<li>Markdown Text Editor with WebView2: “Print file” asks the printer and prints the page shown in the preview, with header and footer (it printed the Markdown text); “Print” and “Save as” of the preview propose the name of the document instead of the data: URL of the page</li>
+<li>MarkDown Support Test.md (Docs folder): new section “Video”, with a short video</li>
+<li>Markdown Text Editor and Preview: the obsolete Windows10 VCL styles have been removed; available styles: Sky, Windows Modern, Windows11 Impressive Light, Windows11 Modern Light, Windows11 Polar Light (light) and Glow, Windows Modern SlateGray, Windows11 Impressive Dark, Windows11 Modern Dark, Windows11 Polar Dark (dark). On Windows 10 the default style is “Windows Modern” (light) or “Windows Modern SlateGray” (dark); a style saved by a previous version and no longer available is replaced by the default one</li>
+<li>Settings, Theme page: all the styles linked into the application are offered, classified as light or dark automatically (also a style added by who builds the editor)</li>
+</ul>
 <p>08 Oct 2026: ver. 3.0.0 (major version)</p>
 <ul>
 <li>Uses the new Markdown Processor 2.0: CommonMark 0.31.2 and GitHub Flavored Markdown compliant engine, with math formulas, GitHub alerts, mermaid diagrams and the legacy extensions (subscript, superscript, insert, mark, smart typography, heading ids, wiki links)</li>
@@ -375,7 +379,7 @@ pre.mermaid{
 <li>Updated Markdown library with best support for CommonMark transformation</li>
 </ul>
 <ol>
-<li>Subscript <!-- raw HTML omitted -->text<!-- raw HTML omitted --> and Superscript <!-- raw HTML omitted -->text<!-- raw HTML omitted --></li>
+<li>Subscript <code>&lt;sub&gt;text&lt;/sub&gt;</code> and Superscript <code>&lt;sup&gt;text&lt;/sup&gt;</code></li>
 <li>Formulas (using <a href="https://developers.google.com/chart/infographics/docs/formulas">Google Chart API</a>)</li>
 <li><mark>Markers</mark></li>
 <li><a href="https://www.markdownguide.org/basic-syntax/#reference-style-links">Reference-style Links</a></li>
@@ -478,5 +482,3 @@ Portions created by Rodrigo Ruz V. are Copyright © 2011-2023 Rodrigo Ruz V.</p>
 <p><a href="https://github.com/EtheaDev/MarkdownProcessor">markdownProcessor</a></p>
 <p><a href="https://github.com/EtheaDev/StyledComponents">StyledComponents</a></p>
 <p><a href="https://sourceforge.net/projects/dzlib/">dzlib</a></p>
-</body>
-</html>

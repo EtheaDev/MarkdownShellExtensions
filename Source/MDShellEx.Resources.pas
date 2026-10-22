@@ -73,6 +73,7 @@ type
     FCSS: string;
     FMathRendering: TMarkdownMathRendering;
     procedure SetMarkDownContent(const AValue: string);
+    function ProcessContent(const AProcessor: TMarkdownProcessor): string;
   public
     //Built-in default stylesheet (the <style>...</style> block prepended to the
     //generated HTML). Exposed as a class function so callers (e.g. the Settings
@@ -163,6 +164,7 @@ uses
   , Winapi.GDIPOBJ
   , Winapi.GDIPAPI
   , System.IOUtils
+  , System.NetEncoding
   , System.UITypes
   , Winapi.ShellAPI
   , SynPDF
@@ -703,6 +705,42 @@ begin
   Result := MarkDownViewerCommon.GetMarkdownDefaultCSS;
 end;
 
+function TMarkDownFile.ProcessContent(const AProcessor: TMarkdownProcessor): string;
+
+  function ErrorHTML(const AError: Exception): string;
+  begin
+    Result := Format('<p style="color:red;">Error rendering Markdown: %s (%s)</p>'+
+      '<pre>%s</pre>', [TNetEncoding.HTML.Encode(AError.Message),
+      AError.ClassName, TNetEncoding.HTML.Encode(FMarkDownContent)]);
+  end;
+
+begin
+  //An exception raised while converting (also a silent EAbort, e.g. from
+  //the SynEdit exporter of the code emitter) must not blank the whole
+  //preview: retry without the code emitter, then show the error and the
+  //Markdown source as plain text.
+  try
+    Result := AProcessor.process(FMarkDownContent);
+  except
+    on E: Exception do
+    begin
+      TLogPreview.Add(E);
+      if AProcessor.Config.codeBlockEmitter = nil then
+        Exit(ErrorHTML(E));
+      AProcessor.Config.codeBlockEmitter := nil;
+      try
+        Result := AProcessor.process(FMarkDownContent);
+      except
+        on E2: Exception do
+        begin
+          TLogPreview.Add(E2);
+          Result := ErrorHTML(E2);
+        end;
+      end;
+    end;
+  end;
+end;
+
 procedure TMarkDownFile.Parse;
 var
   LMDProcessor: TMarkdownProcessor;
@@ -724,9 +762,9 @@ begin
     //Convert MD To HTML. Use the caller-supplied stylesheet (user setting) when
     //provided, otherwise fall back to the built-in default.
     if FCSS <> '' then
-      FHTML := FCSS+LMDProcessor.process(FMarkDownContent)
+      FHTML := FCSS+ProcessContent(LMDProcessor)
     else
-      FHTML := GetDefaultCSS+LMDProcessor.process(FMarkDownContent);
+      FHTML := GetDefaultCSS+ProcessContent(LMDProcessor);
     {$IFDEF DEBUG}
     //Debug aid: dump the generated HTML so it can be inspected.
     //NB: a single file with a fixed name, overwritten at every parse. It used

@@ -753,8 +753,20 @@ begin
 end;
 
 destructor TLine.Destroy;
+var
+  LLine, LNext: TLine;
 begin
-  FNext.Free;
+  //The following lines are freed in a loop, not by recursion (FNext.Free):
+  //a document with many lines overflowed the stack
+  LLine := FNext;
+  FNext := nil;
+  while LLine <> nil do
+  begin
+    LNext := LLine.FNext;
+    LLine.FNext := nil;
+    LLine.Free;
+    LLine := LNext;
+  end;
   inherited;
 end;
 
@@ -2987,10 +2999,22 @@ begin
 end;
 
 destructor TBlock.Destroy;
+var
+  LBlock, LNext: TBlock;
 begin
   FLines.Free;
   FBlocks.Free;
-  FNext.free;
+  //The following blocks are freed in a loop, not by recursion (FNext.Free):
+  //a document with many blocks overflowed the stack
+  LBlock := FNext;
+  FNext := nil;
+  while LBlock <> nil do
+  begin
+    LNext := LBlock.FNext;
+    LBlock.FNext := nil;
+    LBlock.Free;
+    LBlock := LNext;
+  end;
   inherited;
 end;
 

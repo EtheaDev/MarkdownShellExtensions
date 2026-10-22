@@ -429,17 +429,23 @@ function HandleLinkClicked(const ARootFolder, AURL: string;
 var
   LFileName: TFileName;
   LRootFolder: string;
+  LLocalFile: Boolean;
 begin
   Result := False;
   //Prepare FileName
   LRootFolder := ARootFolder;
   if LRootFolder = '' then
     LRootFolder := _ServerRoot;
-  if not URLToLocalFileName(LRootFolder, AURL, LFileName) then
+  LLocalFile := URLToLocalFileName(LRootFolder, AURL, LFileName);
+  if not LLocalFile then
     LFileName := IncludeTrailingPathDelimiter(LRootFolder)+AURL;
   //User Event
   if Assigned(AOnFileNameClicked) then
     AOnFileNameClicked(LFileName, Result);
+  //Handled by the event: it is not also an URL to open (a file:/// link, as
+  //the links of TEdgeMarkdownViewer, would reach OnURLClicked too)
+  if Result then
+    Exit;
   //Auto load file
   if not Result and FileExists(LFileName) and AAutoLoad then
   begin
@@ -448,8 +454,9 @@ begin
       ALoadFile(LFileName);
     Result := True;
   end
-  else if PathIsURL(PChar(AURL)) then
+  else if not LLocalFile and PathIsURL(PChar(AURL)) then
   begin
+    //a web URL (a local file, also missing, is never opened as an URL)
     if Assigned(AOnURLClicked) then
       AOnURLClicked(AURL, Result);
     if not Result and AAutoLoad then

@@ -437,7 +437,11 @@ begin
     Exit;
   end;
   LHighlighter := GetHighlighter(NormalizeLang(meta));
-  if LHighlighter = nil then
+  //An empty fenced block (no lines, or a single empty line) makes
+  //TSynCustomExporter.ExportRange call Abort: the silent EAbort would cross
+  //TMarkdownProcessor.Process and leave the whole preview blank. With only
+  //blank lines the exporter writes nothing, not even the <pre>.
+  if (LHighlighter = nil) or (Trim(lines.Text) = '') then
   begin
     EmitPlainBlock(out_, lines);
     Exit;

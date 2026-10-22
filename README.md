@@ -97,6 +97,14 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+22 Oct 2026: ver. 3.1.2
+- Uses the Markdown Processor 2.1.1: fixed a stack overflow with long documents (many lines or many paragraphs) in the DaringFireball and TxtMark dialects
+
+21 Oct 2026: ver. 3.1.1
+- Markdown Text Editor, preview with WebView2: a link to another Markdown file opened it in the editor and also with the application associated to the .md files; now it is opened only in the editor
+- Fixed the preview left blank by an empty fenced code block with a language (for example `` ```delphi `` followed at once by `` ``` ``): the exporter of the syntax highlighting stopped the conversion (Markdown Text Editor and Preview Panel)
+- Markdown Text Editor and Preview Panel: when the conversion of the document fails, the preview shows the error and the Markdown text instead of staying blank
+
 14 Oct 2026: ver. 3.1.0
 - Uses the Markdown Processor 2.1: **videos** in the documents, written as an image of the video file (`![Demo](video/demo.mp4)`: `.mp4`, `.m4v`, `.webm`, `.ogv`, `.mov`). The preview with WebView2 plays them; HTMLViewer shows a link that opens the video with the player of the system
 - Markdown Text Editor, "Insert image" and "Insert link" dialogs: the selected file is written as a path relative to the document, with `/` (e.g. `../images/image.png`), never as a Windows path; spaces and special characters are percent-encoded. A file of another drive (or of a document not saved yet) is written as a `file:///` URL, with a warning: the safe mode removes it. The image dialog can also select the videos

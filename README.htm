@@ -187,6 +187,16 @@ pre.mermaid{
 </li>
 </ol>
 <h2 id="release-notes">Release Notes</h2>
+<p>22 Oct 2026: ver. 3.1.2</p>
+<ul>
+<li>Uses the Markdown Processor 2.1.1: fixed a stack overflow with long documents (many lines or many paragraphs) in the DaringFireball and TxtMark dialects</li>
+</ul>
+<p>21 Oct 2026: ver. 3.1.1</p>
+<ul>
+<li>Markdown Text Editor, preview with WebView2: a link to another Markdown file opened it in the editor and also with the application associated to the .md files; now it is opened only in the editor</li>
+<li>Fixed the preview left blank by an empty fenced code block with a language (for example <code>```delphi</code> followed at once by <code>```</code>): the exporter of the syntax highlighting stopped the conversion (Markdown Text Editor and Preview Panel)</li>
+<li>Markdown Text Editor and Preview Panel: when the conversion of the document fails, the preview shows the error and the Markdown text instead of staying blank</li>
+</ul>
 <p>14 Oct 2026: ver. 3.1.0</p>
 <ul>
 <li>Uses the Markdown Processor 2.1: <strong>videos</strong> in the documents, written as an image of the video file (<code>![Demo](video/demo.mp4)</code>: <code>.mp4</code>, <code>.m4v</code>, <code>.webm</code>, <code>.ogv</code>, <code>.mov</code>). The preview with WebView2 plays them; HTMLViewer shows a link that opens the video with the player of the system</li>

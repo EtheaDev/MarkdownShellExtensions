@@ -92,6 +92,7 @@ type
     AddWebButton: TButton;
     BackgroundTrackBar: TTrackBar;
     IconBackGround: TRectangle;
+    btnExportAll: TButton;
     procedure ClearAllButtonClick(Sender: TObject);
     procedure DeleteButtonClick(Sender: TObject);
     procedure AddButtonClick(Sender: TObject);
@@ -127,9 +128,11 @@ type
     procedure FixedColorItemEditChange(Sender: TObject);
     procedure AddWebButtonClick(Sender: TObject);
     procedure BackgroundTrackBarTracking(Sender: TObject);
+    procedure btnExportAllClick(Sender: TObject);
   private
     FIconIndexLabel: string;
     FTotIconsLabel: string;
+    FSvgExpDir : string;
     FUpdating: Boolean;
     FEditingList: TSVGIconImageList;
     procedure UpdateIconBackgroundColour;
@@ -141,6 +144,9 @@ type
     procedure SetImageIconName(IconName: String);
     function SelectedSVGIcon: TSVGIconSourceItem;
     function GetClearAlphaColorString(AColor: TAlphaColor): string;
+    procedure svgIconExport(idx : Integer; const dir : String;
+      const enc : TEncoding);
+    procedure svgIconsExport(const dir : String);
   protected
   public
     destructor Destroy; override;
@@ -162,6 +168,7 @@ uses
   {$ENDIF}
   , FMX.SVGIconsUtils
   , System.Math
+  , System.IOUtils
   , FMX.SVGRESTClientFormUnit
   ;
 
@@ -271,6 +278,48 @@ begin
   end;
 end;
 
+procedure TSVGIconImageListEditorFMX.svgIconExport(idx: Integer;
+  const dir: String; const enc : TEncoding);
+begin
+  if not Assigned(FEditingList) then
+    Exit();
+
+  var aicon := FEditingList.GetIcon(idx);
+  if
+    not Assigned(aicon) or
+    aicon.SVGText.IsEmpty
+  then
+    Exit();
+
+  var fname := TPath.Combine(
+    dir,
+    idx.ToString() + '.' + aicon.IconName + '.svg'
+  );
+
+  TFile.WriteAllText(
+    fname,
+    aicon.SVGText,
+    enc
+  );
+end;
+
+procedure TSVGIconImageListEditorFMX.svgIconsExport(const dir: String);
+begin
+  var utf8NoBom : TEncoding;
+  try
+    utf8NoBom := TUTF8Encoding.Create(false);
+
+    for var idx := 0 to FEditingList.Count-1 do
+      svgIconExport(
+        idx,
+        dir,
+        utf8NoBom
+      );
+  finally
+    FreeAndNil(utf8NoBom);
+  end;
+end;
+
 procedure TSVGIconImageListEditorFMX.SVGTextExit(Sender: TObject);
 begin
   SelectedSVGIcon.SVGText := SVGText.Lines.Text;
@@ -280,6 +329,24 @@ end;
 procedure TSVGIconImageListEditorFMX.BackgroundTrackBarTracking(Sender: TObject);
 begin
   UpdateIconBackgroundColour;
+end;
+
+procedure TSVGIconImageListEditorFMX.btnExportAllClick(Sender: TObject);
+begin
+  if
+    not Assigned(FEditingList) or
+    (0 = FEditingList.Count)
+  then
+    Exit();
+
+  if
+    SelectDirectory(
+      'Select a SVG files destination folder',
+      EmptyStr,
+      FSvgExpDir
+    )
+  then
+    svgIconsExport(FSvgExpDir);
 end;
 
 procedure TSVGIconImageListEditorFMX.AutoSizeCheckBoxClick(Sender: TObject);

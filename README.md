@@ -97,6 +97,12 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+30 Oct 2026: ver. 3.1.3
+- Markdown Text Editor: "Word-Wrap Text" and "Show Line Numbers" in the context menu of the editor, with a check mark: they switch word wrap and line numbers in every open editor and are saved with the other editor options (as in the Editor options dialog)
+- Markdown Text Editor: the width of the collapsed side menu depends on the height of the menu, so the vertical scrollbar no longer appears when the menu is narrow
+- New logo, box and setup wizard image of the product
+- Uses StyledComponents 4.5.0
+
 22 Oct 2026: ver. 3.1.2
 - Uses the Markdown Processor 2.1.1: fixed a stack overflow with long documents (many lines or many paragraphs) in the DaringFireball and TxtMark dialects
 
@@ -325,70 +331,56 @@ Licensed under the [Apache License, Version 2.0][2] (the "License");
 
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
 
-### Other libraries from Ethea:
+<!-- credits:begin -->
+Copyright © 2021-2026 Ethea S.r.l.
 
-**SVGIconImageList** - https://github.com/EtheaDev/SVGIconImageList/
+### Credits
 
-**StyledComponents** - https://github.com/EtheaDev/StyledComponents
+Author: Carlo Barazzetta  
+Contributors: Ariel Montes  
+Source project: https://github.com/EtheaDev/MarkdownShellExtensions  
 
-**Delphi MarkdownProcessor** - https://github.com/EtheaDev/MarkdownProcessor
+### Other libraries from Ethea
 
-### Third parties libraries:
+- **[SVGIconImageList](https://github.com/EtheaDev/SVGIconImageList)**
+- **[StyledComponents](https://github.com/EtheaDev/StyledComponents)**
+- **[Delphi MarkdownProcessor](https://github.com/EtheaDev/MarkdownProcessor)**
 
-**OpenSLL Library**: Cryptography and SSL/TLS Toolkit
+### Third party libraries
 
-Copyright © 1998-2018 The OpenSSL Project.  All rights reserved.
-
-**Delphi Markdown** - https://github.com/grahamegrieve/delphi-markdown
-
-Copyright (c) 2011+, Health Intersections Pty Ltd All rights reserved
-
-**Delphi Preview Handler** - https://github.com/RRUZ/delphi-preview-handler
-
-The Initial Developer of the Original Code is Rodrigo Ruz V.
-Portions created by Rodrigo Ruz V. are Copyright © 2011-2023 Rodrigo Ruz V.
-
-**SynEdit** - http://synedit.svn.sourceforge.net/viewvc/synedit/
-
-all rights reserved.
-
-**KaTeX** - https://katex.org/
-
-Copyright (c) 2013-2020 Khan Academy and other contributors (MIT License)
-
-**Mermaid** - https://mermaid.js.org/
-
-Copyright (c) 2014-2022 Knut Sveidqvist (MIT License)
-
-**Synopse/SynPDF** - https://github.com/synopse/SynPDF
-
-Copyright © Synopse: all right reserved.
-
-**HtmlToPdf** - https://github.com/MuzioValerio/HtmlToPdf
-
-Copyright © Muzio Valerio.
-
-**Image32 Library** - http://www.angusj.com/delphi/image32/Docs/_Body.htm
-
-Copyright ©2019-2025 Angus Johnson.
-
-**dzlib** - https://sourceforge.net/projects/dzlib/
-
-Copyright (c) Thomas Mueller
-
-**HTMLViewer** - https://github.com/BerndGabriel/HtmlViewer
-
-Copyright (c) 1995 - 2008 by L. David Baldwin
-
-Copyright (c) 1995 - 2023 by Anders Melander (DitherUnit.pas)
-
-Copyright (c) 1995 - 2023 by Ron Collins (HtmlGif1.pas)
-
-Copyright (c) 2008 - 2009 by Sebastian Zierer (Delphi 2009 Port)
-
-Copyright (c) 2008 - 2010 by Arvid Winkelsdorf (Fixes)
-
-Copyright (c) 2009 - 2023 by HtmlViewer Team
+- **[Delphi Markdown](https://github.com/grahamegrieve/delphi-markdown)**  
+  Copyright (c) 2011+, Health Intersections Pty Ltd. All rights reserved.
+- **[Delphi Preview Handler](https://github.com/RRUZ/delphi-preview-handler)**  
+  The Initial Developer of the Original Code is Rodrigo Ruz V.  
+  Portions created by Rodrigo Ruz V. are Copyright © 2011-2023 Rodrigo Ruz V.
+- **[VCL Styles Utils](https://github.com/RRUZ/vcl-styles-utils)**  
+  Portions created by Rodrigo Ruz V. are Copyright © 2012-2023 Rodrigo Ruz V. (Mozilla Public License 1.1)
+- **[SynEdit (PyScripter fork)](https://github.com/pyscripter/SynEdit)**  
+  Portions created by Martin Waldenburg are Copyright © 1998 Martin Waldenburg (Mozilla Public License 1.1)
+- **[Skia4Delphi](https://skia4delphi.org)**  
+  Copyright © 2021-2025 Skia4Delphi Project (MIT License)
+- **[Image32 Library](https://www.angusj.com/delphi/image32/Docs/_Body.htm)**  
+  Copyright © 2019-2025 Angus Johnson (Boost Software License)
+- **[OpenSSL Library: Cryptography and SSL/TLS Toolkit](https://www.openssl.org)**  
+  Copyright © 1998-2018 The OpenSSL Project. All rights reserved.
+- **[Synopse/SynPDF](https://github.com/synopse/SynPDF)**  
+  Copyright © Synopse: all rights reserved.
+- **[HtmlToPdf](https://github.com/MuzioValerio/HtmlToPdf)**  
+  Copyright © Muzio Valerio.
+- **[HTMLViewer](https://github.com/BerndGabriel/HtmlViewer)**  
+  Copyright (c) 1995 - 2008 by L. David Baldwin  
+  Copyright (c) 1995 - 2023 by Anders Melander (DitherUnit.pas)  
+  Copyright (c) 1995 - 2023 by Ron Collins (HtmlGif1.pas)  
+  Copyright (c) 2008 - 2009 by Sebastian Zierer (Delphi 2009 Port)  
+  Copyright (c) 2008 - 2010 by Arvid Winkelsdorf (Fixes)  
+  Copyright (c) 2009 - 2023 by HtmlViewer Team
+- **[KaTeX](https://katex.org)**  
+  Copyright (c) 2013-2020 Khan Academy and other contributors (MIT License)
+- **[Mermaid](https://mermaid.js.org)**  
+  Copyright (c) 2014-2022 Knut Sveidqvist (MIT License)
+- **[dzlib](https://sourceforge.net/projects/dzlib/)**  
+  Copyright (c) Thomas Mueller
+<!-- credits:end -->
 
 # External projects
 

@@ -240,65 +240,6 @@ object FrmAbout: TFrmAbout
     Height = 166
     Anchors = [akLeft, akTop, akBottom]
     Color = clBtnFace
-    Lines.Strings = (
-      'Author:'
-      'Carlo Barazzetta'
-      'https://github.com/EtheaDev/MarkdownShellExtensions'
-      'Copyright '#169' 2021-2026 all rights reserved.'
-      'Contributors:'
-      'Ariel Montes'
-      ''
-      'Other libraries from Ethea:'
-      'SVGIconImageList'
-      'https://github.com/EtheaDev/SVGIconImageList/'
-      ''
-      'StyledComponents'
-      'https://github.com/EtheaDev/StyledComponents'
-      ''
-      'Delphi MarkdownProcessor'
-      'https://github.com/EtheaDev/MarkdownProcessor'
-      ''
-      'Third parties libraries:'
-      'OpenSLL Library: Cryptography and SSL/TLS Toolkit'
-      'Copyright '#169' 1998-2018 The OpenSSL Project.  All rights reserved.'
-      ''
-      'Delphi Markdown'
-      'https://github.com/grahamegrieve/delphi-markdown'
-      
-        'Copyright (c) 2011+, Health Intersections Pty Ltd All rights res' +
-        'erved'
-      ''
-      'Delphi Preview Handler'
-      'https://github.com/RRUZ/delphi-preview-handler'
-      'The Initial Developer of the Original Code is Rodrigo Ruz V.'
-      
-        'Portions created by Rodrigo Ruz V. are Copyright '#169' 2011-2023 Rod' +
-        'rigo Ruz V.'
-      ''
-      'SynEdit http://synedit.svn.sourceforge.net/viewvc/synedit/'
-      'all rights reserved.'
-      ''
-      'Synopse/SynPDF https://github.com/synopse/SynPDF'
-      'Copyright '#169' Synopse: all right reserved.'
-      ''
-      'HtmlToPdf https://github.com/MuzioValerio/HtmlToPdf'
-      'Copyright '#169' Muzio Valerio.'
-      ''
-      
-        'Image32 Library - http://www.angusj.com/delphi/image32/Docs/_Bod' +
-        'y.htm'
-      'Copyright '#169'2019-2025 Angus Johnson.'
-      ''
-      'dzlib - https://sourceforge.net/projects/dzlib/'
-      'Copyright (c) Thomas Mueller'
-      ''
-      'HTMLViewer - https://github.com/BerndGabriel/HtmlViewer'
-      'Copyright (c) 1995 - 2008 by L. David Baldwin'
-      'Copyright (c) 1995 - 2023 by Anders Melander (DitherUnit.pas)'
-      'Copyright (c) 1995 - 2023 by Ron Collins (HtmlGif1.pas)'
-      'Copyright (c) 2008 - 2009 by Sebastian Zierer (Delphi 2009 Port)'
-      'Copyright (c) 2008 - 2010 by Arvid Winkelsdorf (Fixes)'
-      'Copyright (c) 2009 - 2023 by HtmlViewer Team')
     ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 1

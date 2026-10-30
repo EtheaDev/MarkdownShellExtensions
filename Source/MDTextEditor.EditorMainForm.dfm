@@ -498,6 +498,20 @@ object frmMain: TfrmMain
       OnExecute = acSearchAgainExecute
       OnUpdate = acSearchAgainUpdate
     end
+    object acWordWrap: TAction
+      Category = 'Edit'
+      Caption = 'Word-Wrap Text'
+      Hint = 'Wrap long lines in the editor'
+      OnExecute = acWordWrapExecute
+      OnUpdate = acWordWrapUpdate
+    end
+    object acShowLineNumbers: TAction
+      Category = 'Edit'
+      Caption = 'Show Line Numbers'
+      Hint = 'Show line numbers in the editor'
+      OnExecute = acShowLineNumbersExecute
+      OnUpdate = acShowLineNumbersUpdate
+    end
     object acClose: TAction
       Category = 'File'
       Caption = 'Close'
@@ -839,6 +853,12 @@ object frmMain: TfrmMain
     end
     object N1: TMenuItem
       Caption = '-'
+    end
+    object WordWrapMenuItem: TMenuItem
+      Action = acWordWrap
+    end
+    object ShowLineNumbersMenuItem: TMenuItem
+      Action = acShowLineNumbers
     end
   end
   object PrinterSetupDialog: TPrinterSetupDialog

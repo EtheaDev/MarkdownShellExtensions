@@ -1,4 +1,4 @@
-{******************************************************************************}
+﻿{******************************************************************************}
 {                                                                              }
 {       MarkDown Shell extensions                                              }
 {       (Preview Panel, Thumbnail Icon, MD Text Editor)                        }
@@ -78,6 +78,10 @@ const
   SET_FILE_NAME = 'HiglightSettings';
   SV_COLLAPSED_WIDTH = 42;
   SV_COLLAPSED_WIDTH_WITH_SCROLLBARS = 60;
+  //Height of the menu at 96 dpi (dfm of catMenuItems): 20 buttons of 36 px
+  //plus 3 categories of 5 px border + 16 px caption gutter (Segoe UI -12):
+  //below it the vertical scrollbar of catMenuItems appears
+  SV_MENU_HEIGHT = 783;
 
 
 resourcestring
@@ -215,6 +219,10 @@ type
     Sep1MenuItem: TMenuItem;
     SelectAllMenuItem: TMenuItem;
     N1: TMenuItem;
+    acWordWrap: TAction;
+    acShowLineNumbers: TAction;
+    WordWrapMenuItem: TMenuItem;
+    ShowLineNumbersMenuItem: TMenuItem;
     CloseAllMenuItem: TMenuItem;
     ClientPanel: TPanel;
     PopHTMLViewer: TPopupMenu;
@@ -314,6 +322,10 @@ type
     procedure acAboutExecute(Sender: TObject);
     procedure acSearchAgainExecute(Sender: TObject);
     procedure acSearchAgainUpdate(Sender: TObject);
+    procedure acWordWrapExecute(Sender: TObject);
+    procedure acWordWrapUpdate(Sender: TObject);
+    procedure acShowLineNumbersExecute(Sender: TObject);
+    procedure acShowLineNumbersUpdate(Sender: TObject);
     procedure actnPrinterSetupExecute(Sender: TObject);
     procedure actnPrintPreviewExecute(Sender: TObject);
     procedure actnPrintExecute(Sender: TObject);
@@ -2403,6 +2415,33 @@ begin
   DoSearchReplaceText(False, gbSearchBackwards);
 end;
 
+//Word wrap and line numbers are editor options (also in the Editor options
+//dialog): the context menu toggles them for every open editor, and they
+//are saved with the other editor options when the application closes
+procedure TfrmMain.acWordWrapExecute(Sender: TObject);
+begin
+  FEditorOptions.WordWrap := not FEditorOptions.WordWrap;
+  UpdateEditorsOptions;
+end;
+
+procedure TfrmMain.acWordWrapUpdate(Sender: TObject);
+begin
+  acWordWrap.Enabled := CurrentEditor <> nil;
+  acWordWrap.Checked := FEditorOptions.WordWrap;
+end;
+
+procedure TfrmMain.acShowLineNumbersExecute(Sender: TObject);
+begin
+  FEditorOptions.Gutter.ShowLineNumbers := not FEditorOptions.Gutter.ShowLineNumbers;
+  UpdateEditorsOptions;
+end;
+
+procedure TfrmMain.acShowLineNumbersUpdate(Sender: TObject);
+begin
+  acShowLineNumbers.Enabled := CurrentEditor <> nil;
+  acShowLineNumbers.Checked := FEditorOptions.Gutter.ShowLineNumbers;
+end;
+
 procedure TfrmMain.acSearchAgainUpdate(Sender: TObject);
 begin
   acSearchAgain.Enabled := gsSearchText <> '';
@@ -3122,8 +3161,7 @@ end;
 procedure TfrmMain.AdjustCompactWidth;
 begin
   //Change size of compact view because Scrollbars appears
-  var LHeight := Height / ScaleFactor;
-  if LHeight > 620 then
+  if (SV.Height / ScaleFactor) >= SV_MENU_HEIGHT then
     SV.CompactWidth := Round(SV_COLLAPSED_WIDTH * ScaleFactor)
   else
     SV.CompactWidth := Round(SV_COLLAPSED_WIDTH_WITH_SCROLLBARS * ScaleFactor);

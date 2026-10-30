@@ -125,6 +125,8 @@ uses
   , GitHubAPI
   ;
 
+{$I MarkdownShellExtensions.Credits.inc}
+
 {$R *.dfm}
 
 var
@@ -398,6 +400,7 @@ procedure TFrmAbout.FormCreate(Sender: TObject);
 var
   FileVersionStr: string;
 begin
+  MemoCopyRights.Lines.Text := CreditsText;
   TitleLabel.Font.Height := Round(TitleLabel.Font.Height * 1.6);
   //NB: the link under the logo is the documentation site, and it is now built
   //from HELP_URL instead of being hard-coded in the DFM caption. The caption

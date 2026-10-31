@@ -56,6 +56,16 @@ Entities: &copy; &amp; &lt;tag&gt; &#8364; &#x1F600;
 
 ![Markdown logo](markdownlogo.png "Markdown")
 
+### Image formats
+
+The same image in the formats used on the web: JPEG, PNG, GIF (animated), SVG and WebP.
+
+![JPEG image](images/format-jpeg.jpg "JPEG")
+![PNG image](images/format-png.png "PNG")
+![GIF image](images/format-gif.gif "GIF")
+![SVG image](images/format-svg.svg "SVG")
+![WebP image](images/format-webp.webp "WebP")
+
 ## Video
 
 A local video is written as an image of a video file (`.mp4`, `.webm`, `.ogv`, `.mov`, `.m4v`): WebView2 plays it, HTMLViewer shows a link to the file.

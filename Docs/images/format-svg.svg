@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120" viewBox="0 0 240 120">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e0a020"/>
+      <stop offset="1" stop-color="#f5d76e"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="120" fill="url(#g)"/>
+  <circle cx="52" cy="60" r="40" fill="#fff" stroke="#282828" stroke-width="3"/>
+  <polygon points="52,32 76,76 28,76" fill="#e0a020"/>
+  <text x="110" y="62" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="bold" fill="#fff">SVG</text>
+  <text x="110" y="92" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#fff">Markdown Processor</text>
+</svg>

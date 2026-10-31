@@ -97,6 +97,10 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+31 Oct 2026: ver. 3.1.4
+- Uses the Markdown Processor 2.1.2: in the preview with HTMLViewer the math formulas have the size of the text (they were three times larger)
+- `MarkDown Support Test.md`: new section "Image formats" (JPEG, PNG, animated GIF, SVG and WebP)
+
 30 Oct 2026: ver. 3.1.3
 - Markdown Text Editor: "Word-Wrap Text" and "Show Line Numbers" in the context menu of the editor, with a check mark: they switch word wrap and line numbers in every open editor and are saved with the other editor options (as in the Editor options dialog)
 - Markdown Text Editor: the width of the collapsed side menu depends on the height of the menu, so the vertical scrollbar no longer appears when the menu is narrow

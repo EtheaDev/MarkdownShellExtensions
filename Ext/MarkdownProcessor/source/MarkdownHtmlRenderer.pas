@@ -820,8 +820,10 @@ end;
 
 function TMarkdownHtmlRenderer.MathImage(const Latex: string): string;
 begin
+  // \dpi{110}: the size of the text of the page (codecogs writes 300 dpi
+  // images by default, three times larger than the text)
   Result := '<img class="math" src="https://latex.codecogs.com/png.image?' +
-    EscapeHtml(EncodeUrlComponent(Latex)) + '" alt="' + EscapeHtml(Latex) + '" />';
+    EscapeHtml(EncodeUrlComponent('\dpi{110}' + Latex)) + '" alt="' + EscapeHtml(Latex) + '" />';
 end;
 
 procedure TMarkdownHtmlRenderer.RenderMermaid(Node: TMarkdownNode);

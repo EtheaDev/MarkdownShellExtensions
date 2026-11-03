@@ -97,6 +97,10 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+03 Nov 2026: ver. 3.1.5
+- The editor and the preview use Ethea SynEdit 3.0.0 (https://github.com/EtheaDev/SynEdit), the EtheaDev fork of pyscripter/SynEdit with every unit under the `SynEdit.` scope
+- Uses the Markdown Help Viewer 3.1.4
+
 31 Oct 2026: ver. 3.1.4
 - Uses the Markdown Processor 2.1.2: in the preview with HTMLViewer the math formulas have the size of the text (they were three times larger)
 - `MarkDown Support Test.md`: new section "Image formats" (JPEG, PNG, animated GIF, SVG and WebP)

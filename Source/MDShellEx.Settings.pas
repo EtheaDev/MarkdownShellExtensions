@@ -35,7 +35,8 @@ uses
   System.SysUtils
   , System.Classes
   , VCL.Graphics
-  , SynEditHighlighter
+  , SynEdit.Highlighter
+  , SynEdit.Types
   , System.Generics.Collections
   , SynEditOptionsDialog
   , System.UITypes
@@ -235,7 +236,7 @@ uses
   , uRegistry
   , MDShellEx.Misc
   , MarkDownViewerCommon
-  , SynEdit
+  , SynEdit.Core
   , Winapi.Messages
   ;
 

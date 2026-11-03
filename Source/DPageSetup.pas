@@ -43,8 +43,8 @@ interface
 uses
   Windows, SysUtils, Classes, Graphics, Forms, Controls, StdCtrls,
   Buttons, ExtCtrls, ComCtrls, ToolWin, ImgList, ActnList, Dialogs,
-  SynEditPrintTypes, SynEditPrint, SynEditPrintMargins,
-  SynEditPrintHeaderFooter, SynEditPrintPreview, System.Actions,
+  SynEdit.PrintTypes, SynEdit.Print, SynEdit.PrintMargins,
+  SynEdit.PrintHeaderFooter, SynEdit.PrintPreview, System.Actions,
   System.ImageList, SVGIconImageListBase, SVGIconImageList;
 
 resourcestring

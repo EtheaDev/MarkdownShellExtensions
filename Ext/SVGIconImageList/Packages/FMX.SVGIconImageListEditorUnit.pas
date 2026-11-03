@@ -144,9 +144,9 @@ type
     procedure SetImageIconName(IconName: String);
     function SelectedSVGIcon: TSVGIconSourceItem;
     function GetClearAlphaColorString(AColor: TAlphaColor): string;
-    procedure svgIconExport(idx : Integer; const dir : String;
-      const enc : TEncoding);
-    procedure svgIconsExport(const dir : String);
+    function svgIconExport(idx : Integer; const dir : String;
+      const enc : TEncoding): Boolean;
+    function svgIconsExport(const dir : String): Integer;
   protected
   public
     destructor Destroy; override;
@@ -171,6 +171,10 @@ uses
   , System.IOUtils
   , FMX.SVGRESTClientFormUnit
   ;
+
+resourcestring
+  SELECT_SVG_EXPORT_DIR = 'Select a SVG files destination folder';
+  SVG_FILES_SAVED = '%d File(s) saved into "%s" folder';
 
 var
   SavedBounds: TRect = (Left: 0; Top: 0; Right: 0; Bottom: 0);
@@ -278,9 +282,10 @@ begin
   end;
 end;
 
-procedure TSVGIconImageListEditorFMX.svgIconExport(idx: Integer;
-  const dir: String; const enc : TEncoding);
+function TSVGIconImageListEditorFMX.svgIconExport(idx: Integer;
+  const dir: String; const enc : TEncoding): Boolean;
 begin
+  Result := False;
   if not Assigned(FEditingList) then
     Exit();
 
@@ -301,20 +306,22 @@ begin
     aicon.SVGText,
     enc
   );
+  Result := True;
 end;
 
-procedure TSVGIconImageListEditorFMX.svgIconsExport(const dir: String);
+function TSVGIconImageListEditorFMX.svgIconsExport(const dir: String): Integer;
 begin
-  var utf8NoBom : TEncoding;
+  Result := 0;
+  //Created before the try: if the creation fails, there is nothing to free
+  var utf8NoBom : TEncoding := TUTF8Encoding.Create(false);
   try
-    utf8NoBom := TUTF8Encoding.Create(false);
-
     for var idx := 0 to FEditingList.Count-1 do
-      svgIconExport(
+      if svgIconExport(
         idx,
         dir,
         utf8NoBom
-      );
+      ) then
+        Inc(Result);
   finally
     FreeAndNil(utf8NoBom);
   end;
@@ -341,12 +348,12 @@ begin
 
   if
     SelectDirectory(
-      'Select a SVG files destination folder',
+      SELECT_SVG_EXPORT_DIR,
       EmptyStr,
       FSvgExpDir
     )
   then
-    svgIconsExport(FSvgExpDir);
+    ShowMessage(Format(SVG_FILES_SAVED, [svgIconsExport(FSvgExpDir), FSvgExpDir]));
 end;
 
 procedure TSVGIconImageListEditorFMX.AutoSizeCheckBoxClick(Sender: TObject);

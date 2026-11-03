@@ -29,8 +29,8 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, ComCtrls, ExtCtrls, ColorGrd, StdCtrls, CheckLst, SynEdit,
-  ActnList, SynEditHighlighter, SynUnicode, System.ImageList, Vcl.ImgList,
+  Dialogs, ComCtrls, ExtCtrls, ColorGrd, StdCtrls, CheckLst, SynEdit.Core,
+  ActnList, SynEdit.Highlighter, SynEdit.Unicode, System.ImageList, Vcl.ImgList,
   SVGIconImageListBase, SVGIconImageList, MDShellEx.Settings, Vcl.ButtonGroup,
   Vcl.ToolWin, MDShellEx.Resources, Vcl.VirtualImageList, MDShellEx.About,
   Vcl.WinXCtrls, Vcl.Samples.Spin,
@@ -207,7 +207,7 @@ uses
   MarkdownProcessor,
   MarkdownUtils,
   MarkDownViewerCommon,
-  SynHighlighterCss,
+  SynEdit.Highlighter.Css,
   uRegistry;
 
 //Normalize a stylesheet for comparison: ignore line-endings and surrounding

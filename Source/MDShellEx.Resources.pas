@@ -35,11 +35,11 @@ uses
   , Vcl.ImgList
   , Vcl.Controls
   , System.ImageList
-  , SynHighlighterMarkdown
+  , SynEdit.Highlighter.Markdown
   , SynEditOptionsDialog
-  , SynEditPrint
-  , SynEditCodeFolding
-  , SynEditHighlighter
+  , SynEdit.Print
+  , SynEdit.CodeFolding
+  , SynEdit.Highlighter
   , SVGIconImageListBase
   , SVGIconImageList
   , Vcl.BaseImageCollection

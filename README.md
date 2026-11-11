@@ -97,6 +97,9 @@ To manually install the SVGShellExtensions.dll follow these steps:
 3. To install manually the dll run the `Unregister_Register.cmd` (run-as-administrator): notice that you must change the path into cmd file.
 
 ## Release Notes ##
+11 Nov 2026: ver. 3.1.6
+- Compatibility with Delphi 13.2
+
 03 Nov 2026: ver. 3.1.5
 - The editor and the preview use Ethea SynEdit 3.0.0 (https://github.com/EtheaDev/SynEdit), the EtheaDev fork of pyscripter/SynEdit with every unit under the `SynEdit.` scope
 - Uses the Markdown Help Viewer 3.1.4

@@ -117,6 +117,9 @@ uses
   SynEdit.Highlighter.LDraw,
   SynEdit.Highlighter.Omni,
   SynEdit.Highlighter.Markdown,
+  SynEdit.Highlighter.Rexx,
+  SynEdit.Highlighter.LLVM,
+  SynEdit.Highlighter.WebIDL,
   SynEdit.SpellCheck,
   SynEdit.URIOpener,
   SynEdit.ActionsResource;
@@ -181,7 +184,7 @@ begin
     TSynBaanSyn, TSynGalaxySyn, TSynProgressSyn, TSynMsgSyn,
     TSynIdlSyn, TSynUnrealSyn, TSynCPMSyn, TSynTeXSyn, TSynYAMLSyn,
     TSynHaskellSyn, TSynLDRSyn, TSynURISyn, TSynDOTSyn, TSynRCSyn,
-    TSynMarkdownSyn
+    TSynMarkdownSyn, TSynRexxSyn, TSynLLVMIRSyn, TSynWebIDLSyn
   ]);
 
   // SynEdit Actions

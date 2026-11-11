@@ -46,6 +46,9 @@
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <DllSuffix>$(Auto)</DllSuffix>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(Platform)'=='Win64' and '$(Base)'!=''">
+        <DCC_UnitSearchPath>$(BDSCOMMONDIR)\Dcp\$(Platform);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+    </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
         <DCC_DebugInformation>0</DCC_DebugInformation>

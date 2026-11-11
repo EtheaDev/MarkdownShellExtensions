@@ -4,7 +4,7 @@
         <MainSource>MDShellExtensions.dpr</MainSource>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
-        <ProjectVersion>20.4</ProjectVersion>
+        <ProjectVersion>20.5</ProjectVersion>
         <FrameworkType>VCL</FrameworkType>
         <Base>True</Base>
         <Platform Condition="'$(Platform)'==''">Win64</Platform>
@@ -60,7 +60,7 @@
         <Icon_MainIcon>..\Icons\logo.ico</Icon_MainIcon>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <VerInfo_Keys>CompanyName=Ethea S.r.l.;FileDescription=MarkDown Shell Extensions 64bit;FileVersion=3.1.5.0;InternalName=;LegalCopyright=Copyright © 2021-2026 Ethea S.r.l.;LegalTrademarks=;OriginalFilename=;ProductName=MarkDown Shell Extensions 64bit;ProductVersion=3.1.5;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=Ethea S.r.l.;FileDescription=MarkDown Shell Extensions 64bit;FileVersion=3.1.6.0;InternalName=;LegalCopyright=Copyright © 2021-2026 Ethea S.r.l.;LegalTrademarks=;OriginalFilename=;ProductName=MarkDown Shell Extensions 64bit;ProductVersion=3.1.6;Comments=</VerInfo_Keys>
         <Custom_Styles>Glow|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Glow.vsf;Sky|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Sky.vsf;&quot;Windows Modern|VCLSTYLE|$(BDSCOMMONDIR)\Styles\WindowsModern.vsf&quot;;&quot;Windows Modern SlateGray|VCLSTYLE|$(BDSCOMMONDIR)\Styles\WindowsModernSlateGray.vsf&quot;;&quot;Windows11 Impressive Dark|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows11_Impressive_Dark.vsf&quot;;&quot;Windows11 Impressive Light|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows11_Impressive_Light.vsf&quot;;&quot;Windows11 Modern Dark|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows_Modern_Dark_SE.vsf&quot;;&quot;Windows11 Modern Light|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows11_Modern_Light.vsf&quot;;&quot;Windows11 Polar Dark|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows11_Polar_Dark.vsf&quot;;&quot;Windows11 Polar Light|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows11_Polar_Light.vsf&quot;</Custom_Styles>
         <DCC_DcuOutput>..\Dcu\$(Platform)\$(Config)</DCC_DcuOutput>
         <GenDll>true</GenDll>

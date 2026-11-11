@@ -1960,6 +1960,7 @@ uses
   , Vcl.ColorButtonStyles
   {$ENDIF}
   , Vcl.StyledCmpMessages
+  , Vcl.StyledPanel
   ;
 
 const
@@ -3408,6 +3409,28 @@ end;
 type
   TControlColorAccess = class(TControl);
 
+//The style services that paint AControl: its own (a per-control StyleName,
+//inherited from its parents) where the RTL supports it, else the global ones
+function ControlStyleServices(const AControl: TControl): TCustomStyleServices;
+begin
+  {$IFDEF D11+}
+  Result := StyleServices(AControl);
+  if not Assigned(Result) then
+    Result := StyleServices;
+  {$ELSE}
+  Result := StyleServices;
+  {$ENDIF}
+end;
+
+//The attributes a TStyledPanel paints its face with in its current state
+function StyledPanelFace(const APanel: TStyledPanel): TStyledButtonAttributes;
+begin
+  if APanel.Enabled then
+    Result := APanel.PanelStyleNormal
+  else
+    Result := APanel.PanelStyleDisabled;
+end;
+
 function TStyledButtonRender.GetTransparentFontColor(
   const AFontColor: TColor): TColor;
 var
@@ -3420,13 +3443,24 @@ begin
   LParent := FOwnerControl.Parent;
   if not Assigned(LParent) then
     Exit;
-  //What is really behind the caption: the parent, painted by the VCL style
-  //when it styles its client, otherwise with its own Color
-  LStyle := StyleServices;
-  LStyled := LStyle.Enabled and not LStyle.IsSystemStyle and
-    (seClient in LParent.StyleElements);
+  //What is really behind the caption: the parent, painted by ITS VCL style (a
+  //per-control StyleName, not only the global style) when it styles its client,
+  //otherwise with its own Color
+  LStyle := ControlStyleServices(LParent);
+  if LParent is TStyledPanel then
+    //A TStyledPanel draws its face itself whatever its StyleElements: from the
+    //VCL style only AsVCLComponent (the panel colour of the style)
+    LStyled := TStyledPanel(LParent).AsVCLComponent and LStyle.Enabled and
+      not LStyle.IsSystemStyle
+  else
+    LStyled := LStyle.Enabled and not LStyle.IsSystemStyle and
+      (seClient in LParent.StyleElements);
   if LStyled then
     LBackColor := LStyle.GetStyleColor(scPanel)
+  else if LParent is TStyledPanel then
+    //The face it paints: the disabled one while the panel is disabled (its
+    //Color is the normal face only)
+    LBackColor := StyledPanelFace(TStyledPanel(LParent)).ButtonColor
   else
     LBackColor := TControlColorAccess(LParent).Color;
   if LBackColor = clNone then

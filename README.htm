@@ -1,7 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>README</title>
 <style type="text/css">
-body{
-  font-family: Arial, sans-serif;
-}
+:root{color-scheme:light;}
+body{font-family:"Arial",sans-serif;font-size:12pt;color:#000000;background-color:#FFFFFF;}
+a{color:#0000FF;}
+.markdown-alert>:last-child{margin-bottom:0;}
+.markdown-alert-title{margin-top:0;}
+@media print{body{color:#000;background-color:#fff;}}
+</style>
+<script>
+document.addEventListener("click",function(e){var a=e.target.closest("a");if(a){var h=a.getAttribute("href");if(h&&h.charAt(0)==="#"){e.preventDefault();var t=document.getElementById(decodeURIComponent(h.substring(1)));if(t)t.scrollIntoView();}}});
+window.addEventListener("scroll",function(){if(window.chrome&&chrome.webview)chrome.webview.postMessage("scrollY:"+Math.round(window.scrollY)+":"+Math.max(0,Math.round(document.documentElement.scrollHeight-window.innerHeight)));});
+</script>
+</head>
+<body>
+<style type="text/css">
 img{
   max-width: 100%;
   height: auto;
@@ -187,6 +203,10 @@ pre.mermaid{
 </li>
 </ol>
 <h2 id="release-notes">Release Notes</h2>
+<p>11 Nov 2026: ver. 3.1.6</p>
+<ul>
+<li>Compatibility with Delphi 13.2</li>
+</ul>
 <p>03 Nov 2026: ver. 3.1.5</p>
 <ul>
 <li>The editor and the preview use Ethea SynEdit 3.0.0 (<a href="https://github.com/EtheaDev/SynEdit">https://github.com/EtheaDev/SynEdit</a>), the EtheaDev fork of pyscripter/SynEdit with every unit under the <code>SynEdit.</code> scope</li>
@@ -524,3 +544,5 @@ Copyright (c) Thomas Mueller</li>
 <p><a href="https://github.com/EtheaDev/MarkdownProcessor">markdownProcessor</a></p>
 <p><a href="https://github.com/EtheaDev/StyledComponents">StyledComponents</a></p>
 <p><a href="https://sourceforge.net/projects/dzlib/">dzlib</a></p>
+</body>
+</html>
